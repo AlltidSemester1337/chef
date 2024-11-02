@@ -43,11 +43,7 @@ fun MenuScreen(
     onItemClicked: (String) -> Unit = { }
 ) {
     val menuItems = listOf(
-        //MenuItem("summarize", R.string.menu_summarize_title, R.string.menu_summarize_description),
-        //MenuItem("photo_reasoning", R.string.menu_reason_title, R.string.menu_reason_description),
         MenuItem("chat", R.string.menu_chat_title, R.string.menu_chat_description),
-        //MenuItem("functions_chat", R.string.menu_functions_title, R.string.menu_functions_description),
-        //MenuItem("audio", R.string.menu_audio_title, R.string.menu_audio_description)
     )
 
     LazyColumn(

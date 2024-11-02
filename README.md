@@ -1,6 +1,9 @@
-# Firebase Quickstarts for Android
+# Chef
 
-A collection of quickstart samples demonstrating the Firebase APIs on Android. For more information, see https://firebase.google.com.
+A personal cooking assistant app built on vertexai chat and firebase. Requires integration towards
+vertexai using google-services.json credentials for SA.
+
+Old below:
 
 ## Samples
 
@@ -16,34 +19,14 @@ in the `app/build.gradle` file of the app as the Android package name. Download
 the generated `google-services.json` file, and copy it to the `app/` directory of
 the sample you wish to run.
 
-- [Admob](admob/README.md)
+
 - [Analytics](analytics/README.md)
-- [App Distribution](appdistribution/README.md)
-- [App-Indexing](app-indexing/README.md)
 - [Auth](auth/README.md)
-- [Config](config/README.md)
 - [Crash](crash/README.md)
 - [Database](database/README.md)
 - [Firestore](firestore/README.md)
-- [Functions](functions/README.md)
-- [Dynamic Links](dynamiclinks/README.md)
-- [In-App Messaging](inappmessaging/README.md)
-- [Messaging](messaging/README.md)
-- [ML Kit](mlkit/README.md)
-- [ML Kit LanguageID](mlkit-langid/README.md)
-- [ML Kit Smart Reply](mlkit-smartreply/README.md)
-- [ML Kit Translate](mlkit-translate/README.md)
-- [Performance Monitoring](perf/README.md)
-- [Storage](storage/README.md)
 - [Vertex AI](vertexai/README.md)
 
 ## How to make contributions?
-Please read and follow the steps in the [CONTRIBUTING.md](CONTRIBUTING.md)
 
-[![Actions Status][gh-actions-badge]][gh-actions]
-[![SAM Score][sam-score-badge]][sam-score]
-
-[gh-actions]: https://github.com/firebase/quickstart-android/actions
-[gh-actions-badge]: https://github.com/firebase/quickstart-android/workflows/Android%20CI/badge.svg
-[sam-score]: https://ossbot.computer/samscore.html
-[sam-score-badge]: https://ossbot.computer/samscorebadge?org=firebase&repo=quickstart-android
+Fork or reach out to author.

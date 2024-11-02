@@ -49,21 +49,9 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate(routeId)
                             })
                         }
-                        //composable("summarize") {
-                        //    SummarizeRoute()
-                        //}
-                        //composable("photo_reasoning") {
-                        //    PhotoReasoningRoute()
-                        //}
                         composable("chat") {
                             ChatRoute()
                         }
-                        //composable("functions_chat") {
-                        //    FunctionsChatRoute()
-                        //}
-                        //composable("audio") {
-                        //    AudioRoute()
-                        //}
                     }
                 }
             }
