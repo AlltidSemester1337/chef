@@ -9,7 +9,7 @@ Run the app from vertexai/app module.
 Features:
 
 - 1.0.x - Initial release, chat history persisted locally
-- 1.1.x - Chat history persisted on DB (TBD)
+- 1.1.x - Chat history persisted on Realtime Database
 - 1.2.x - UI improvements, remove menu, add logos etc
 - ... (design updates from Bobo?)
 - 2.0.x - Integrate fine-tuned model from historical data (requires at least 100 approved recipe
@@ -35,7 +35,6 @@ the sample you wish to run.
 - [Auth](auth/README.md)
 - [Crash](crash/README.md)
 - [Database](database/README.md)
-- [Firestore](firestore/README.md)
 - [Vertex AI](vertexai/README.md)
 
 ## How to make contributions?

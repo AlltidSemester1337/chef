@@ -28,21 +28,53 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.content.Context
 import android.util.Log
-import com.formulae.chef.services.persistence.ChatHistoryFilePersistence
+import com.formulae.chef.services.persistence.ChatHistoryRealtimeDatabasePersistence
 
-
+// TODO: Clean up this shit
 class ChatViewModel(
     context: Context,
     generativeModel: GenerativeModel
 ) : ViewModel() {
-    private val _context = context
-    private val _persistenceImpl = ChatHistoryFilePersistence(context)
-    private val _chatHistory: MutableStateFlow<List<Content>> =
-        MutableStateFlow(_persistenceImpl.loadChatHistory())
+    private val _persistenceImpl = ChatHistoryRealtimeDatabasePersistence()
+    private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
+    private val chat = generativeModel.startChat(
+        history = _chatHistory.value
+    )
+    private val _uiState: MutableStateFlow<ChatUiState> =
+        MutableStateFlow(
+            ChatUiState(
+                chat.history.map { content ->
+                    ChatMessage(
+                        text = content.parts.first().asTextOrNull() ?: "",
+                        participant = if (content.role == "user") Participant.USER else Participant.MODEL,
+                        isPending = false
+                    )
+                }
+            )
+        )
+    val uiState: StateFlow<ChatUiState> =
+        _uiState.asStateFlow()
 
     init {
-        if (_chatHistory.value.isEmpty()) {
-            _chatHistory.value = listOf(
+        viewModelScope.launch {
+            _chatHistory.value = initializeChatHistory()
+        }
+        viewModelScope.launch {
+            _chatHistory.collect { history -> updateUiState(history) }
+        }
+    }
+
+    private suspend fun initializeChatHistory(): List<Content> {
+        var result: List<Content> = emptyList()
+
+        try {
+            result = _persistenceImpl.loadChatHistory()
+        } catch (e: Exception) {
+            Log.e("FirebaseDB", "Error fetching chat history", e)
+        }
+
+        if (result.isEmpty()) {
+            return listOf(
                 content(role = "user") { text("Hi, can you help me with a suggestion for what to cook with the following ingredients? Chicken, beans, root vegetables, olive oil, spices\n") },
                 content(role = "model") {
                     text(
@@ -539,36 +571,20 @@ class ChatViewModel(
                 },
             )
         }
+        return result
     }
 
-
-    init {
-        Log.d("ChatViewModel", "Chat history size: ${_chatHistory.value.size}")
-        Log.d(
-            "ChatViewModel",
-            "Chat history entries first: ${_chatHistory.value.first().parts.first().asTextOrNull()}"
+    private fun updateUiState(history: List<Content>) {
+        _uiState.value = ChatUiState(
+            history.map { content ->
+                ChatMessage(
+                    text = content.parts.first().asTextOrNull() ?: "",
+                    participant = if (content.role == "user") Participant.USER else Participant.MODEL,
+                    isPending = false
+                )
+            }
         )
     }
-
-    private val chat = generativeModel.startChat(
-        history = _chatHistory.value
-    )
-
-    private val _uiState: MutableStateFlow<ChatUiState> =
-        MutableStateFlow(
-            ChatUiState(
-                chat.history.map { content ->
-                    // Map the initial messages
-                    ChatMessage(
-                        text = content.parts.first().asTextOrNull() ?: "",
-                        participant = if (content.role == "user") Participant.USER else Participant.MODEL,
-                        isPending = false
-                    )
-                }
-            )
-        )
-    val uiState: StateFlow<ChatUiState> =
-        _uiState.asStateFlow()
 
     fun sendMessage(userMessage: String) {
         // Add a pending message
