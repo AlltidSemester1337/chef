@@ -1,9 +1,21 @@
 # Chef
 
-A personal cooking assistant app built on vertexai chat and firebase. Requires integration towards
-vertexai using google-services.json credentials for SA.
+A personal cooking assistant app to suggest recipes for cooking. Built on vertexai chat and
+firebase. Requires integration towards
+vertexai using google-services.json credentials for SA in order to run.
 
-Old below:
+Run the app from vertexai/app module.
+
+Features:
+
+- 1.0.x - Initial release, chat history persisted locally
+- 1.1.x - Chat history persisted on DB (TBD)
+- 1.2.x - UI improvements, remove menu, add logos etc
+- ... (design updates from Bobo?)
+- 2.0.x - Integrate fine-tuned model from historical data (requires at least 100 approved recipe
+  suggestions) for chatbot instead of general purpose / reinforced learning model
+
+Old desc below:
 
 ## Samples
 
@@ -18,7 +30,6 @@ To add a sample app to a Firebase project, use the `applicationId` value specifi
 in the `app/build.gradle` file of the app as the Android package name. Download
 the generated `google-services.json` file, and copy it to the `app/` directory of
 the sample you wish to run.
-
 
 - [Analytics](analytics/README.md)
 - [Auth](auth/README.md)
