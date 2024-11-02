@@ -981,7 +981,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:474448463284:android:c76572afd2f0ba8d97e8e1",
         "android_client_info": {
-          "package_name": "com.google.firebase.quickstart.vertexai"
+          "package_name": "com.formulae.chef"
         }
       },
       "oauth_client": [],
