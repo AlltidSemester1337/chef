@@ -1,3 +1,5 @@
+import java.util.Properties
+
 /*
  * Copyright 2023 Google LLC
  *
@@ -21,11 +23,26 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
+val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
+
 android {
     namespace = "com.formulae.chef"
     compileSdk = 35
 
     defaultConfig {
+        buildConfigField(
+            "String",
+            "firebaseDbUrl",
+            "\"${firebaseDbUrl}\""
+        )
+
         applicationId = "com.formulae.chef"
         minSdk = 26
         targetSdk = 35
@@ -65,7 +82,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("io.coil-kt:coil-compose:2.7.0")
-    
+
     implementation("com.google.firebase:firebase-analytics:22.1.2")
     implementation("com.google.firebase:firebase-vertexai:16.0.0-beta06")
 

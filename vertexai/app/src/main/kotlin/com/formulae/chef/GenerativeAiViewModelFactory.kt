@@ -47,7 +47,6 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         systemInstruction = content { text("You are a personal chef / cooking assistant to help with coming up for new ideas on recipes. Use https://www.honestgreens.com/en/menu as inspiration for the whole foods, healthy, simple and savory cooking / recipe style. Please use metric units and centiliters / decilitres for liquid measurements and state the nutritional values for each recipe.") }
                     )
                     ChatViewModel(
-                        context = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Context,
                         generativeModel = generativeModel
                     )
                 }

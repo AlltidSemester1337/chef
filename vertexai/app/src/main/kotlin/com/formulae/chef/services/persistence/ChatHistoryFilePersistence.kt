@@ -19,13 +19,17 @@ private val gson = GsonBuilder()
 class ChatHistoryFilePersistence(context: Context) : ChatHistoryPersistence {
     private val _context = context
 
-    override fun saveChatHistory(history: List<Content>) {
-        val sharedPreferences: SharedPreferences = _context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        val type = object : TypeToken<List<Content>>() {}.type
-        val historyJson = gson.toJson(history, type)
-        editor.putString(KEY_CHAT_HISTORY, historyJson)
-        editor.apply()
+    //override fun saveChatHistory(history: List<Content>) {
+    //    val sharedPreferences: SharedPreferences = _context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    //    val editor = sharedPreferences.edit()
+    //    val type = object : TypeToken<List<Content>>() {}.type
+    //    val historyJson = gson.toJson(history, type)
+    //    editor.putString(KEY_CHAT_HISTORY, historyJson)
+    //    editor.apply()
+    //}
+
+    override fun saveNewEntries(newEntries: List<Content>) {
+        TODO("Not yet implemented")
     }
 
     override suspend fun loadChatHistory(): List<Content> {

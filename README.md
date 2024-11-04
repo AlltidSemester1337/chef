@@ -3,6 +3,7 @@
 A personal cooking assistant app to suggest recipes for cooking. Built on vertexai chat and
 firebase. Requires integration towards
 vertexai using google-services.json credentials for SA in order to run.
+Also requires a firebaseDbUrl to be set in local.properties when building the app to run using ChatHistoryRealtimeDatabasePersistence.
 
 Run the app from vertexai/app module.
 
