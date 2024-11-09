@@ -28,15 +28,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Log
 import com.formulae.chef.services.persistence.ChatHistoryRealtimeDatabasePersistence
+import com.google.firebase.vertexai.Chat
+import kotlinx.coroutines.runBlocking
 
 class ChatViewModel(
     generativeModel: GenerativeModel
 ) : ViewModel() {
     private val _persistenceImpl = ChatHistoryRealtimeDatabasePersistence()
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
-    private val chat = generativeModel.startChat(
-        history = _chatHistory.value
-    )
     private val _uiState: MutableStateFlow<ChatUiState> =
         MutableStateFlow(
             ChatUiState()
@@ -45,11 +44,14 @@ class ChatViewModel(
     val uiState: StateFlow<ChatUiState> =
         _uiState.asStateFlow()
 
+    private lateinit var chat: Chat
+
     init {
         viewModelScope.launch {
             _chatHistory.value = initializeChatHistory()
-        }
-        viewModelScope.launch {
+            chat = generativeModel.startChat(
+                history = _chatHistory.value
+            )
             _chatHistory.collect { history -> updateUiStateMessages(history) }
         }
     }
@@ -99,7 +101,6 @@ class ChatViewModel(
                     _chatHistory.value += newUserContent
                     _chatHistory.value += newModelContent
                     updateUiStateMessages(_chatHistory.value)
-                    //_persistenceImpl.saveChatHistory(_chatHistory.value)
                     _persistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
                 }
             } catch (e: Exception) {
