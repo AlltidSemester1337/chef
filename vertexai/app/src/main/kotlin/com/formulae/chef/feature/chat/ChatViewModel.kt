@@ -44,14 +44,19 @@ class ChatViewModel(
     val uiState: StateFlow<ChatUiState> =
         _uiState.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     private lateinit var chat: Chat
 
     init {
         viewModelScope.launch {
+            _isLoading.value = true
             _chatHistory.value = initializeChatHistory()
             chat = generativeModel.startChat(
                 history = _chatHistory.value
             )
+            _isLoading.value = false
             _chatHistory.collect { history -> updateUiStateMessages(history) }
         }
     }

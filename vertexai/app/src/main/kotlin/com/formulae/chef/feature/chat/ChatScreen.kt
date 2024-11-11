@@ -67,6 +67,7 @@ internal fun ChatRoute(
     chatViewModel: ChatViewModel = viewModel(factory = GenerativeViewModelFactory)
 ) {
     val chatUiState by chatViewModel.uiState.collectAsState()
+    val isLoading by chatViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -109,9 +110,7 @@ internal fun ChatRoute(
                 onSearchIconClicked = { isSearchVisible = !isSearchVisible },
                 resetMatchIndex = { currentMatchIndex = 0 }
             )
-            // Messages List
-            ChatList(filteredMessages, listState, searchQuery, currentMatchIndex)
-
+            // TODO: Debug here, perhaps try different arrangement as well
             if (matchingIndices.isNotEmpty()) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -138,6 +137,20 @@ internal fun ChatRoute(
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Match")
                     }
                 }
+            }
+            if (isLoading) {
+                // TODO: Test
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                // Messages List
+                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex, scrollToMatch = {
+                    coroutineScope.launch {
+                        // TODO: Play around in debug and figure out correct value to set here to scroll to highlighted
+                        listState.scrollToItem(currentMatchIndex)
+                    }
+                })
             }
         }
     }
@@ -178,7 +191,8 @@ fun ChatList(
     chatMessages: List<ChatMessage>,
     listState: LazyListState,
     searchQuery: String,
-    currentMatchIndex: Int
+    currentMatchIndex: Int,
+    scrollToMatch: () -> Unit
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -188,6 +202,7 @@ fun ChatList(
             val isHighlighted = message.text.contains(searchQuery, ignoreCase = true) &&
                     chatMessages.indexOf(message) == currentMatchIndex
             ChatBubbleItem(message, isHighlighted)
+            scrollToMatch()
         }
     }
 }
