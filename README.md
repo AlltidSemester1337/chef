@@ -12,9 +12,9 @@ Features:
 
 - 1.0.x - Initial release, chat history persisted locally
 - 1.1.x - Chat history persisted on Realtime Database
-- 1.2.x - Search function in chat
-- 1.2.x - UI improvements, remove menu, add logos etc
-- ... (design updates from Bobo?)
+- 1.2.x - Search function in chat (delivered by toggling results not working)
+- 1.3.x - UI improvements, remove menu, add logos etc
+- ... (design updates from Bobo?) - Fix proper toggling of both search bar and toggling results?
 - 2.0.x - Integrate fine-tuned model from historical data (requires at least 100 approved recipe
   suggestions) for chatbot instead of general purpose / reinforced learning model
 

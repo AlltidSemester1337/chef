@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.chat
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +70,19 @@ internal fun ChatRoute(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
+
+    val filteredMessages = chatUiState.messages.filter { message ->
+        message.text.contains(searchQuery, ignoreCase = true)
+    }
+
+    val matchingIndices = filteredMessages.mapIndexedNotNull { index, message ->
+        if (message.text.contains(searchQuery, ignoreCase = true)) index else null
+    }
+
+    var currentMatchIndex by rememberSaveable { mutableStateOf(0) }
+
     Scaffold(
         bottomBar = {
             MessageInput(
@@ -85,8 +102,73 @@ internal fun ChatRoute(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
+            SearchBar(
+                searchQuery = searchQuery,
+                onSearchQueryChanged = { query -> searchQuery = query },
+                isSearchVisible = isSearchVisible,
+                onSearchIconClicked = { isSearchVisible = !isSearchVisible },
+                resetMatchIndex = { currentMatchIndex = 0 }
+            )
             // Messages List
-            ChatList(chatUiState.messages, listState)
+            ChatList(filteredMessages, listState, searchQuery, currentMatchIndex)
+
+            if (matchingIndices.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (currentMatchIndex > 0) {
+                                currentMatchIndex -= 1
+                            }
+                        }
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Match")
+                    }
+                    IconButton(
+                        onClick = {
+                            if (currentMatchIndex < matchingIndices.size - 1) {
+                                currentMatchIndex += 1
+                            }
+                        }
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Match")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchBar(
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    isSearchVisible: Boolean,
+    onSearchIconClicked: () -> Unit,
+    resetMatchIndex: () -> Unit
+) {
+    if (isSearchVisible) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChanged,
+            label = { Text("Search Messages") },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        )
+    } else {
+        IconButton(onClick = {
+            onSearchIconClicked()
+            resetMatchIndex()
+        }) {
+            Icon(Icons.Default.Search, contentDescription = "Search")
         }
     }
 }
@@ -94,29 +176,36 @@ internal fun ChatRoute(
 @Composable
 fun ChatList(
     chatMessages: List<ChatMessage>,
-    listState: LazyListState
+    listState: LazyListState,
+    searchQuery: String,
+    currentMatchIndex: Int
 ) {
     LazyColumn(
         reverseLayout = true,
         state = listState
     ) {
         items(chatMessages.reversed()) { message ->
-            ChatBubbleItem(message)
+            val isHighlighted = message.text.contains(searchQuery, ignoreCase = true) &&
+                    chatMessages.indexOf(message) == currentMatchIndex
+            ChatBubbleItem(message, isHighlighted)
         }
     }
 }
 
 @Composable
 fun ChatBubbleItem(
-    chatMessage: ChatMessage
+    chatMessage: ChatMessage,
+    isHighlighted: Boolean = false
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
-        chatMessage.participant == Participant.ERROR
+            chatMessage.participant == Participant.ERROR
 
-    val backgroundColor = when (chatMessage.participant) {
-        Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
-        Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
-        Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
+    val backgroundColor = when {
+        isHighlighted -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f, green = 0.5f)
+        chatMessage.participant == Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
+        chatMessage.participant == Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
+        chatMessage.participant == Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.background
     }
 
     val bubbleShape = if (isModelMessage) {
