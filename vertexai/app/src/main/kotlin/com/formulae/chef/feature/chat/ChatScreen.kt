@@ -110,8 +110,7 @@ internal fun ChatRoute(
                 onSearchIconClicked = { isSearchVisible = !isSearchVisible },
                 resetMatchIndex = { currentMatchIndex = 0 }
             )
-            // TODO: Debug here, perhaps try different arrangement as well
-            if (matchingIndices.isNotEmpty()) {
+            if (isSearchVisible && matchingIndices.isNotEmpty()) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
@@ -139,18 +138,12 @@ internal fun ChatRoute(
                 }
             }
             if (isLoading) {
-                // TODO: Test
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else {
                 // Messages List
-                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex, scrollToMatch = {
-                    coroutineScope.launch {
-                        // TODO: Play around in debug and figure out correct value to set here to scroll to highlighted
-                        listState.scrollToItem(currentMatchIndex)
-                    }
-                })
+                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex)
             }
         }
     }
@@ -192,17 +185,16 @@ fun ChatList(
     listState: LazyListState,
     searchQuery: String,
     currentMatchIndex: Int,
-    scrollToMatch: () -> Unit
 ) {
     LazyColumn(
         reverseLayout = true,
         state = listState
     ) {
         items(chatMessages.reversed()) { message ->
-            val isHighlighted = message.text.contains(searchQuery, ignoreCase = true) &&
+            val isMatchingSearch = message.text.contains(searchQuery, ignoreCase = true)
+            val isHighlighted = isMatchingSearch &&
                     chatMessages.indexOf(message) == currentMatchIndex
             ChatBubbleItem(message, isHighlighted)
-            scrollToMatch()
         }
     }
 }
