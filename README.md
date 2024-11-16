@@ -24,7 +24,7 @@ Features:
 
 ## Demo 1.4 release
 
-![Demo](screen-20241115-163153.mp4)
+[Demo 1.4](https://youtube.com/shorts/N_3rSULhudQ?feature=share)
 
 ## How to make contributions?
 
