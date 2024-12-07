@@ -18,7 +18,7 @@ Features:
 - 1.4.x - UI improvements, remove menu, add logos etc
 - 1.5.x - Fix proper toggling of both search bar and toggling results (fix scrolling or remove
   toggle buttons), add number of matching items to display
-- ... (design updates from Bobo?)
+- ... (design updates from Bobo? Implement RAG (cost efficient w options for scalability), consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?)
 - 2.0.x - Integrate fine-tuned model from historical data (requires at least 100 approved recipe
   suggestions) for chatbot instead of general purpose / reinforced learning model
 
