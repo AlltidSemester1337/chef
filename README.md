@@ -19,9 +19,13 @@ Features:
 
 Planned upcoming features / requests / ideas:
 Collections view with recipe details and images, also options to filter / search and categorize
+
 Web? https://reflex.dev/ 
+
 RAG? Langchain graphchain? (cost efficient w options for scalability), consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?) 
+
 Quick intro and few shot prompting for new users? (sign up / register flow)
+
 User seed / username based sessions and sharing / collaboration / community features? (minimal at least a copy recipe text)
 
 ## Demo 1.4 release
