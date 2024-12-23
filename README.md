@@ -30,4 +30,7 @@ User seed / username based sessions and sharing / collaboration / community feat
 
 ## How to make contributions?
 
-Fork or reach out to author.
+Fork or reach out to authors humlekottekonsult@gmail.com
+
+## Support, feature request, question etc
+This project is owned and currently operated and maintained by [Humlekotte Konsultbolag](https://www.humlekotte.nu). Any questions reach out via email humlekottekonsult@gmail.com
