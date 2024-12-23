@@ -16,11 +16,13 @@ Features:
 - 1.1.x - Chat history persisted on Realtime Database
 - 1.2.x - Search function in chat (delivered by toggling results not working)
 - 1.4.x - UI improvements, remove menu, add logos etc
-- 1.5.x - Fix proper toggling of both search bar and toggling results (fix scrolling or remove
-  toggle buttons), add number of matching items to display
-- ... (design updates from Bobo? Implement RAG (cost efficient w options for scalability), consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?)
-- 2.0.x - Integrate fine-tuned model from historical data (requires at least 100 approved recipe
-  suggestions) for chatbot instead of general purpose / reinforced learning model
+
+Planned upcoming features / requests / ideas:
+Collections view with recipe details and images, also options to filter / search and categorize
+Web? https://reflex.dev/ 
+RAG? Langchain graphchain? (cost efficient w options for scalability), consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?) 
+Quick intro and few shot prompting for new users? (sign up / register flow)
+User seed / username based sessions and sharing / collaboration / community features? (minimal at least a copy recipe text)
 
 ## Demo 1.4 release
 
