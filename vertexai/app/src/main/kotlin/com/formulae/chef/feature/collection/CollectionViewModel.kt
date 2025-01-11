@@ -2,14 +2,14 @@ package com.formulae.chef.feature.collection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.formulae.chef.services.persistence.DummyRecipeRepository
+import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class CollectionViewModel(
-    private val repository: DummyRecipeRepository
+    private val repository: RecipeRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CollectionUiState())
     val uiState: StateFlow<CollectionUiState> = _uiState.asStateFlow()
@@ -24,7 +24,7 @@ class CollectionViewModel(
     fun fetchRecipes() {
         viewModelScope.launch {
             _isLoading.value = true
-            val recipes = repository.getDummyRecipes()
+            val recipes = repository.loadRecipes()
             _uiState.value = CollectionUiState(recipes = recipes)
             _isLoading.value = false
         }

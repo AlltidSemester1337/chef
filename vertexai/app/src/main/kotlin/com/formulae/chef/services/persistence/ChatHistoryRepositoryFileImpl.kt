@@ -16,7 +16,7 @@ private val gson = GsonBuilder()
     .registerTypeAdapter(Part::class.java, PartInstanceCreator())
     .create()
 
-class ChatHistoryFilePersistence(context: Context) : ChatHistoryPersistence {
+class ChatHistoryRepositoryFileImpl(context: Context) : ChatHistoryRepository {
     private val _context = context
 
     //override fun saveChatHistory(history: List<Content>) {

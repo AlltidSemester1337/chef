@@ -4,9 +4,8 @@ import android.util.Log
 import com.formulae.chef.BuildConfig
 import com.formulae.chef.util.json.ContentInstanceCreator
 import com.formulae.chef.util.json.PartInstanceCreator
-import com.google.firebase.FirebaseApp
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
+
+
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.Part
 import com.google.gson.GsonBuilder
@@ -21,12 +20,8 @@ private val gson = GsonBuilder()
 
 private const val CHAT_HISTORY_KEY = "chatHistory"
 
-class ChatHistoryRealtimeDatabasePersistence : ChatHistoryPersistence {
-    private val _database =
-        Firebase.database(
-            FirebaseApp.getInstance(),
-            BuildConfig.firebaseDbUrl
-        )
+class ChatHistoryRepositoryImpl : ChatHistoryRepository {
+    private val _database = FirebaseInstance.database
 
     override fun saveNewEntries(newEntries: List<Content>) {
         val reference = _database.getReference(CHAT_HISTORY_KEY)

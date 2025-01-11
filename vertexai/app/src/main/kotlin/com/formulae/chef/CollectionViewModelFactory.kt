@@ -3,10 +3,10 @@ package com.formulae.chef
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.formulae.chef.feature.collection.CollectionViewModel
-import com.formulae.chef.services.persistence.DummyRecipeRepository
+import com.formulae.chef.services.persistence.RecipeRepository
 
 class CollectionViewModelFactory(
-    private val repository: DummyRecipeRepository
+    private val repository: RecipeRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

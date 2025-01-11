@@ -16,10 +16,13 @@
 
 package com.formulae.chef.feature.chat
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.formulae.chef.services.persistence.ChatHistoryRealtimeDatabasePersistence
+import com.formulae.chef.feature.collection.Recipe
+import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
@@ -33,7 +36,7 @@ import kotlinx.coroutines.launch
 class ChatViewModel(
     generativeModel: GenerativeModel
 ) : ViewModel() {
-    private val _persistenceImpl = ChatHistoryRealtimeDatabasePersistence()
+    private val _persistenceImpl = ChatHistoryRepositoryImpl()
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
         MutableStateFlow(
@@ -115,6 +118,54 @@ class ChatViewModel(
                         participant = Participant.ERROR
                     )
                 )
+            }
+        }
+    }
+
+    fun onRecipeStarred(message: ChatMessage) {
+        if (message.isStarred) {
+            TODO() //deleteRecipe(message)
+        } else {
+            saveRecipe(message)
+        }
+    }
+
+    fun saveRecipe(message: ChatMessage) {
+        viewModelScope.launch {
+            try {
+                // TODO To perform migration, ask for a specific algorith to be used for transformation. After that update prompt to provide more structured model response and revise this logic.
+                val recipeData = mapOf(
+                    "title" to "Untitled Recipe",
+                    "description" to "Saved from chat",
+                    "content" to message.text
+                )
+                Log.d("CHEF", "CHEF:::::RECIPE_SAVE")
+
+                // Save to Firebase
+                //Firebase.database.getReference("recipes").push().setValue(recipeData)
+
+                // Update UI
+                val updatedMessage = message.copy(isStarred = true)
+                // TODO Fix
+                //_uiState.value = _uiState.value.copy(
+                //    messages = _uiState.value.messages.map {
+                //        if (it.id == message.id) updatedMessage else it
+                //    }
+                //)
+
+                // Show toast
+                //Toast.makeText(
+                //    context,
+                //    "Recipe saved successfully!",
+                //    Toast.LENGTH_SHORT
+                //).show()
+            } catch (e: Exception) {
+                Log.e("FirebaseSave", "Failed to save recipe", e)
+                //Toast.makeText(
+                //    context,
+                //    "Failed to save recipe: ${e.localizedMessage}",
+                //    Toast.LENGTH_SHORT
+                //.show()
             }
         }
     }

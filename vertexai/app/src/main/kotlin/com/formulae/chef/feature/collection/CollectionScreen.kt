@@ -40,15 +40,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.CollectionViewModelFactory
-import com.formulae.chef.services.persistence.DummyRecipeRepository
+import com.formulae.chef.services.persistence.RecipeRepository
 
 @Composable
 internal fun CollectionRoute(
-    repository: DummyRecipeRepository,
+    repository: RecipeRepository,
     collectionViewModel: CollectionViewModel = viewModel(factory = CollectionViewModelFactory(repository))
 ) {
     val collectionUiState by collectionViewModel.uiState.collectAsState()

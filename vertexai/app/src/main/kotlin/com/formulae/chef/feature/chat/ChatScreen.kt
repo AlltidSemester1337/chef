@@ -34,7 +34,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -70,6 +73,8 @@ internal fun ChatRoute(
     val isLoading by chatViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    val onRecipeStarred = chatViewModel::onRecipeStarred
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var isSearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -143,7 +148,7 @@ internal fun ChatRoute(
                 )
             } else {
                 // Messages List
-                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex)
+                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex, onRecipeStarred)
             }
         }
     }
@@ -185,6 +190,7 @@ fun ChatList(
     listState: LazyListState,
     searchQuery: String,
     currentMatchIndex: Int,
+    onStarClicked: (ChatMessage) -> Unit,
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -194,7 +200,7 @@ fun ChatList(
             val isMatchingSearch = message.text.contains(searchQuery, ignoreCase = true)
             val isHighlighted = isMatchingSearch &&
                     chatMessages.indexOf(message) == currentMatchIndex
-            ChatBubbleItem(message, isHighlighted)
+            ChatBubbleItem(message, isHighlighted, onStarClicked)
         }
     }
 }
@@ -202,7 +208,8 @@ fun ChatList(
 @Composable
 fun ChatBubbleItem(
     chatMessage: ChatMessage,
-    isHighlighted: Boolean = false
+    isHighlighted: Boolean = false,
+    onStarClicked: (ChatMessage) -> Unit,
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
             chatMessage.participant == Participant.ERROR
@@ -238,6 +245,19 @@ fun ChatBubbleItem(
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 4.dp)
         )
+
+        if (chatMessage.participant == Participant.MODEL) {
+            //TODO: Move to inside message, lower right corner instead of on top
+            IconButton(
+                onClick = { onStarClicked(chatMessage) } // Callback to handle star click
+            ) {
+                Icon(
+                    // TODO: Invert the icon based on the starred state or check default value
+                    imageVector = if (chatMessage.isStarred) Icons.Default.Star else Icons.Default.Delete,
+                    contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection"
+                )
+            }
+        }
         Row {
             if (chatMessage.isPending) {
                 CircularProgressIndicator(
