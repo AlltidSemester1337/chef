@@ -17,6 +17,7 @@
 package com.formulae.chef.feature.collection
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,12 +40,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.formulae.chef.CollectionViewModelFactory
+import com.formulae.chef.services.persistence.DummyRecipeRepository
 
 @Composable
 internal fun CollectionRoute(
-    collectionViewModel: CollectionViewModel = viewModel()
+    repository: DummyRecipeRepository,
+    collectionViewModel: CollectionViewModel = viewModel(factory = CollectionViewModelFactory(repository))
 ) {
     val collectionUiState by collectionViewModel.uiState.collectAsState()
     val isLoading by collectionViewModel.isLoading.collectAsState()
@@ -87,13 +92,13 @@ fun RecipeList(
             modifier = Modifier
                 .fillMaxSize()
                 .wrapContentSize(Alignment.Center),
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
         )
     } else {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 120.dp),
         ) {
             items(recipes) { recipe ->
                 RecipeItem(recipe = recipe, onRecipeClick = onRecipeClick)

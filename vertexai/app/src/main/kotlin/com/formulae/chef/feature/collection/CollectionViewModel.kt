@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-
 class CollectionViewModel(
     private val repository: DummyRecipeRepository
 ) : ViewModel() {
@@ -34,8 +33,8 @@ class CollectionViewModel(
     fun onRecipeSelected(recipe: Recipe) {
         // Trigger navigation or handle selection
     }
-}
 
-data class CollectionUiState(
-    val recipes: List<Recipe> = emptyList()
-)
+    data class CollectionUiState(
+        val recipes: List<Recipe> = emptyList()
+    )
+}

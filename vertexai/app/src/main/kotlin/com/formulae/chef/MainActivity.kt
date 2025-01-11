@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.formulae.chef.services.persistence.DummyRecipeRepository
 import com.formulae.chef.ui.theme.GenerativeAISample
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val recipeRepository = DummyRecipeRepository()
 
         setContent {
             GenerativeAISample {
@@ -48,7 +50,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(recipeRepository)
                 }
             }
         }

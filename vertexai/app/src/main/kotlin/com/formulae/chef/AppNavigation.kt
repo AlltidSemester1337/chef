@@ -6,10 +6,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.formulae.chef.feature.chat.ChatRoute
 import com.formulae.chef.feature.collection.CollectionRoute
+import com.formulae.chef.services.persistence.DummyRecipeRepository
 
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(recipeRepository: DummyRecipeRepository) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {
@@ -23,7 +24,7 @@ fun AppNavigation() {
             ChatRoute() // Your existing ChatRoute
         }
         composable("collection") {
-            CollectionRoute() // Your new CollectionRoute
+            CollectionRoute(repository=recipeRepository) // Your new CollectionRoute
         }
     }
 }

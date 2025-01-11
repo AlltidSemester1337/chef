@@ -16,17 +16,25 @@ Features:
 - 1.1.x - Chat history persisted on Realtime Database
 - 1.2.x - Search function in chat (delivered by toggling results not working)
 - 1.4.x - UI improvements, remove menu, add logos etc
+- 1.5.x - Added recipe collection / favourite feature <-- WIP
+
+Future:
+- 1.6.x - Generate image and save / load for recipes in recipe collection, and enable copy of recipe (text only or with image?)
+- 1.7.x - Add features to categorize (tags, date, ingredients etc) and search / filter recipes in collection. This will replace search functionality in chat.
 
 Planned upcoming features / requests / ideas:
-Collections view with recipe details and images, also options to filter / search and categorize
 
 Web? https://reflex.dev/ 
 
-RAG? Langchain graphchain? (cost efficient w options for scalability), consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?) 
+RAG? Langchain graphchain? (cost efficient w options for scalability), cost? Advanced RAG such as vector search and / or graph may be to costly?
+
+Long context / persistence? Consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?)
+
+User seed / username based sessions(must in order to progress further then closed BETA testing)
 
 Quick intro and few shot prompting for new users? (sign up / register flow)
 
-User seed / username based sessions and sharing / collaboration / community features? (minimal at least a copy recipe text)
+Sharing / collaboration / community features?
 
 ## Demo 1.4 release
 
