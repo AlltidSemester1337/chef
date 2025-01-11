@@ -16,20 +16,19 @@
 
 package com.formulae.chef.feature.chat
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.services.persistence.ChatHistoryRealtimeDatabasePersistence
+import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
+import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
-import com.google.firebase.vertexai.type.Content
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import android.util.Log
-import com.formulae.chef.services.persistence.ChatHistoryRealtimeDatabasePersistence
-import com.google.firebase.vertexai.Chat
-import kotlinx.coroutines.runBlocking
 
 class ChatViewModel(
     generativeModel: GenerativeModel
