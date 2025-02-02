@@ -22,7 +22,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.feature.collection.Recipe
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
+import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
@@ -37,7 +39,8 @@ class ChatViewModel(
     generativeModel: GenerativeModel,
     application: Application
 ) : AndroidViewModel(application) {
-    private val _persistenceImpl = ChatHistoryRepositoryImpl()
+    private val _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl()
+    private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
         MutableStateFlow(
@@ -68,7 +71,7 @@ class ChatViewModel(
         var result: List<Content> = emptyList()
 
         try {
-            result = _persistenceImpl.loadChatHistory()
+            result = _chatHistoryPersistenceImpl.loadChatHistory()
         } catch (e: Exception) {
             Log.e("FirebaseDB", "Error fetching chat history", e)
         }
@@ -109,7 +112,7 @@ class ChatViewModel(
                     _chatHistory.value += newUserContent
                     _chatHistory.value += newModelContent
                     updateUiStateMessages(_chatHistory.value)
-                    _persistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
+                    _chatHistoryPersistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
                 }
             } catch (e: Exception) {
                 _uiState.value.replaceLastPendingMessage()
@@ -161,16 +164,8 @@ class ChatViewModel(
     fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
-                val recipeData = mapOf(
-                    "title" to "Untitled Recipe",
-                    "description" to "Saved from chat",
-                    "content" to message.text
-                )
-                // TODO Remove after testing
-                Log.d("CHEF", "CHEF:::::RECIPE_SAVE")
-                // TODO implement saveRecipe
-                //_persistenceImpl.saveRecipe(recipeData)
-                Log.d("CHEF", "CHEF:::::RECIPE_SAVED")
+                val newRecipe = deriveRecipeFromMessage(message.text)
+                _recipeRepositoryImpl.saveRecipe(newRecipe)
                 // Update UI
                 _uiState.value.updateStarredMessage(message, isStarred = true)
 
@@ -191,66 +186,50 @@ class ChatViewModel(
         }
     }
 
-    /*ref = db.reference(FAVOURITES_KEY)
-    title, summary, ingredients, instructions = None, None, None, None
-    try :
-    title = self.derive_recipe_title(answer)
-    summary = self.derive_recipe_summary(answer, title = title)
-    ingredients = self.derive_recipe_ingredients(answer, title = title, summary = summary)
-    instructions = self.derive_recipe_instructions(answer)
-    except Exception as e :
-    logging.warning(f"Error derive details from recipe: {e}", exc_info = True)
-    return
+    private fun deriveRecipeFromMessage(answer: String): Recipe {
+        val title = deriveRecipeTitle(answer)
+        val summary = deriveRecipeSummary(answer, title = title)
+        val ingredients = deriveRecipeIngredients(answer, title = title, summary = summary)
+        val instructions = deriveRecipeInstructions(answer)
 
-    if not title and summary and ingredients and instructions :
-    logging.warning(f"Failed to derive details from recipe: {answer}")
-    return
-    # TODO add image generation later
-    imageUrl = None
-    updatedAt = datetime.datetime.now(tz = datetime.timezone.utc).isoformat()
-
-    # Create recipe data
-    recipe_entry =
-    {
-        "title": title,
-        "summary": summary,
-        "ingredients": ingredients,
-        "instructions": instructions,
-        "imageUrl": imageUrl,
-        "updatedAt": updatedAt,
+        if (title.isEmpty() || summary.isEmpty() || ingredients.isEmpty() || instructions.isEmpty()) {
+            throw Exception("Failed to derive details from recipe: $answer")
+        }
+        // TODO add image generation later
+        val imageUrl = null
+        val updatedAt = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).toString()
+        return Recipe(
+            title = title,
+            summary = summary,
+            ingredients = ingredients,
+            instructions = instructions,
+            imageUrl = imageUrl,
+            updatedAt = updatedAt
+        )
     }
 
-    try :
-    # Push recipe entry to Firebase
-    ref.push(recipe_entry)
-    # TODO Add a success message to the frontend
-    print("Recipe saved successfully!")  # Debugging
-    except Exception as e :
-    logging.error(f"Error saving recipe: {e}", exc_info = True)
+    private fun deriveRecipeTitle(answer: String): String {
+        val title = answer.split("\n\n")[0].replace("##", "").trim()
+        return title
+    }
 
-    def derive_recipe_title (self, answer: str) -> str | None:
-    """Derive the recipe title from the chatbot response."""
-    title = answer.split("\n\n")[0].replace("##  ", "")
-    return title
+    private fun deriveRecipeSummary(answer: String, title: String): String {
+        val summary =
+            answer.split("**Ingredients:**")[0].replace(title, "").replace("##", "").replace("\n\n", "").trim()
+        return summary
+    }
 
-    def derive_recipe_summary (self, answer: str, title: str) -> str | None:
-    """Derive the recipe title from the chatbot response."""
-    summary = answer.split("**Ingredients:**")[0].replace(title, "").replace("##  \n\n", "")
-    return summary
+    private fun deriveRecipeIngredients(answer: String, title: String, summary: String): String {
+        val ingredients =
+            answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace("**Ingredients**", "")
+                .replace("##", "").trim()
+        return ingredients
+    }
 
-    def derive_recipe_ingredients (self, answer: str, title: str, summary: str) -> str | None:
-    """Derive the ingredients from the chatbot response."""
-    # TODO Try to create list using \ n ? Maybe but think about benefits / downside on the collection recipe details page
-    ingredients =
-    answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace(
-    "##  \n\n",
-    ""
-    )
-    return ingredients
+    private fun deriveRecipeInstructions(answer: String): String {
+        val instructions = answer.split("**Instructions:**")[1].replace("\n\n", "")
+        return instructions
+    }
 
-    def derive_recipe_instructions (self, answer: str) -> str | None:
-    """Derive the instructions from the chatbot response."""
-    # TODO Try to create list using \ n ? Maybe but think about benefits / downside on the collection recipe details page
-    instructions = answer.split("**Instructions:**")[1].replace("\n\n", "")
-    return instructions*/
+
 }

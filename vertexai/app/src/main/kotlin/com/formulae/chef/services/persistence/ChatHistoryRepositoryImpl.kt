@@ -1,7 +1,6 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-import com.formulae.chef.BuildConfig
 import com.formulae.chef.util.json.ContentInstanceCreator
 import com.formulae.chef.util.json.PartInstanceCreator
 

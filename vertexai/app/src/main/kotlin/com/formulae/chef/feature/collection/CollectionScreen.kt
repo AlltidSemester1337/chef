@@ -124,10 +124,6 @@ fun RecipeItem(
                 text = recipe.title,
                 style = MaterialTheme.typography.headlineSmall
             )
-            Text(
-                text = "Ingredients: ${recipe.ingredients.joinToString(", ")}",
-                style = MaterialTheme.typography.bodyMedium
-            )
         }
     }
 }
