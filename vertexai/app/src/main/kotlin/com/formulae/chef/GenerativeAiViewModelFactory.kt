@@ -16,6 +16,7 @@
 
 package com.formulae.chef
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -31,10 +32,12 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         extras: CreationExtras
     ): T {
         val config = generationConfig {
-            temperature = 1.5f
+            temperature = 2f
             maxOutputTokens = 8192
             topP = 0.95f
         }
+
+        val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
 
         return with(viewModelClass) {
             when {
@@ -46,7 +49,8 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         systemInstruction = content { text("You are a personal chef / cooking assistant to help with coming up for new ideas on recipes. Use https://www.honestgreens.com/en/menu as inspiration for the whole foods, healthy, simple and savory cooking / recipe style. Please use metric units and centiliters / decilitres for liquid measurements and state the nutritional values for each recipe.") }
                     )
                     ChatViewModel(
-                        generativeModel = generativeModel
+                        generativeModel = generativeModel,
+                        application = application
                     )
                 }
 

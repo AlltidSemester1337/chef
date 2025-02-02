@@ -16,12 +16,12 @@
 
 package com.formulae.chef.feature.chat
 
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.formulae.chef.feature.collection.Recipe
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
@@ -34,8 +34,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
-    generativeModel: GenerativeModel
-) : ViewModel() {
+    generativeModel: GenerativeModel,
+    application: Application
+) : AndroidViewModel(application) {
     private val _persistenceImpl = ChatHistoryRepositoryImpl()
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
@@ -123,50 +124,133 @@ class ChatViewModel(
     }
 
     fun onRecipeStarred(message: ChatMessage) {
+        val context: Context = getApplication<Application>().applicationContext
         if (message.isStarred) {
-            TODO() //deleteRecipe(message)
+            deleteRecipe(context, message)
         } else {
-            saveRecipe(message)
+            saveRecipe(context, message)
         }
     }
 
-    fun saveRecipe(message: ChatMessage) {
+    fun deleteRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
-                // TODO To perform migration, ask for a specific algorith to be used for transformation. After that update prompt to provide more structured model response and revise this logic.
+                //_persistenceImpl.deleteRecipe(recipeData)
+                Log.d("CHEF", "CHEF:::::RECIPE_DELETED")
+                // Update UI
+                _uiState.value.updateStarredMessage(message, isStarred = false)
+
+                // Show toast
+                Toast.makeText(
+                    context,
+                    "Recipe removed from collection successfully.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } catch (e: Exception) {
+                Log.e("FirebaseDelete", "Failed to remove recipe", e)
+                Toast.makeText(
+                    context,
+                    "Failed to remove recipe: ${e.localizedMessage}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    fun saveRecipe(context: Context, message: ChatMessage) {
+        viewModelScope.launch {
+            try {
                 val recipeData = mapOf(
                     "title" to "Untitled Recipe",
                     "description" to "Saved from chat",
                     "content" to message.text
                 )
+                // TODO Remove after testing
                 Log.d("CHEF", "CHEF:::::RECIPE_SAVE")
-
-                // Save to Firebase
-                //Firebase.database.getReference("recipes").push().setValue(recipeData)
-
+                // TODO implement saveRecipe
+                //_persistenceImpl.saveRecipe(recipeData)
+                Log.d("CHEF", "CHEF:::::RECIPE_SAVED")
                 // Update UI
-                val updatedMessage = message.copy(isStarred = true)
-                // TODO Fix
-                //_uiState.value = _uiState.value.copy(
-                //    messages = _uiState.value.messages.map {
-                //        if (it.id == message.id) updatedMessage else it
-                //    }
-                //)
+                _uiState.value.updateStarredMessage(message, isStarred = true)
 
                 // Show toast
-                //Toast.makeText(
-                //    context,
-                //    "Recipe saved successfully!",
-                //    Toast.LENGTH_SHORT
-                //).show()
+                Toast.makeText(
+                    context,
+                    "Recipe saved successfully, view details in collection.",
+                    Toast.LENGTH_SHORT
+                ).show()
             } catch (e: Exception) {
                 Log.e("FirebaseSave", "Failed to save recipe", e)
-                //Toast.makeText(
-                //    context,
-                //    "Failed to save recipe: ${e.localizedMessage}",
-                //    Toast.LENGTH_SHORT
-                //.show()
+                Toast.makeText(
+                    context,
+                    "Failed to save recipe: ${e.localizedMessage}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
+
+    /*ref = db.reference(FAVOURITES_KEY)
+    title, summary, ingredients, instructions = None, None, None, None
+    try :
+    title = self.derive_recipe_title(answer)
+    summary = self.derive_recipe_summary(answer, title = title)
+    ingredients = self.derive_recipe_ingredients(answer, title = title, summary = summary)
+    instructions = self.derive_recipe_instructions(answer)
+    except Exception as e :
+    logging.warning(f"Error derive details from recipe: {e}", exc_info = True)
+    return
+
+    if not title and summary and ingredients and instructions :
+    logging.warning(f"Failed to derive details from recipe: {answer}")
+    return
+    # TODO add image generation later
+    imageUrl = None
+    updatedAt = datetime.datetime.now(tz = datetime.timezone.utc).isoformat()
+
+    # Create recipe data
+    recipe_entry =
+    {
+        "title": title,
+        "summary": summary,
+        "ingredients": ingredients,
+        "instructions": instructions,
+        "imageUrl": imageUrl,
+        "updatedAt": updatedAt,
+    }
+
+    try :
+    # Push recipe entry to Firebase
+    ref.push(recipe_entry)
+    # TODO Add a success message to the frontend
+    print("Recipe saved successfully!")  # Debugging
+    except Exception as e :
+    logging.error(f"Error saving recipe: {e}", exc_info = True)
+
+    def derive_recipe_title (self, answer: str) -> str | None:
+    """Derive the recipe title from the chatbot response."""
+    title = answer.split("\n\n")[0].replace("##  ", "")
+    return title
+
+    def derive_recipe_summary (self, answer: str, title: str) -> str | None:
+    """Derive the recipe title from the chatbot response."""
+    summary = answer.split("**Ingredients:**")[0].replace(title, "").replace("##  \n\n", "")
+    return summary
+
+    def derive_recipe_ingredients (self, answer: str, title: str, summary: str) -> str | None:
+    """Derive the ingredients from the chatbot response."""
+    # TODO Try to create list using \ n ? Maybe but think about benefits / downside on the collection recipe details page
+    ingredients =
+    answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace(
+    "##  \n\n",
+    ""
+    )
+    return ingredients
+
+    def derive_recipe_instructions (self, answer: str) -> str | None:
+    """Derive the instructions from the chatbot response."""
+    # TODO Try to create list using \ n ? Maybe but think about benefits / downside on the collection recipe details page
+    instructions = answer.split("**Instructions:**")[1].replace("\n\n", "")
+    return instructions*/
 }

@@ -16,13 +16,23 @@
 
 package com.formulae.chef.feature.chat
 
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -51,13 +61,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -194,9 +209,10 @@ fun ChatList(
 ) {
     LazyColumn(
         reverseLayout = true,
-        state = listState
+        state = listState,
+        modifier = Modifier.fillMaxSize()
     ) {
-        items(chatMessages.reversed()) { message ->
+        items(chatMessages.reversed(), key = { it.id }) { message ->
             val isMatchingSearch = message.text.contains(searchQuery, ignoreCase = true)
             val isHighlighted = isMatchingSearch &&
                     chatMessages.indexOf(message) == currentMatchIndex
@@ -205,6 +221,7 @@ fun ChatList(
     }
 }
 
+// TODO Why only some (short) messages star button is interactable? try to further troubleshoot and fix
 @Composable
 fun ChatBubbleItem(
     chatMessage: ChatMessage,
@@ -246,18 +263,7 @@ fun ChatBubbleItem(
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
-        if (chatMessage.participant == Participant.MODEL) {
-            //TODO: Move to inside message, lower right corner instead of on top
-            IconButton(
-                onClick = { onStarClicked(chatMessage) } // Callback to handle star click
-            ) {
-                Icon(
-                    // TODO: Invert the icon based on the starred state or check default value
-                    imageVector = if (chatMessage.isStarred) Icons.Default.Star else Icons.Default.Delete,
-                    contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection"
-                )
-            }
-        }
+
         Row {
             if (chatMessage.isPending) {
                 CircularProgressIndicator(
@@ -272,10 +278,36 @@ fun ChatBubbleItem(
                     shape = bubbleShape,
                     modifier = Modifier.widthIn(0.dp, maxWidth * 0.9f)
                 ) {
-                    Text(
-                        text = chatMessage.text,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        Text(
+                            text = chatMessage.text,
+                            modifier = Modifier
+                                .padding(16.dp)
+                        )
+                        if (chatMessage.participant == Participant.MODEL) {
+                            Row( // Wrap IconButton in Row for consistent layout
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End // Align button to the end
+
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        onStarClicked(chatMessage)
+                                    }, // Callback to handle add to collection
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection",
+                                        tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -36,4 +36,11 @@ class ChatUiState(
             _messages.add(newMessage)
         }
     }
+
+    fun updateStarredMessage(msg: ChatMessage, isStarred: Boolean) {
+        val index = _messages.indexOfFirst { it.id == msg.id }
+        if (index != -1) {
+            _messages[index] = msg.copy(isStarred = isStarred)
+        }
+    }
 }
