@@ -14,10 +14,13 @@ class RecipeRepositoryImpl : RecipeRepository {
 
     override fun saveRecipe(recipe: Recipe) {
         val reference = _database.getReference(FAVOURITES_KEY)
-        val newEntriesChildren = gson.toJson(recipe)
-        reference.push().setValue(newEntriesChildren).addOnCompleteListener { task ->
+        val newDocumentRef = reference.push()
+        val recipeWithId = recipe.copy(id = newDocumentRef.key)
+        val newEntriesChildren = gson.toJson(recipeWithId)
+
+        newDocumentRef.setValue(newEntriesChildren).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("FirebaseDB", "Recipe saved successfully!")
+                Log.d("FirebaseDB", "Recipe $newDocumentRef saved successfully!")
             } else {
                 Log.e("FirebaseDB", "Failed to add new recipe: ", task.exception)
             }
@@ -28,5 +31,17 @@ class RecipeRepositoryImpl : RecipeRepository {
         return recipesRef.get().await().children.mapNotNull { snapshot ->
             snapshot.getValue(String::class.java)?.let { gson.fromJson(it, Recipe::class.java) }
         }
+    }
+
+    override fun removeRecipe(recipeId: String) {
+        val reference = _database.getReference(FAVOURITES_KEY)
+
+        reference.child(recipeId).removeValue()
+            .addOnSuccessListener {
+                Log.d("FirebaseDB", "Recipe $recipeId deleted successfully")
+            }
+            .addOnFailureListener { e ->
+                Log.e("FirebaseDB", "Error deleting recipe", e)
+            }
     }
 }

@@ -1,6 +1,7 @@
 package com.formulae.chef.feature.model
 
 data class Recipe(
+    val id: String? = null,
     val title: String,
     val summary: String,
     val ingredients: String,

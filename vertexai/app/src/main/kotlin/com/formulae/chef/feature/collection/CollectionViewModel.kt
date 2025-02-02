@@ -21,6 +21,8 @@ class CollectionViewModel(
     private val _selectedRecipe = MutableStateFlow<Recipe?>(null)  // Holds selected recipe
     val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
 
+    var recipes: List<Recipe> = emptyList()
+
 
     init {
         fetchRecipes()
@@ -29,7 +31,7 @@ class CollectionViewModel(
     fun fetchRecipes() {
         viewModelScope.launch {
             _isLoading.value = true
-            val recipes = repository.loadRecipes()
+            recipes = repository.loadRecipes()
             _uiState.value = CollectionUiState(recipes = recipes)
             _isLoading.value = false
         }
@@ -37,6 +39,13 @@ class CollectionViewModel(
 
     fun onRecipeSelected(recipe: Recipe) {
         _selectedRecipe.value = recipe
+    }
+
+    fun onRecipeRemove(recipeId: String) {
+        repository.removeRecipe(recipeId)
+        _selectedRecipe.value = null
+        recipes = recipes.filter { it.id != recipeId }
+        _uiState.value = CollectionUiState(recipes = recipes)
     }
 
     data class CollectionUiState(

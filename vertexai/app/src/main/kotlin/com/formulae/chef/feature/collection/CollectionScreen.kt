@@ -16,9 +16,11 @@
 
 package com.formulae.chef.feature.collection
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,9 +29,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.CollectionViewModelFactory
@@ -75,10 +83,12 @@ internal fun CollectionRoute(
                         // Navigate to RecipeDetail
                         collectionViewModel.onRecipeSelected(recipe)
                     },
+                    onRecipeRemove = { recipeId: String ->
+                        collectionViewModel.onRecipeRemove(recipeId)
+                    },
                     listState = listState
                 )
-            }
-            else{
+            } else {
                 // Recipe Detail
                 DetailRoute(recipe = selectedRecipe!!)
             }
@@ -90,6 +100,7 @@ internal fun CollectionRoute(
 fun RecipeList(
     recipes: List<Recipe>,
     onRecipeClick: (Recipe) -> Unit,
+    onRecipeRemove: (String) -> Unit,
     listState: LazyListState
 ) {
     if (recipes.isEmpty()) {
@@ -107,7 +118,7 @@ fun RecipeList(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 120.dp),
         ) {
             items(recipes) { recipe ->
-                RecipeItem(recipe = recipe, onRecipeClick = onRecipeClick)
+                RecipeItem(recipe = recipe, onRecipeClick = onRecipeClick, onRecipeRemove = onRecipeRemove)
             }
         }
     }
@@ -117,7 +128,8 @@ fun RecipeList(
 @Composable
 fun RecipeItem(
     recipe: Recipe,
-    onRecipeClick: (Recipe) -> Unit
+    onRecipeClick: (Recipe) -> Unit,
+    onRecipeRemove: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -126,11 +138,32 @@ fun RecipeItem(
             .clickable { onRecipeClick(recipe) },
         elevation = CardDefaults.elevatedCardElevation(4.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically // Ensures both items are aligned properly
+        ) {
             Text(
                 text = recipe.title,
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .weight(1f)
+                    .align(Alignment.CenterVertically)
             )
+            IconButton(
+                onClick = {
+                    onRecipeRemove(recipe.id!!)
+                }, // Callback to handle add to collection
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Remove recipe from collection",
+                    tint = Color.Red
+                )
+            }
         }
     }
 }

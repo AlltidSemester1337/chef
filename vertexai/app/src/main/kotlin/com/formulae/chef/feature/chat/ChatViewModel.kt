@@ -129,15 +129,16 @@ class ChatViewModel(
     fun onRecipeStarred(message: ChatMessage) {
         val context: Context = getApplication<Application>().applicationContext
         if (message.isStarred) {
-            deleteRecipe(context, message)
+            removeRecipe(context, message)
         } else {
             saveRecipe(context, message)
         }
     }
 
-    fun deleteRecipe(context: Context, message: ChatMessage) {
+    fun removeRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
+                // TODO Implement search/delete by title
                 //_persistenceImpl.deleteRecipe(recipeData)
                 Log.d("CHEF", "CHEF:::::RECIPE_DELETED")
                 // Update UI
