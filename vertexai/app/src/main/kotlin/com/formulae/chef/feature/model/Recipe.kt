@@ -1,4 +1,4 @@
-package com.formulae.chef.feature.collection
+package com.formulae.chef.feature.model
 
 data class Recipe(
     val title: String,

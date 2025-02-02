@@ -1,7 +1,7 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-import com.formulae.chef.feature.collection.Recipe
+import com.formulae.chef.feature.model.Recipe
 import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
 

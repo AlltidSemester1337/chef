@@ -1,6 +1,6 @@
 package com.formulae.chef.services.persistence
 
-import com.formulae.chef.feature.collection.Recipe
+import com.formulae.chef.feature.model.Recipe
 
 interface RecipeRepository {
     fun saveRecipe(recipe: Recipe)

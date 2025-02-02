@@ -22,7 +22,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.formulae.chef.feature.collection.Recipe
+import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.google.firebase.vertexai.Chat
@@ -215,13 +215,13 @@ class ChatViewModel(
 
     private fun deriveRecipeSummary(answer: String, title: String): String {
         val summary =
-            answer.split("**Ingredients:**")[0].replace(title, "").replace("##", "").replace("\n\n", "").trim()
+            answer.split("**Ingredients:**")[0].replace(title, "").replace("##", "").trim()
         return summary
     }
 
     private fun deriveRecipeIngredients(answer: String, title: String, summary: String): String {
         val ingredients =
-            answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace("**Ingredients**", "")
+            answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace("**Ingredients:**", "")
                 .replace("##", "").trim()
         return ingredients
     }

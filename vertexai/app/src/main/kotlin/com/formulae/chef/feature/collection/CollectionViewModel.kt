@@ -2,6 +2,7 @@ package com.formulae.chef.feature.collection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,10 @@ class CollectionViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _selectedRecipe = MutableStateFlow<Recipe?>(null)  // Holds selected recipe
+    val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
+
+
     init {
         fetchRecipes()
     }
@@ -31,7 +36,7 @@ class CollectionViewModel(
     }
 
     fun onRecipeSelected(recipe: Recipe) {
-        // Trigger navigation or handle selection
+        _selectedRecipe.value = recipe
     }
 
     data class CollectionUiState(
