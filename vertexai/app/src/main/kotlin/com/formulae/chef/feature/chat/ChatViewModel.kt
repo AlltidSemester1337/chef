@@ -25,11 +25,18 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
+import com.google.cloud.aiplatform.v1.EndpointName
+import com.google.cloud.aiplatform.v1.PredictRequest
+import com.google.cloud.aiplatform.v1.PredictionServiceClient
+import com.google.firebase.FirebaseApp
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
+import com.google.gson.Gson
+import com.google.protobuf.Value
+import com.google.protobuf.util.JsonFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,10 +44,20 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(
     generativeModel: GenerativeModel,
+    predictionServiceClient: PredictionServiceClient?,
+    location: String,
     application: Application
 ) : AndroidViewModel(application) {
     private val _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl()
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
+    private val _projectId = FirebaseApp.getInstance().options.projectId
+
+    private val _imagenEndpointName =
+        EndpointName.ofProjectLocationPublisherModelName(
+            _projectId, location, "google", "imagen-3.0-generate-002"
+        )
+    private val _predictionServiceClient = predictionServiceClient
+
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
         MutableStateFlow(
@@ -196,8 +213,13 @@ class ChatViewModel(
         if (title.isEmpty() || summary.isEmpty() || ingredients.isEmpty() || instructions.isEmpty()) {
             throw Exception("Failed to derive details from recipe: $answer")
         }
-        // TODO add image generation later
-        val imageUrl = null
+        var imageUrl: String? = null
+        try {
+            imageUrl = createImageForRecipe(answer)
+        } catch (e: Exception) {
+            Log.e("FirebaseSave", "Failed to generate image for recipe", e)
+        }
+
         val updatedAt = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).toString()
         return Recipe(
             title = title,
@@ -230,6 +252,52 @@ class ChatViewModel(
     private fun deriveRecipeInstructions(answer: String): String {
         val instructions = answer.split("**Instructions:**")[1].replace("\n\n", "")
         return instructions
+    }
+
+    private fun createImageForRecipe(answer: String): String {
+        val gson = Gson()
+        val prompt =
+            "As a professional photographer specializing in 100mm Macro lens natural lightning food photography, please create a photorealistic, colorful, visually appealing image for use in a recipe collection webpage of a single serving for the following recipe: $answer"
+        val instancesJson = gson.toJson(mapOf("prompt" to prompt))
+        val instances = jsonToValue(instancesJson)
+
+        val paramsJson = gson.toJson(
+            mapOf(
+                "sampleCount" to 1,
+                "aspectRatio" to "4:3",
+                "storageUri" to "gs://$_projectId.firebasestorage.app/recipes",
+                "outputOptions" to
+                        mapOf(
+                            "mimeType" to "image/jpeg",
+                        )
+            )
+        )
+
+        val parameters = jsonToValue(paramsJson)
+
+        val predictRequest = PredictRequest.newBuilder()
+            .setEndpoint(_imagenEndpointName.toString())
+            .addAllInstances(listOf(instances))
+            .setParameters(parameters)
+            .build()
+        val response = _predictionServiceClient!!.predict(predictRequest)
+        val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
+        return convertFirebaseStorageUriToPublicUrl(gcsUri)
+    }
+
+    // Converts JSON string to Protobuf Value
+    fun jsonToValue(json: String): Value {
+        val builder = Value.newBuilder()
+        JsonFormat.parser().merge(json, builder)
+        return builder.build()
+    }
+
+    fun convertFirebaseStorageUriToPublicUrl(gcsUri: String): String {
+        require(gcsUri.startsWith("gs://")) { "Not a valid GCS URI" }
+        val path = gcsUri.removePrefix("gs://").split("/", limit = 2)
+        val bucket = path[0]
+        val objectPath = path[1].replace("/", "%2F") // URL encode "/"
+        return "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath?alt=media"
     }
 
 

@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.collection
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,7 +38,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.feature.model.Recipe
 
 @Composable
@@ -46,6 +50,7 @@ internal fun DetailRoute(
 
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
+    var hasImage = recipe.imageUrl?.isNotEmpty() ?: false
 
     Column(
         modifier = Modifier
@@ -53,17 +58,23 @@ internal fun DetailRoute(
             .fillMaxSize()
             .verticalScroll(scrollState),
     ) {
-        //Image(
-        //    painter = rememberAsyncImagePainter(recipe.imageUrl),
-        //    contentDescription = "Recipe Image",
-        //    modifier = Modifier
-        //        .fillMaxWidth()
-        //        .height(200.dp)
-        //        .clip(RoundedCornerShape(8.dp))
-        //)
-        //Spacer(modifier = Modifier.height(8.dp))
+
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Conditional Display
+        if (hasImage) {
+            Image(
+                painter = rememberAsyncImagePainter(recipe.imageUrl),
+                contentDescription = "Recipe Image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Text(text = recipe.summary, style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 

@@ -21,10 +21,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.ChatViewModel
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.aiplatform.v1.PredictionServiceClient
+import com.google.cloud.aiplatform.v1.PredictionServiceSettings
 import com.google.firebase.Firebase
 import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
+import org.json.JSONObject
+import java.io.InputStream
+import java.lang.String
+import java.nio.charset.Charset
+
 
 val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(
@@ -48,8 +56,32 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         generationConfig = config,
                         systemInstruction = content { text("You are a personal chef / cooking assistant to help with coming up for new ideas on recipes. Use https://www.honestgreens.com/en/menu as inspiration for the whole foods, healthy, simple and savory cooking / recipe style. Please use metric units and centiliters / decilitres for liquid measurements and state the nutritional values for each recipe.") }
                     )
+
+
+                    val settingsStream: InputStream =
+                        application.applicationContext.assets.open("gcp.json")
+                    val configString = settingsStream.bufferedReader(Charset.defaultCharset()).use { it.readText() }
+                    val location = JSONObject(configString).getString("location")
+
+                    val credentialsStream: InputStream =
+                        application.applicationContext.assets.open("imagen-google-services.json")
+                    val credentials = GoogleCredentials.fromStream(credentialsStream)
+                        .createScoped(listOf("https://www.googleapis.com/auth/cloud-platform"))
+
+                    val endpoint = String.format("$location-aiplatform.googleapis.com:443")
+
+                    val predictionServiceSettings: PredictionServiceSettings =
+                        PredictionServiceSettings.newBuilder()
+                            .setCredentialsProvider { credentials }
+                            .setEndpoint(endpoint)
+                            .build()
+
+                    val predictionServiceClient = PredictionServiceClient.create(predictionServiceSettings)
+
                     ChatViewModel(
                         generativeModel = generativeModel,
+                        predictionServiceClient = predictionServiceClient,
+                        location = location,
                         application = application
                     )
                 }

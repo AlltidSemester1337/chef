@@ -65,6 +65,13 @@ android {
     buildFeatures {
         compose = true
     }
+
+    packaging {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
+        }
+    }
 }
 
 dependencies {
@@ -84,7 +91,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     implementation("com.google.firebase:firebase-analytics:22.1.2")
-    implementation("com.google.firebase:firebase-vertexai:16.0.0-beta06")
+    implementation("com.google.firebase:firebase-vertexai:16.0.2")
+    implementation("com.google.cloud:google-cloud-aiplatform:3.58.0")
+    implementation("io.grpc:grpc-okhttp:1.68.1")
 
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
 
