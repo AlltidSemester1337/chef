@@ -16,7 +16,9 @@
 
 package com.formulae.chef.feature.chat
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
@@ -262,26 +265,19 @@ fun ChatBubbleItem(
                     shape = bubbleShape,
                     modifier = Modifier.widthIn(0.dp, maxWidth * 0.9f)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
+                    Box(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = chatMessage.text,
-                            modifier = Modifier
-                                .padding(16.dp)
                         )
                         if (chatMessage.participant == Participant.MODEL) {
-                            Row( // Wrap IconButton in Row for consistent layout
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End // Align button to the end
-
-                            ) {
                                 IconButton(
                                     onClick = {
                                         onStarClicked(chatMessage)
-                                    }, // Callback to handle add to collection
+                                    }, // Callback to handle add to collection'
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .zIndex(1f) // Ensure this composable is drawn on top for hit testing
+                                        .border(1.dp, Color.Red) // Debug: visualize the hit area
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Star,
@@ -289,7 +285,6 @@ fun ChatBubbleItem(
                                         tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
                                     )
                                 }
-                            }
                         }
                     }
                 }
