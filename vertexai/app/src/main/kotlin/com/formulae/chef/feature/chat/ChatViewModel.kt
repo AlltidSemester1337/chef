@@ -90,7 +90,7 @@ class ChatViewModel(
         var result: List<Content> = emptyList()
 
         try {
-            result = _chatHistoryPersistenceImpl.loadChatHistory()
+            result = _chatHistoryPersistenceImpl.loadChatHistoryLastTwentyEntries()
         } catch (e: Exception) {
             Log.e("FirebaseDB", "Error fetching chat history", e)
         }

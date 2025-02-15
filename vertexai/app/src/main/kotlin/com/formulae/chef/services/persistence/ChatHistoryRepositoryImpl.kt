@@ -36,12 +36,12 @@ class ChatHistoryRepositoryImpl : ChatHistoryRepository {
         }
     }
 
-    override suspend fun loadChatHistory(): List<Content> {
+    override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
         return suspendCancellableCoroutine { continuation ->
             _database.getReference(CHAT_HISTORY_KEY).get().addOnSuccessListener { dataSnapshot ->
                 val contentList = dataSnapshot.children.mapNotNull { child ->
                     child.getValue(String::class.java)?.let { gson.fromJson(it, Content::class.java) }
-                }
+                }.takeLast(20)
                 continuation.resume(contentList)
             }.addOnFailureListener { exception ->
                 Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)

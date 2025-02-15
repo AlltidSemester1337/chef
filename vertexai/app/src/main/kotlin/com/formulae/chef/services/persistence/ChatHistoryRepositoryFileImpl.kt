@@ -32,7 +32,7 @@ class ChatHistoryRepositoryFileImpl(context: Context) : ChatHistoryRepository {
         TODO("Not yet implemented")
     }
 
-    override suspend fun loadChatHistory(): List<Content> {
+    override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
         val sharedPreferences: SharedPreferences = _context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val historyJson = sharedPreferences.getString(KEY_CHAT_HISTORY, null)
         return if (historyJson != null) {
