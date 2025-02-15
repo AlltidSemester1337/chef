@@ -52,7 +52,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                 isAssignableFrom(ChatViewModel::class.java) -> {
                     // Initialize a GenerativeModel with the `gemini-flash` AI model for chat
                     val generativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-1.5-flash-002",
+                        modelName = "gemini-2.0-flash-001",
                         generationConfig = config,
                         systemInstruction = content { text("You are a personal chef / cooking assistant to help with coming up for new ideas on recipes. Use https://www.honestgreens.com/en/menu as inspiration for the whole foods, healthy, simple and savory cooking / recipe style. Please use metric units and centiliters / decilitres for liquid measurements and state the nutritional values for each recipe.") }
                     )

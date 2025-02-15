@@ -2,7 +2,8 @@
 
 ![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/ic_launcher_new_round.webp)
 
-A personal cooking assistant Android app (Kotlin) to suggest recipes for cooking. Built on vertexai chat and
+A personal cooking assistant Android app (Kotlin) to suggest recipes for cooking. Built on vertexai
+chat and
 firebase. Requires integration towards
 vertexai using google-services.json credentials for SA in order to run.
 Also requires a firebaseDbUrl to be set in local.properties when building the app to run using
@@ -18,18 +19,23 @@ Features:
 - 1.4.x - UI improvements, remove menu, add logos etc
 - 1.5.x - Added recipe collection / favourite feature
 - 1.6.x - Generate image and save / load for recipes in recipe collection
+- 1.6.1 enable sharing URL (copy)
 
 Future:
-- 1.6.x enable copy of recipe (text only or with image?) + sharing URL
-- 1.7.x - Add features to categorize (tags, date, ingredients etc) and search / filter recipes in collection. This will replace search functionality in chat.
+
+- 1.7.x - Add features to categorize (tags, date, ingredients etc) and search / filter recipes in
+  collection. This will replace search functionality in chat.
 
 Planned upcoming features / requests / ideas:
 
-Web? https://reflex.dev/ 
+Web? https://reflex.dev/
 
-RAG? Langchain graphchain? (cost efficient w options for scalability), cost? Advanced RAG such as vector search and / or graph may be to costly?
+RAG? Langchain graphchain? (cost efficient w options for scalability), cost? Advanced RAG such as
+vector search and / or graph may be to costly?
 
-Long context / persistence? Consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP memory etc?)
+Long context / persistence?
+Consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP
+memory etc?)
 
 User seed / username based sessions(must in order to progress further then closed BETA testing)
 
@@ -46,4 +52,7 @@ Sharing / collaboration / community features?
 Fork or reach out to authors humlekottekonsult@gmail.com
 
 ## Support, feature request, question etc
-This project is owned and currently operated and maintained by [Humlekotte Konsultbolag](https://www.humlekotte.nu). Any questions reach out via email humlekottekonsult@gmail.com
+
+This project is owned and currently operated and maintained
+by [Humlekotte Konsultbolag](https://www.humlekotte.nu). Any questions reach out via email
+humlekottekonsult@gmail.com

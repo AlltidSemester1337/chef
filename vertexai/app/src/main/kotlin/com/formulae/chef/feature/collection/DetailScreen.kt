@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.collection
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -54,6 +58,8 @@ internal fun DetailRoute(
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
     var hasImage = recipe.imageUrl?.isNotEmpty() ?: false
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     BackHandler {
         navController.navigate("collection")
@@ -120,6 +126,25 @@ internal fun DetailRoute(
             Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = recipe.instructions, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        // Centered Share Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Button(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString("https://humlekotte.nu/chef-web/recipe/?id=${recipe.id}"))
+                    Toast.makeText(
+                        context,
+                        "Recipe URL copied to clipboard",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            ) {
+                Text("Share Recipe")
+            }
         }
     }
 }
