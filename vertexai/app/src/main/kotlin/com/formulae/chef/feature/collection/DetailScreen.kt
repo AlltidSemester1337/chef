@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.collection
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,17 +41,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.feature.model.Recipe
 
 @Composable
 internal fun DetailRoute(
-    recipe: Recipe
+    recipe: Recipe,
+    navController: NavController
 ) {
 
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
     var hasImage = recipe.imageUrl?.isNotEmpty() ?: false
+
+    BackHandler {
+        navController.navigate("collection")
+    }
 
     Column(
         modifier = Modifier

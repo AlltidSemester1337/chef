@@ -16,10 +16,11 @@ Features:
 - 1.1.x - Chat history persisted on Realtime Database
 - 1.2.x - Search function in chat (delivered by toggling results not working)
 - 1.4.x - UI improvements, remove menu, add logos etc
-- 1.5.x - Added recipe collection / favourite feature <-- WIP
+- 1.5.x - Added recipe collection / favourite feature
+- 1.6.x - Generate image and save / load for recipes in recipe collection
 
 Future:
-- 1.6.x - Generate image and save / load for recipes in recipe collection, and enable copy of recipe (text only or with image?)
+- 1.6.x enable copy of recipe (text only or with image?) + sharing URL
 - 1.7.x - Add features to categorize (tags, date, ingredients etc) and search / filter recipes in collection. This will replace search functionality in chat.
 
 Planned upcoming features / requests / ideas:

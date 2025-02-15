@@ -37,10 +37,12 @@ import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
 import com.google.protobuf.Value
 import com.google.protobuf.util.JsonFormat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChatViewModel(
     generativeModel: GenerativeModel,
@@ -162,11 +164,11 @@ class ChatViewModel(
                 _uiState.value.updateStarredMessage(message, isStarred = false)
 
                 // Show toast
-                Toast.makeText(
-                    context,
-                    "Recipe removed from collection successfully.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                //Toast.makeText(
+                //    context,
+                //    "Recipe removed from collection successfully.",
+                //    Toast.LENGTH_SHORT
+                //).show()
 
             } catch (e: Exception) {
                 Log.e("FirebaseDelete", "Failed to remove recipe", e)
@@ -182,8 +184,13 @@ class ChatViewModel(
     fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
-                val newRecipe = deriveRecipeFromMessage(message.text)
-                _recipeRepositoryImpl.saveRecipe(newRecipe)
+                val newRecipe = withContext(Dispatchers.Default) {
+                    deriveRecipeFromMessage(message.text)
+                }
+
+                withContext(Dispatchers.IO) {
+                    _recipeRepositoryImpl.saveRecipe(newRecipe)
+                }
                 // Update UI
                 _uiState.value.updateStarredMessage(message, isStarred = true)
 

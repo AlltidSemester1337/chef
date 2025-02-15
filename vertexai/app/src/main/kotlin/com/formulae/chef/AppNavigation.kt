@@ -24,7 +24,7 @@ fun AppNavigation(recipeRepository: RecipeRepository) {
             ChatRoute() // Your existing ChatRoute
         }
         composable("collection") {
-            CollectionRoute(repository=recipeRepository) // Your new CollectionRoute
+            CollectionRoute(repository = recipeRepository, navController = navController) // Your new CollectionRoute
         }
     }
 }

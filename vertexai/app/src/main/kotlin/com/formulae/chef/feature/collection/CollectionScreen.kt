@@ -16,7 +16,6 @@
 
 package com.formulae.chef.feature.collection
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,7 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,14 +41,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.formulae.chef.CollectionViewModelFactory
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.persistence.RecipeRepository
@@ -58,7 +54,8 @@ import com.formulae.chef.services.persistence.RecipeRepository
 @Composable
 internal fun CollectionRoute(
     repository: RecipeRepository,
-    collectionViewModel: CollectionViewModel = viewModel(factory = CollectionViewModelFactory(repository))
+    collectionViewModel: CollectionViewModel = viewModel(factory = CollectionViewModelFactory(repository)),
+    navController: NavController
 ) {
     val collectionUiState by collectionViewModel.uiState.collectAsState()
     val isLoading by collectionViewModel.isLoading.collectAsState()
@@ -90,7 +87,7 @@ internal fun CollectionRoute(
                 )
             } else {
                 // Recipe Detail
-                DetailRoute(recipe = selectedRecipe!!)
+                DetailRoute(recipe = selectedRecipe!!, navController = navController)
             }
         }
     }
