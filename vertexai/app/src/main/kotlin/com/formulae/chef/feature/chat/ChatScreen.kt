@@ -33,10 +33,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -78,19 +75,6 @@ internal fun ChatRoute(
 
     val onRecipeStarred = chatViewModel::onRecipeStarred
 
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var isSearchVisible by rememberSaveable { mutableStateOf(false) }
-
-    val filteredMessages = chatUiState.messages.filter { message ->
-        message.text.contains(searchQuery, ignoreCase = true)
-    }
-
-    val matchingIndices = filteredMessages.mapIndexedNotNull { index, message ->
-        if (message.text.contains(searchQuery, ignoreCase = true)) index else null
-    }
-
-    var currentMatchIndex by rememberSaveable { mutableStateOf(0) }
-
     Scaffold(
         bottomBar = {
             MessageInput(
@@ -110,78 +94,14 @@ internal fun ChatRoute(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            SearchBar(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = { query -> searchQuery = query },
-                isSearchVisible = isSearchVisible,
-                onSearchIconClicked = { isSearchVisible = !isSearchVisible },
-                resetMatchIndex = { currentMatchIndex = 0 }
-            )
-            if (isSearchVisible && matchingIndices.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
-                    IconButton(
-                        onClick = {
-                            if (currentMatchIndex > 0) {
-                                currentMatchIndex -= 1
-                            }
-                        }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Match")
-                    }
-                    IconButton(
-                        onClick = {
-                            if (currentMatchIndex < matchingIndices.size - 1) {
-                                currentMatchIndex += 1
-                            }
-                        }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Match")
-                    }
-                }
-            }
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else {
                 // Messages List
-                ChatList(filteredMessages, listState, searchQuery, currentMatchIndex, onRecipeStarred)
+                ChatList(chatUiState.messages, listState, onRecipeStarred)
             }
-        }
-    }
-}
-
-@Composable
-fun SearchBar(
-    searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
-    isSearchVisible: Boolean,
-    onSearchIconClicked: () -> Unit,
-    resetMatchIndex: () -> Unit
-) {
-    if (isSearchVisible) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            label = { Text("Search Messages") },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                capitalization = KeyboardCapitalization.Sentences
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        )
-    } else {
-        IconButton(onClick = {
-            onSearchIconClicked()
-            resetMatchIndex()
-        }) {
-            Icon(Icons.Default.Search, contentDescription = "Search")
         }
     }
 }
@@ -190,8 +110,6 @@ fun SearchBar(
 fun ChatList(
     chatMessages: List<ChatMessage>,
     listState: LazyListState,
-    searchQuery: String,
-    currentMatchIndex: Int,
     onStarClicked: (ChatMessage) -> Unit,
 ) {
     LazyColumn(
@@ -200,10 +118,8 @@ fun ChatList(
         modifier = Modifier.fillMaxSize()
     ) {
         items(chatMessages.reversed(), key = { it.id }) { message ->
-            val isMatchingSearch = message.text.contains(searchQuery, ignoreCase = true)
-            val isHighlighted = isMatchingSearch &&
-                    chatMessages.indexOf(message) == currentMatchIndex
-            ChatBubbleItem(message, isHighlighted, onStarClicked)
+
+            ChatBubbleItem(message, onStarClicked)
         }
     }
 }
@@ -212,14 +128,12 @@ fun ChatList(
 @Composable
 fun ChatBubbleItem(
     chatMessage: ChatMessage,
-    isHighlighted: Boolean = false,
     onStarClicked: (ChatMessage) -> Unit,
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
             chatMessage.participant == Participant.ERROR
 
     val backgroundColor = when {
-        isHighlighted -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f, green = 0.5f)
         chatMessage.participant == Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
         chatMessage.participant == Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
         chatMessage.participant == Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
@@ -276,8 +190,6 @@ fun ChatBubbleItem(
                                     }, // Callback to handle add to collection'
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
-                                        .zIndex(1f) // Ensure this composable is drawn on top for hit testing
-                                        .border(1.dp, Color.Red) // Debug: visualize the hit area
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Star,

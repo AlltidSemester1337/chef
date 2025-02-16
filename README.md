@@ -20,13 +20,17 @@ Features:
 - 1.5.x - Added recipe collection / favourite feature
 - 1.6.x - Generate image and save / load for recipes in recipe collection
 - 1.6.1 enable sharing URL (copy)
+- 1.6.2 search / filter recipes in collection. This replaces search functionality in chat.
 
 Future:
 
-- 1.7.x - Add features to categorize (tags, date, ingredients etc) and search / filter recipes in
-  collection. This will replace search functionality in chat.
+- 1.7.x - Implement users / sessions
 
 Planned upcoming features / requests / ideas:
+Add features to categorize (tags, date, ingredients etc)
+Onboarding / preferences
+Integrate recipe lookup / references
+Look into imagegen pricing and consider if it can be used for more recipe images
 
 Web? https://reflex.dev/
 

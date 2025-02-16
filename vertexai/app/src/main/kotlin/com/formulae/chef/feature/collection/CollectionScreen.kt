@@ -16,18 +16,23 @@
 
 package com.formulae.chef.feature.collection
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -36,14 +41,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -61,11 +71,21 @@ internal fun CollectionRoute(
     val isLoading by collectionViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val selectedRecipe by collectionViewModel.selectedRecipe.collectAsState()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val filteredMessages = collectionUiState.recipes.filter { recipe ->
+        recipe.title.contains(searchQuery, ignoreCase = true)
+    }
+
+    BackHandler {
+        navController.navigate("home")
+    }
 
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
+                .padding(vertical = 30.dp)
+                .imePadding()
                 .fillMaxSize()
         ) {
             if (isLoading) {
@@ -73,24 +93,51 @@ internal fun CollectionRoute(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else if (selectedRecipe == null) {
-                // Recipe List
-                RecipeList(
-                    recipes = collectionUiState.recipes,
-                    onRecipeClick = { recipe: Recipe ->
-                        // Navigate to RecipeDetail
-                        collectionViewModel.onRecipeSelected(recipe)
-                    },
-                    onRecipeRemove = { recipeId: String ->
-                        collectionViewModel.onRecipeRemove(recipeId)
-                    },
-                    listState = listState
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    SearchBar(
+                        searchQuery = searchQuery,
+                        onSearchQueryChanged = { query -> searchQuery = query },
+                    )
+                    // Recipe List
+                    RecipeList(
+                        recipes = filteredMessages,
+                        onRecipeClick = { recipe: Recipe ->
+                            // Navigate to RecipeDetail
+                            collectionViewModel.onRecipeSelected(recipe)
+                        },
+                        onRecipeRemove = { recipeId: String ->
+                            collectionViewModel.onRecipeRemove(recipeId)
+                        },
+                        listState = listState
+                    )
+                }
             } else {
                 // Recipe Detail
                 DetailRoute(recipe = selectedRecipe!!, navController = navController)
             }
         }
     }
+}
+
+@Composable
+fun SearchBar(
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChanged,
+        label = { Text("Filter Recipes") },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            capitalization = KeyboardCapitalization.Sentences
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    )
 }
 
 @Composable
@@ -112,7 +159,6 @@ fun RecipeList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 120.dp),
         ) {
             items(recipes) { recipe ->
                 RecipeItem(recipe = recipe, onRecipeClick = onRecipeClick, onRecipeRemove = onRecipeRemove)

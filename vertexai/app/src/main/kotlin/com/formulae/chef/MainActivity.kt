@@ -43,6 +43,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val recipeRepository = RecipeRepositoryImpl()
 
+        this.actionBar?.hide()
+
         setContent {
             GenerativeAISample {
                 // A surface container using the 'background' color from the theme
