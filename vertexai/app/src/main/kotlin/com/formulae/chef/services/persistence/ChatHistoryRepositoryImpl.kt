@@ -1,32 +1,30 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-import com.formulae.chef.util.json.ContentInstanceCreator
-import com.formulae.chef.util.json.PartInstanceCreator
 
 
-import com.google.firebase.vertexai.type.Content
-import com.google.firebase.vertexai.type.Part
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+//TODO Update for 2.0 users
+private const val CHAT_HISTORY_KEY = "users/AuPP3gxW5fSjcxNB3NTQ9CVX9IJ2/chat_history"
 
-private val gson = GsonBuilder()
-    .registerTypeAdapter(Content::class.java, ContentInstanceCreator())
-    .registerTypeAdapter(Part::class.java, PartInstanceCreator())
-    .create()
+data class Content(
+    var role: String = "user", // Default value, must be mutable (var)
+    var parts: List<Part> = emptyList() // Default empty list, must be mutable
+)
 
-private const val CHAT_HISTORY_KEY = "chatHistory"
+data class Part(
+    var text: String = ""
+)
 
 class ChatHistoryRepositoryImpl : ChatHistoryRepository {
     private val _database = FirebaseInstance.database
 
-    override fun saveNewEntries(newEntries: List<Content>) {
+    override fun saveNewEntries(newEntries: List<com.google.firebase.vertexai.type.Content>) {
         val reference = _database.getReference(CHAT_HISTORY_KEY)
         for (entry in newEntries) {
-            val newEntriesChildren = gson.toJson(entry)
-            reference.push().setValue(newEntriesChildren).addOnCompleteListener { task ->
+            reference.push().setValue(entry).addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Log.d("FirebaseDB", "entry saved successfully!")
                 } else {
@@ -36,12 +34,16 @@ class ChatHistoryRepositoryImpl : ChatHistoryRepository {
         }
     }
 
-    override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
+    override suspend fun loadChatHistoryLastTwentyEntries(): List<com.google.firebase.vertexai.type.Content> {
         return suspendCancellableCoroutine { continuation ->
             _database.getReference(CHAT_HISTORY_KEY).get().addOnSuccessListener { dataSnapshot ->
                 val contentList = dataSnapshot.children.mapNotNull { child ->
-                    child.getValue(String::class.java)?.let { gson.fromJson(it, Content::class.java) }
-                }.takeLast(20)
+                    child.getValue(Content::class.java)
+                }.takeLast(20).map { content ->
+                    com.google.firebase.vertexai.type.Content(
+                        content.role,
+                        content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) })
+                }
                 continuation.resume(contentList)
             }.addOnFailureListener { exception ->
                 Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)

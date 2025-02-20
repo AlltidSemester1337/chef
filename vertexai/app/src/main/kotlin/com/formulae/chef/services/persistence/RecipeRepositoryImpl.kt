@@ -5,7 +5,8 @@ import com.formulae.chef.feature.model.Recipe
 import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
 
-private const val FAVOURITES_KEY = "favourites"
+//TODO Update for 2.0 users
+private const val FAVOURITES_KEY = "recipes"
 
 class RecipeRepositoryImpl : RecipeRepository {
     private val _database = FirebaseInstance.database
@@ -16,9 +17,8 @@ class RecipeRepositoryImpl : RecipeRepository {
         val reference = _database.getReference(FAVOURITES_KEY)
         val newDocumentRef = reference.push()
         val recipeWithId = recipe.copy(id = newDocumentRef.key)
-        val newEntriesChildren = gson.toJson(recipeWithId)
 
-        newDocumentRef.setValue(newEntriesChildren).addOnCompleteListener { task ->
+        newDocumentRef.setValue(recipeWithId).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Log.d("FirebaseDB", "Recipe $newDocumentRef saved successfully!")
             } else {
@@ -29,7 +29,7 @@ class RecipeRepositoryImpl : RecipeRepository {
 
     override suspend fun loadRecipes(): List<Recipe> {
         return recipesRef.get().await().children.mapNotNull { snapshot ->
-            snapshot.getValue(String::class.java)?.let { gson.fromJson(it, Recipe::class.java) }
+            snapshot.getValue(Recipe::class.java)
         }
     }
 
