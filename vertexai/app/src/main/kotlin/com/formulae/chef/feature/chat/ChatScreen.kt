@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -171,23 +173,32 @@ fun ChatBubbleItem(
                         .padding(all = 8.dp)
                 )
             }
+            // TODO Continue debug click for a bit but still seems hopeless...
             BoxWithConstraints {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = backgroundColor),
                     shape = bubbleShape,
                     modifier = Modifier.widthIn(0.dp, maxWidth * 0.9f)
                 ) {
-                    Box(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, Color.Red),
                             text = chatMessage.text,
                         )
                         if (chatMessage.participant == Participant.MODEL) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
                                 IconButton(
                                     onClick = {
                                         onStarClicked(chatMessage)
                                     }, // Callback to handle add to collection'
                                     modifier = Modifier
-                                        .align(Alignment.BottomEnd)
+                                        .border(1.dp, Color.Green)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Star,
@@ -195,6 +206,7 @@ fun ChatBubbleItem(
                                         tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
                                     )
                                 }
+                            }
                         }
                     }
                 }

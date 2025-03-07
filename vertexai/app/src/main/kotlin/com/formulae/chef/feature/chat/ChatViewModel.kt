@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
@@ -33,7 +34,6 @@ import com.google.cloud.aiplatform.v1.PredictionServiceClient
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.StorageMetadata
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
@@ -52,10 +52,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+
+private const val IMAGE_PROMPT_TEMPLATE =
+    "As a professional photographer specializing in 100mm Macro lens natural lightning food photography, please create a photorealistic, colorful, visually appealing image for use in a recipe collection webpage of a single serving for the following recipe: "
 
 class ChatViewModel(
-    generativeModel: GenerativeModel,
+    chatGenerativeModel: GenerativeModel,
+    jsonGenerativeModel: GenerativeModel,
     predictionServiceClient: PredictionServiceClient?,
     location: String,
     application: Application,
@@ -70,6 +75,7 @@ class ChatViewModel(
         )
     private val _predictionServiceClient = predictionServiceClient
     private val _userSessionService = userSessionService
+    private val _jsonGenerativeModel = jsonGenerativeModel
 
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
@@ -93,7 +99,7 @@ class ChatViewModel(
             _currentUser = _userSessionService.currentUser.first()
             _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(_currentUser!!.uid)
             _chatHistory.value = initializeChatHistory()
-            chat = generativeModel.startChat(
+            chat = chatGenerativeModel.startChat(
                 history = _chatHistory.value
             )
             _isLoading.value = false
@@ -167,46 +173,20 @@ class ChatViewModel(
         }
     }
 
-    // Think about scrapping this functionality completely, see linear
-    /*fun removeRecipe(context: Context, message: ChatMessage) {
-        viewModelScope.launch {
-            try {
-                //_persistenceImpl.deleteRecipe(recipeData)
-                Log.d("CHEF", "CHEF:::::RECIPE_DELETED")
-                // Update UI
-                _uiState.value.updateStarredMessage(message, isStarred = false)
-
-                // Show toast
-                //Toast.makeText(
-                //    context,
-                //    "Recipe removed from collection successfully.",
-                //    Toast.LENGTH_SHORT
-                //).show()
-
-            } catch (e: Exception) {
-                Log.e("FirebaseDelete", "Failed to remove recipe", e)
-                Toast.makeText(
-                    context,
-                    "Failed to remove recipe: ${e.localizedMessage}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }*/
 
     fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
-                val newRecipe = withContext(Dispatchers.Default) {
-                    deriveRecipeFromMessage(message.text)
+                val newRecipes = withContext(Dispatchers.Default) {
+                    deriveRecipesFromMessage(message.text)
                 }
 
                 if (_currentUser != null) {
-                    newRecipe.uid = _currentUser!!.uid
+                    newRecipes.forEach { it.uid = _currentUser!!.uid }
                 }
 
                 withContext(Dispatchers.IO) {
-                    _recipeRepositoryImpl.saveRecipe(newRecipe)
+                    newRecipes.forEach(_recipeRepositoryImpl::saveRecipe)
                 }
                 // Update UI
                 _uiState.value.updateStarredMessage(message, isStarred = true)
@@ -228,23 +208,30 @@ class ChatViewModel(
         }
     }
 
-    private fun deriveRecipeFromMessage(answer: String): Recipe {
-        val title = deriveRecipeTitle(answer)
-        val summary = deriveRecipeSummary(answer, title = title)
-        val ingredients = deriveRecipeIngredients(answer, title = title, summary = summary)
-        val instructions = deriveRecipeInstructions(answer)
+    private suspend fun deriveRecipesFromMessage(answer: String): List<Recipe> {
+        val recipesJsonText = _jsonGenerativeModel.generateContent(content { text(answer) }).text!!
+        val gson = Gson()
+        val recipes = gson.fromJson(recipesJsonText.replace("```json", "").replace("```", ""), Recipes::class.java)
+        return recipes.recipes.map(this::createRecipeFromJson)
+    }
+
+    private fun createRecipeFromJson(recipe: Recipe): Recipe {
+        val title = recipe.title.replace("##", "").trim()
+        val summary = recipe.summary.replace("##", "").trim()
+        val ingredients = recipe.ingredients.replace("##", "").trim()
+        val instructions = recipe.instructions //.replace("\n\n", "")???
 
         if (title.isEmpty() || summary.isEmpty() || ingredients.isEmpty() || instructions.isEmpty()) {
-            throw Exception("Failed to derive details from recipe: $answer")
+            throw Exception("Failed to derive details from recipe: $recipe")
         }
         var imageUrl: String? = null
         try {
-            imageUrl = createImageForRecipe(answer)
+            imageUrl = createImageForRecipe(recipe.toString())
         } catch (e: Exception) {
             Log.e("FirebaseSave", "Failed to generate image for recipe", e)
         }
 
-        val updatedAt = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).toString()
+        val updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
         return Recipe(
             title = title,
             summary = summary,
@@ -255,33 +242,10 @@ class ChatViewModel(
         )
     }
 
-    private fun deriveRecipeTitle(answer: String): String {
-        val title = answer.split("\n\n")[0].replace("##", "").trim()
-        return title
-    }
 
-    private fun deriveRecipeSummary(answer: String, title: String): String {
-        val summary =
-            answer.split("**Ingredients:**")[0].replace(title, "").replace("##", "").trim()
-        return summary
-    }
-
-    private fun deriveRecipeIngredients(answer: String, title: String, summary: String): String {
-        val ingredients =
-            answer.split("**Instructions:**")[0].replace(title, "").replace(summary, "").replace("**Ingredients:**", "")
-                .replace("##", "").trim()
-        return ingredients
-    }
-
-    private fun deriveRecipeInstructions(answer: String): String {
-        val instructions = answer.split("**Instructions:**")[1].replace("\n\n", "")
-        return instructions
-    }
-
-    private fun createImageForRecipe(answer: String): String {
+    private fun createImageForRecipe(recipe: String): String {
         val gson = Gson()
-        val prompt =
-            "As a professional photographer specializing in 100mm Macro lens natural lightning food photography, please create a photorealistic, colorful, visually appealing image for use in a recipe collection webpage of a single serving for the following recipe: $answer"
+        val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val instancesJson = gson.toJson(mapOf("prompt" to prompt))
         val instances = jsonToValue(instancesJson)
 
