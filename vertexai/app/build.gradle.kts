@@ -102,6 +102,7 @@ dependencies {
 
     implementation("com.google.firebase:firebase-database")
     implementation(libs.firebase.appcheck.debug)
+    implementation(libs.firebase.storage.ktx)
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

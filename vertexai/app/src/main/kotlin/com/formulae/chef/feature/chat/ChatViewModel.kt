@@ -32,6 +32,9 @@ import com.google.cloud.aiplatform.v1.PredictRequest
 import com.google.cloud.aiplatform.v1.PredictionServiceClient
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.StorageMetadata
+import com.google.firebase.storage.ktx.storage
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
@@ -46,7 +49,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class ChatViewModel(
     generativeModel: GenerativeModel,
@@ -300,7 +306,11 @@ class ChatViewModel(
             .build()
         val response = _predictionServiceClient!!.predict(predictRequest)
         val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
-        return convertFirebaseStorageUriToPublicUrl(gcsUri)
+        val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
+        val downloadUrl = runBlocking {
+            Firebase.storage("gs://$_projectId.firebasestorage.app/").reference.child(storagePath).downloadUrl.await()
+        }
+        return downloadUrl.encodedPath.toString()
     }
 
     // Converts JSON string to Protobuf Value
@@ -308,15 +318,6 @@ class ChatViewModel(
         val builder = Value.newBuilder()
         JsonFormat.parser().merge(json, builder)
         return builder.build()
-    }
-
-    fun convertFirebaseStorageUriToPublicUrl(gcsUri: String): String {
-        require(gcsUri.startsWith("gs://")) { "Not a valid GCS URI" }
-        val path = gcsUri.removePrefix("gs://").split("/", limit = 2)
-        val bucket = path[0]
-        val objectPath = path[1].replace("/", "%2F") // URL encode "/"
-        // TODO Should be like this instead: "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/1739388695424/sample_0.jpg"
-        return "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath?alt=media"
     }
 
 
