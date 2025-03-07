@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.ChatViewModel
+import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.aiplatform.v1.PredictionServiceClient
 import com.google.cloud.aiplatform.v1.PredictionServiceSettings
@@ -78,11 +79,14 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
 
                     val predictionServiceClient = PredictionServiceClient.create(predictionServiceSettings)
 
+                    val userSessionService = UserSessionServiceFirebaseImpl()
+
                     ChatViewModel(
                         generativeModel = generativeModel,
                         predictionServiceClient = predictionServiceClient,
                         location = location,
-                        application = application
+                        application = application,
+                        userSessionService = userSessionService
                     )
                 }
 

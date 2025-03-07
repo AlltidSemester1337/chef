@@ -6,8 +6,7 @@ import android.util.Log
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-//TODO Update for 2.0 users
-private const val CHAT_HISTORY_KEY = "users/AuPP3gxW5fSjcxNB3NTQ9CVX9IJ2/chat_history"
+
 
 data class Content(
     var role: String = "user", // Default value, must be mutable (var)
@@ -18,7 +17,8 @@ data class Part(
     var text: String = ""
 )
 
-class ChatHistoryRepositoryImpl : ChatHistoryRepository {
+class ChatHistoryRepositoryImpl(override val uid: String) : ChatHistoryRepository {
+    private val CHAT_HISTORY_KEY = "users/$uid/chat_history"
     private val _database = FirebaseInstance.database
 
     override fun saveNewEntries(newEntries: List<com.google.firebase.vertexai.type.Content>) {
@@ -36,19 +36,20 @@ class ChatHistoryRepositoryImpl : ChatHistoryRepository {
 
     override suspend fun loadChatHistoryLastTwentyEntries(): List<com.google.firebase.vertexai.type.Content> {
         return suspendCancellableCoroutine { continuation ->
-            _database.getReference(CHAT_HISTORY_KEY).get().addOnSuccessListener { dataSnapshot ->
-                val contentList = dataSnapshot.children.mapNotNull { child ->
-                    child.getValue(Content::class.java)
-                }.takeLast(20).map { content ->
-                    com.google.firebase.vertexai.type.Content(
-                        content.role,
-                        content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) })
+            _database.getReference(CHAT_HISTORY_KEY).get()
+                .addOnSuccessListener { dataSnapshot ->
+                    val contentList = dataSnapshot.children.mapNotNull { child ->
+                        child.getValue(Content::class.java)
+                    }.takeLast(20).map { content ->
+                        com.google.firebase.vertexai.type.Content(
+                            content.role,
+                            content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) })
+                    }
+                    continuation.resume(contentList)
+                }.addOnFailureListener { exception ->
+                    Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)
+                    continuation.resumeWithException(exception)
                 }
-                continuation.resume(contentList)
-            }.addOnFailureListener { exception ->
-                Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)
-                continuation.resumeWithException(exception)
-            }
         }
     }
 }

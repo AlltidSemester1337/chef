@@ -2,8 +2,8 @@
 
 ![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/ic_launcher_new_round.webp)
 
-A personal cooking assistant Android app (Kotlin) to suggest recipes for cooking. Built on vertexai
-chat and
+A personal cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
+suggest recipes for cooking. Built on vertexai chat and
 firebase. Requires integration towards
 vertexai using google-services.json credentials for SA in order to run.
 Also requires a firebaseDbUrl to be set in local.properties when building the app to run using
@@ -21,35 +21,11 @@ Features:
 - 1.6.x - Generate image and save / load for recipes in recipe collection
 - 1.6.1 enable sharing URL (copy)
 - 1.6.2 search / filter recipes in collection. This replaces search functionality in chat.
+- 2.0.0 - Users and sessions
 
-Future:
+## Demos
 
-- 1.7.x - Implement users / sessions
-
-Planned upcoming features / requests / ideas:
-Add features to categorize (tags, date, ingredients etc)
-Onboarding / preferences
-Integrate recipe lookup / references
-Look into imagegen pricing and consider if it can be used for more recipe images
-
-Web? https://reflex.dev/
-
-RAG? Langchain graphchain? (cost efficient w options for scalability), cost? Advanced RAG such as
-vector search and / or graph may be to costly?
-
-Long context / persistence?
-Consider [context caching](https://ai.google.dev/gemini-api/docs/caching?lang=python) or chatGTP
-memory etc?)
-
-User seed / username based sessions(must in order to progress further then closed BETA testing)
-
-Quick intro and few shot prompting for new users? (sign up / register flow)
-
-Sharing / collaboration / community features?
-
-## Demo 1.4 release
-
-[Demo 1.4](https://youtube.com/shorts/N_3rSULhudQ?feature=share)
+[Demos](https://www.youtube.com/playlist?list=PL3z3ETRVg-c4teb_hZ8OzLwx7ySJKoB1Q)
 
 ## How to make contributions?
 

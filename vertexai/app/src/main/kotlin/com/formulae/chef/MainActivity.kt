@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.ui.theme.GenerativeAISample
 import com.google.firebase.Firebase
@@ -45,6 +46,8 @@ class MainActivity : ComponentActivity() {
 
         this.actionBar?.hide()
 
+        val userSessionService = UserSessionServiceFirebaseImpl()
+
         setContent {
             GenerativeAISample {
                 // A surface container using the 'background' color from the theme
@@ -52,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(recipeRepository)
+                    AppNavigation(recipeRepository, userSessionService)
                 }
             }
         }

@@ -1,6 +1,6 @@
 package com.formulae.chef.services.persistence
 
-import android.content.Context
+/*import android.content.Context
 import android.content.SharedPreferences
 import com.formulae.chef.util.json.ContentInstanceCreator
 import com.formulae.chef.util.json.PartInstanceCreator
@@ -29,7 +29,6 @@ class ChatHistoryRepositoryFileImpl(context: Context) : ChatHistoryRepository {
     //}
 
     override fun saveNewEntries(newEntries: List<Content>) {
-        TODO("Not yet implemented")
     }
 
     override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
@@ -45,3 +44,4 @@ class ChatHistoryRepositoryFileImpl(context: Context) : ChatHistoryRepository {
     }
 
 }
+*/

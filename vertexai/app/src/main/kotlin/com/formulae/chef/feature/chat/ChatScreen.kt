@@ -123,7 +123,6 @@ fun ChatList(
     }
 }
 
-// TODO Why only some (short) messages star button is interactable? try to further troubleshoot and fix
 @Composable
 fun ChatBubbleItem(
     chatMessage: ChatMessage,

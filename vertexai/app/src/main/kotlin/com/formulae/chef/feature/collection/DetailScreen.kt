@@ -21,13 +21,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -88,7 +86,7 @@ internal fun DetailRoute(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Text(text = recipe.summary, style = MaterialTheme.typography.bodyMedium)
+        Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
@@ -120,12 +118,12 @@ internal fun DetailRoute(
         if (showIngredients) {
             Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.ingredients, style = MaterialTheme.typography.bodyMedium)
+            Text(text = recipe.ingredients.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
         } else {
             Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.instructions, style = MaterialTheme.typography.bodyMedium)
+            Text(text = recipe.instructions.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
         }
 
         // Centered Share Button

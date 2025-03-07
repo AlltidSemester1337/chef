@@ -3,6 +3,7 @@ package com.formulae.chef.feature.collection
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,7 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class CollectionViewModel(
-    private val repository: RecipeRepository
+    private val repository: RecipeRepository,
+    private val userSessionService: UserSessionService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CollectionUiState())
     val uiState: StateFlow<CollectionUiState> = _uiState.asStateFlow()
@@ -31,9 +33,13 @@ class CollectionViewModel(
     fun fetchRecipes() {
         viewModelScope.launch {
             _isLoading.value = true
-            recipes = repository.loadRecipes()
-            _uiState.value = CollectionUiState(recipes = recipes)
-            _isLoading.value = false
+            if (!userSessionService.anonymousSession) {
+                userSessionService.currentUser.collect { user ->
+                    recipes = user?.let { repository.loadUserRecipes(it.uid) } ?: repository.loadAllRecipes()
+                    _uiState.value = CollectionUiState(recipes = recipes)
+                    _isLoading.value = false
+                }
+            }
         }
     }
 

@@ -23,12 +23,15 @@ import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.google.cloud.aiplatform.v1.EndpointName
 import com.google.cloud.aiplatform.v1.PredictRequest
 import com.google.cloud.aiplatform.v1.PredictionServiceClient
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.UserInfo
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
@@ -41,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -48,9 +52,9 @@ class ChatViewModel(
     generativeModel: GenerativeModel,
     predictionServiceClient: PredictionServiceClient?,
     location: String,
-    application: Application
+    application: Application,
+    userSessionService: UserSessionService
 ) : AndroidViewModel(application) {
-    private val _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl()
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
 
@@ -59,6 +63,7 @@ class ChatViewModel(
             _projectId, location, "google", "imagen-3.0-generate-002"
         )
     private val _predictionServiceClient = predictionServiceClient
+    private val _userSessionService = userSessionService
 
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> =
@@ -73,10 +78,14 @@ class ChatViewModel(
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private lateinit var chat: Chat
+    private var _currentUser: UserInfo? = null
+    private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
 
     init {
         viewModelScope.launch {
             _isLoading.value = true
+            _currentUser = _userSessionService.currentUser.first()
+            _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(_currentUser!!.uid)
             _chatHistory.value = initializeChatHistory()
             chat = generativeModel.startChat(
                 history = _chatHistory.value
@@ -147,17 +156,15 @@ class ChatViewModel(
 
     fun onRecipeStarred(message: ChatMessage) {
         val context: Context = getApplication<Application>().applicationContext
-        if (message.isStarred) {
-            removeRecipe(context, message)
-        } else {
+        if (!message.isStarred) {
             saveRecipe(context, message)
         }
     }
 
-    fun removeRecipe(context: Context, message: ChatMessage) {
+    // Think about scrapping this functionality completely, see linear
+    /*fun removeRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
-                // TODO Implement search/delete by title
                 //_persistenceImpl.deleteRecipe(recipeData)
                 Log.d("CHEF", "CHEF:::::RECIPE_DELETED")
                 // Update UI
@@ -179,13 +186,17 @@ class ChatViewModel(
                 ).show()
             }
         }
-    }
+    }*/
 
     fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
                 val newRecipe = withContext(Dispatchers.Default) {
                     deriveRecipeFromMessage(message.text)
+                }
+
+                if (_currentUser != null) {
+                    newRecipe.uid = _currentUser!!.uid
                 }
 
                 withContext(Dispatchers.IO) {
@@ -304,6 +315,7 @@ class ChatViewModel(
         val path = gcsUri.removePrefix("gs://").split("/", limit = 2)
         val bucket = path[0]
         val objectPath = path[1].replace("/", "%2F") // URL encode "/"
+        // TODO Should be like this instead: "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/1739388695424/sample_0.jpg"
         return "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath?alt=media"
     }
 

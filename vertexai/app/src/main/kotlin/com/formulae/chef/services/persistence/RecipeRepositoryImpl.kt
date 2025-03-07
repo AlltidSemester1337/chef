@@ -5,13 +5,11 @@ import com.formulae.chef.feature.model.Recipe
 import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
 
-//TODO Update for 2.0 users
 private const val FAVOURITES_KEY = "recipes"
 
 class RecipeRepositoryImpl : RecipeRepository {
     private val _database = FirebaseInstance.database
     private val recipesRef = _database.getReference(FAVOURITES_KEY)
-    private val gson = Gson()
 
     override fun saveRecipe(recipe: Recipe) {
         val reference = _database.getReference(FAVOURITES_KEY)
@@ -27,7 +25,12 @@ class RecipeRepositoryImpl : RecipeRepository {
         }
     }
 
-    override suspend fun loadRecipes(): List<Recipe> {
+    override suspend fun loadUserRecipes(uid: String): List<Recipe> {
+        // TODO: Might want to optimize this query later?
+        return loadAllRecipes().filter { it.uid == uid }
+    }
+
+    override suspend fun loadAllRecipes(): List<Recipe> {
         return recipesRef.get().await().children.mapNotNull { snapshot ->
             snapshot.getValue(Recipe::class.java)
         }

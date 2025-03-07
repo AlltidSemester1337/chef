@@ -96,6 +96,7 @@ dependencies {
     implementation("io.grpc:grpc-okhttp:1.68.1")
 
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-auth-ktx")
 
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
 

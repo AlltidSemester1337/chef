@@ -27,6 +27,14 @@
     <string name="menu_audio_title">Generate text from text-and-audio input</string>
     <string name="menu_audio_description">Sample app for recording audio and generating text from it</string>
 
+    <!-- Sign in strings -->
+    <string name="sign_in">Sign in</string>
+    <string name="sign_up">Sign up</string>
+    <string name="sign_out">Sign out</string>
+    <string name="skip_sign_up">Sign up later</string>
+    <string name="password">Password</string>
+    <string name="email">Email</string>
+
     <!-- Summarize sample strings -->
     <string name="summarize_label">Text</string>
     <string name="summarize_hint">Enter text to summarize</string>
