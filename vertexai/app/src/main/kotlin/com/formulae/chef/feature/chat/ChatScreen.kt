@@ -16,10 +16,6 @@
 
 package com.formulae.chef.feature.chat
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -173,12 +168,11 @@ fun ChatBubbleItem(
                         .padding(all = 8.dp)
                 )
             }
-            // TODO Continue debug click for a bit but still seems hopeless...
             Column {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = backgroundColor),
                     shape = bubbleShape,
-                    modifier = Modifier.fillMaxWidth()//Modifier.widthIn(0.dp, maxWidth * 0.9f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(

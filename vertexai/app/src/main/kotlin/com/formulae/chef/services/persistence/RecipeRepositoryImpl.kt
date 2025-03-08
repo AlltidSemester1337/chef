@@ -26,8 +26,12 @@ class RecipeRepositoryImpl : RecipeRepository {
     }
 
     override suspend fun loadUserRecipes(uid: String): List<Recipe> {
-        // TODO: Might want to optimize this query later?
-        return loadAllRecipes().filter { it.uid == uid }
+        return recipesRef.orderByChild("uid")
+            .equalTo(uid)
+            .get()
+            .await()
+            .children
+            .mapNotNull { snapshot -> snapshot.getValue(Recipe::class.java) }
     }
 
     override suspend fun loadAllRecipes(): List<Recipe> {

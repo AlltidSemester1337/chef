@@ -52,8 +52,6 @@ import com.formulae.chef.SignInViewModelFactory
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.theme.Purple40
 
-// TODO Implement preview
-//@Preview(showBackground = true, name = "Home Screen")
 @Composable
 internal fun SignInRoute(
     userSessionService: UserSessionService,

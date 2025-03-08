@@ -15,12 +15,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.formulae.chef.services.authentication.UserSessionService
 import com.google.firebase.auth.UserInfo
 
-@Preview(showBackground = true, name = "Home Screen")
+
 @Composable
 fun HomeScreen(
     userSessionService: UserSessionService,
