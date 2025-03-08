@@ -174,39 +174,39 @@ fun ChatBubbleItem(
                 )
             }
             // TODO Continue debug click for a bit but still seems hopeless...
-            BoxWithConstraints {
+            Column {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = backgroundColor),
                     shape = bubbleShape,
-                    modifier = Modifier.widthIn(0.dp, maxWidth * 0.9f)
+                    modifier = Modifier.fillMaxWidth()//Modifier.widthIn(0.dp, maxWidth * 0.9f)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, Color.Red),
+                                .fillMaxWidth(),
                             text = chatMessage.text,
                         )
-                        if (chatMessage.participant == Participant.MODEL) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        onStarClicked(chatMessage)
-                                    }, // Callback to handle add to collection'
-                                    modifier = Modifier
-                                        .border(1.dp, Color.Green)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection",
-                                        tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
-                                    )
-                                }
-                            }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                if (chatMessage.participant == Participant.MODEL) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+                        shape = bubbleShape,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        IconButton(
+                            onClick = {
+                                onStarClicked(chatMessage)
+                            }, // Callback to handle add to collection'
+                            modifier = Modifier
+                                .align(Alignment.End)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection",
+                                tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
+                            )
                         }
                     }
                 }
