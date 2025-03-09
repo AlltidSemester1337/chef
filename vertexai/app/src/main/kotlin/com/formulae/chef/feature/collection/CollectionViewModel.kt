@@ -32,14 +32,8 @@ class CollectionViewModel(
 
     fun fetchRecipes() {
         viewModelScope.launch {
-            _isLoading.value = true
-            if (!userSessionService.anonymousSession) {
-                userSessionService.currentUser.collect { user ->
-                    recipes = user?.let { repository.loadUserRecipes(it.uid) } ?: repository.loadAllRecipes()
-                    _uiState.value = CollectionUiState(recipes = recipes)
-                    _isLoading.value = false
-                }
-            }
+            recipes = repository.loadAllRecipes()
+            _uiState.value = CollectionUiState(recipes = recipes)
         }
     }
 

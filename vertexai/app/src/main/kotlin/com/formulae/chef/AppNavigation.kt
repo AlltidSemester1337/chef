@@ -22,16 +22,22 @@ fun AppNavigation(recipeRepository: RecipeRepository, userSessionService: UserSe
                 userSessionService = userSessionService,
                 onNavigateToChat = { navController.navigate("chat") },
                 onNavigateToCollection = { navController.navigate("collection") },
-                onSignOut = { userSessionService.signOut(); navController.navigate("signIn") {
+                onSignOut = {
+                    userSessionService.signOut(); navController.navigate("signIn") {
                     popUpTo("home") { inclusive = true }
-                } }
+                }
+                }
             )
         }
         composable("chat") {
             ChatRoute() // Your existing ChatRoute
         }
         composable("collection") {
-            CollectionRoute(repository = recipeRepository, navController = navController) // Your new CollectionRoute
+            CollectionRoute(
+                repository = recipeRepository,
+                navController = navController,
+                userSessionService = userSessionService
+            )
         }
         composable("signIn") {
             SignInRoute(userSessionService, navController)
