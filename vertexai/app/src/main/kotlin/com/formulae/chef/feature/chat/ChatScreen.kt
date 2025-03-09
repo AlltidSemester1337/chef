@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.GenerativeViewModelFactory
@@ -215,9 +216,9 @@ fun MessageInput(
     resetScroll: () -> Unit = {}
 ) {
     var userMessage by rememberSaveable { mutableStateOf("") }
-
     ElevatedCard(
         modifier = Modifier
+            .padding(bottom = 40.dp)
             .fillMaxWidth()
     ) {
         Row(
@@ -259,4 +260,33 @@ fun MessageInput(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewChatList() {
+    ChatList(
+        chatMessages = listOf(
+            ChatMessage(text = "Can you give me a recipe for coq au vin?"),
+            ChatMessage(
+                text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry, showcasing the magic of slow cooking and aromatic spices.  The beef becomes incredibly tender as it simmers in a fragrant coconut milk-based curry.\\n\\n**Yields:** 4 servings\\n**Prep time:** 20 minutes\\n**Cook time:** 2 - 2.5 hours\\n\\n**",
+                participant = Participant.MODEL
+            ),
+            ChatMessage(text = "Can you give me a recipe for coq au vin?"),
+            ChatMessage(
+                text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry, showcasing the magic of slow cooking and aromatic spices.  The beef becomes incredibly tender as it simmers in a fragrant coconut milk-based curry.\\n\\n**Yields:** 4 servings\\n**Prep time:** 20 minutes\\n**Cook time:** 2 - 2.5 hours\\n\\n**",
+                participant = Participant.MODEL
+            ),
+            ChatMessage(text = "Can you give me a recipe for coq au vin?"),
+            ChatMessage(
+                text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry, showcasing the magic of slow cooking and aromatic spices.  The beef becomes incredibly tender as it simmers in a fragrant coconut milk-based curry.\\n\\n**Yields:** 4 servings\\n**Prep time:** 20 minutes\\n**Cook time:** 2 - 2.5 hours\\n\\n**",
+                participant = Participant.MODEL
+            )
+        ), rememberLazyListState(), {})
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewMessageInput() {
+    MessageInput(onSendMessage = {})
 }

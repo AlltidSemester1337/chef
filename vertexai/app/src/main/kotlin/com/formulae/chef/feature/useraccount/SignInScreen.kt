@@ -37,18 +37,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.formulae.chef.R
 import com.formulae.chef.SignInViewModelFactory
+import com.formulae.chef.feature.collection.SearchBar
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.theme.Purple40
 
@@ -61,6 +64,26 @@ internal fun SignInRoute(
     val email = viewModel.email.collectAsState()
     val password = viewModel.password.collectAsState()
 
+    SignUpScreen(
+        email,
+        password,
+        { viewModel.updateEmail(it) },
+        { viewModel.updatePassword(it) },
+        { viewModel.onSignInClick() },
+        { viewModel.onSignUpClick() }
+    ) { viewModel.onSkipSignInClick() }
+}
+
+@Composable
+private fun SignUpScreen(
+    email: State<String>,
+    password: State<String>,
+    onUpdateEmail: (String) -> Unit,
+    onUpdatePassword: (String) -> Unit,
+    onSignInClick: () -> Unit,
+    onSignUpClick: () -> Unit,
+    onSkipSignUpClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,7 +108,7 @@ internal fun SignInRoute(
                 unfocusedIndicatorColor = Color.Transparent
             ),
             value = email.value,
-            onValueChange = { viewModel.updateEmail(it) },
+            onValueChange = onUpdateEmail,
             placeholder = { Text(stringResource(R.string.email)) },
             leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = "Email") }
         )
@@ -105,7 +128,7 @@ internal fun SignInRoute(
                 unfocusedIndicatorColor = Color.Transparent
             ),
             value = password.value,
-            onValueChange = { viewModel.updatePassword(it) },
+            onValueChange = onUpdatePassword,
             placeholder = { Text(stringResource(R.string.password)) },
             leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = "Email") },
             visualTransformation = PasswordVisualTransformation()
@@ -118,7 +141,7 @@ internal fun SignInRoute(
         )
 
         Button(
-            onClick = { viewModel.onSignInClick() },
+            onClick = onSignInClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp, 0.dp)
@@ -136,7 +159,7 @@ internal fun SignInRoute(
                 .padding(4.dp)
         )
 
-        TextButton(onClick = { viewModel.onSignUpClick() }) {
+        TextButton(onClick = onSignUpClick) {
             Text(text = stringResource(R.string.sign_up), fontSize = 16.sp)
         }
 
@@ -146,8 +169,28 @@ internal fun SignInRoute(
                 .padding(4.dp)
         )
 
-        TextButton(onClick = { viewModel.onSkipSignInClick() }) {
+        TextButton(onClick = onSkipSignUpClick) {
             Text(text = stringResource(R.string.skip_sign_up), fontSize = 16.sp)
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSignUpScreen() {
+    SignUpScreen(
+        email = object : State<String> {
+            override val value: String
+                get() = "Email"
+        },
+        password = object : State<String> {
+            override val value: String
+                get() = "Password"
+        },
+        onUpdateEmail = { },
+        onUpdatePassword = { },
+        onSignInClick = { },
+        onSignUpClick = { },
+        onSkipSignUpClick = { }
+    )
 }
