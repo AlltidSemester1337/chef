@@ -3,7 +3,6 @@ package com.formulae.chef.feature.collection
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
-import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +11,6 @@ import kotlinx.coroutines.launch
 
 class CollectionViewModel(
     private val repository: RecipeRepository,
-    private val userSessionService: UserSessionService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CollectionUiState())
     val uiState: StateFlow<CollectionUiState> = _uiState.asStateFlow()
@@ -41,8 +39,13 @@ class CollectionViewModel(
         _selectedRecipe.value = recipe
     }
 
-    fun onRecipeRemove(recipeId: String) {
-        repository.removeRecipe(recipeId)
+    fun onRecipeRemove(recipe: Recipe) {
+        val recipeId = recipe.id!!
+        if (recipe.copyId != null) {
+            repository.removeRecipe(recipeId)
+        } else {
+            repository.removeRecipeUid(recipeId)
+        }
         _selectedRecipe.value = null
         recipes = recipes.filter { it.id != recipeId }
         _uiState.value = CollectionUiState(recipes = recipes)

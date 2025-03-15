@@ -8,6 +8,8 @@ data class Recipe(
     var ingredients: String = "",
     var instructions: String = "",
     var imageUrl: String? = null,
-    var updatedAt: String = ""
+    var updatedAt: String = "",
+    var isFavourite: Boolean = false,
+    var copyId: String? = null
 
 )

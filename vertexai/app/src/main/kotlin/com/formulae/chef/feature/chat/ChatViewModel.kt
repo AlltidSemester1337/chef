@@ -185,6 +185,8 @@ class ChatViewModel(
                     newRecipes.forEach { it.uid = _currentUser!!.uid }
                 }
 
+                newRecipes.forEach { it.isFavourite = true }
+
                 withContext(Dispatchers.IO) {
                     newRecipes.forEach(_recipeRepositoryImpl::saveRecipe)
                 }

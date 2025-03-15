@@ -7,4 +7,5 @@ interface RecipeRepository {
     suspend fun loadUserRecipes(uid: String): List<Recipe>
     suspend fun loadAllRecipes(): List<Recipe>
     fun removeRecipe(recipeId: String)
+    fun removeRecipeUid(recipeId: String)
 }

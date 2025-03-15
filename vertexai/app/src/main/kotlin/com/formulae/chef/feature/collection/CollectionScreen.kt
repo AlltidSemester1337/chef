@@ -47,6 +47,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -97,18 +98,16 @@ internal fun CollectionRoute(
 
     val signedIn = !userSessionService.anonymousSession && currentUser != null
 
-    var recipesSource by remember {
-        mutableStateOf(
-            if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
-        )
+    var recipesSource by remember { mutableStateOf(RecipeSource.ALL_RECIPES) } // Start as null
+
+    LaunchedEffect(signedIn) {
+        recipesSource = if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
     }
 
     val recipesSourceList = if (recipesSource == RecipeSource.USER_FAVOURITES && currentUser != null) {
-        collectionUiState.recipes.filter { recipe ->
-            recipe.uid.contains(currentUser!!.uid) ?: false
-        }
+        getUserFavouritesRecipeSourceList(collectionUiState, currentUser)
     } else {
-        collectionUiState.recipes
+        getBrowseRecipeSourceList(collectionUiState, currentUser)
     }
 
     // Filter the list further based on the search query.
@@ -148,8 +147,8 @@ internal fun CollectionRoute(
                     onRecipeClick = { recipe: Recipe ->
                         collectionViewModel.onRecipeSelected(recipe)
                     },
-                    onRecipeRemoveClick = { recipeId: String ->
-                        collectionViewModel.onRecipeRemove(recipeId)
+                    onRecipeRemoveClick = { recipe: Recipe ->
+                        collectionViewModel.onRecipeRemove(recipe)
                     }
                 )
             } else {
@@ -159,6 +158,28 @@ internal fun CollectionRoute(
         }
     }
 }
+
+private fun getUserFavouritesRecipeSourceList(
+    collectionUiState: CollectionViewModel.CollectionUiState,
+    currentUser: UserInfo?
+) = collectionUiState.recipes.filter { recipe ->
+    recipe.uid.contains(currentUser!!.uid) ?: false
+}.filter { recipe ->
+    recipe.isFavourite
+}
+
+private fun getBrowseRecipeSourceList(
+    collectionUiState: CollectionViewModel.CollectionUiState,
+    currentUser: UserInfo?
+) = collectionUiState.recipes
+    .filter { recipe ->
+        recipe.copyId == null
+    }
+    .filter { recipe ->
+        recipe.isFavourite
+    }.filter { recipe ->
+        recipe.uid != currentUser!!.uid
+    }
 
 @Composable
 private fun RecipeListRoute(
@@ -171,7 +192,7 @@ private fun RecipeListRoute(
     onClickUserFavourites: () -> Unit,
     onClickAllRecipes: () -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeRemoveClick: (String) -> Unit
+    onRecipeRemoveClick: (Recipe) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -189,7 +210,8 @@ private fun RecipeListRoute(
             recipes = filteredRecipes,
             onRecipeClick = onRecipeClick,
             onRecipeRemove = onRecipeRemoveClick,
-            listState = listState
+            listState = listState,
+            recipeRemoveEnabled = recipesSource == RecipeSource.USER_FAVOURITES
         )
     }
 }
@@ -248,8 +270,9 @@ fun SearchBar(
 fun RecipeList(
     recipes: List<Recipe>,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeRemove: (String) -> Unit,
-    listState: LazyListState
+    onRecipeRemove: (Recipe) -> Unit,
+    listState: LazyListState,
+    recipeRemoveEnabled: Boolean
 ) {
     if (recipes.isEmpty()) {
         Text(
@@ -265,7 +288,12 @@ fun RecipeList(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(recipes) { recipe ->
-                RecipeItem(recipe = recipe, onRecipeClick = onRecipeClick, onRecipeRemove = onRecipeRemove)
+                RecipeItem(
+                    recipe = recipe,
+                    onRecipeClick = onRecipeClick,
+                    onRecipeRemove = onRecipeRemove,
+                    recipeRemoveEnabled = recipeRemoveEnabled
+                )
             }
         }
     }
@@ -276,7 +304,8 @@ fun RecipeList(
 fun RecipeItem(
     recipe: Recipe,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeRemove: (String) -> Unit
+    onRecipeRemove: (Recipe) -> Unit,
+    recipeRemoveEnabled: Boolean
 ) {
     Card(
         modifier = Modifier
@@ -298,18 +327,20 @@ fun RecipeItem(
                     .weight(1f)
                     .align(Alignment.CenterVertically)
             )
-            IconButton(
-                onClick = {
-                    onRecipeRemove(recipe.id!!)
-                }, // Callback to handle add to collection
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove recipe from collection",
-                    tint = Color.Red
-                )
+            if (recipeRemoveEnabled) {
+                IconButton(
+                    onClick = {
+                        onRecipeRemove(recipe)
+                    }, // Callback to handle add to collection
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove recipe from collection",
+                        tint = Color.Red
+                    )
+                }
             }
         }
     }
