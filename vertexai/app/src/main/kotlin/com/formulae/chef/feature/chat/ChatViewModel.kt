@@ -38,11 +38,16 @@ import com.google.firebase.storage.ktx.storage
 import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
+import com.google.firebase.vertexai.type.GenerateContentResponse
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
 import com.google.protobuf.Value
 import com.google.protobuf.util.JsonFormat
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.api.trace.Tracer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -143,7 +148,11 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                val response = chat.sendMessage(userMessage)
+                val response = generateModelResponseInstrumented(
+                    prompt = userMessage,
+                    responseFunction = chat::sendMessage,
+                    spanName = "generateChatModelResponse"
+                )
 
                 _uiState.value.replaceLastPendingMessage()
 
@@ -164,6 +173,51 @@ class ChatViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun generateModelResponseInstrumented(
+        prompt: String,
+        responseFunction: suspend (String) -> GenerateContentResponse,
+        spanName: String
+    ): GenerateContentResponse {
+        // Obtain the global OpenTelemetry tracer
+        val tracer: Tracer = getTracer()
+
+        // Start a new span
+        val span: Span = tracer.spanBuilder(spanName).startSpan()
+
+        // Add the input parameter as an attribute
+        span.setAttribute("prompt", prompt)
+
+        // Initialize the response variable
+        var response: GenerateContentResponse? = null
+
+        // Use a try-finally block to ensure the span is ended properly
+        try {
+            // Set the span in the current context
+            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+                // Call the original method logic
+                response = responseFunction(prompt)
+
+                // Add the output as an attribute
+                span.setAttribute("modelResponse", response.toString())
+            }
+        } catch (e: Exception) {
+            // Record any exceptions thrown during the method execution
+            span.recordException(e)
+            span.setStatus(StatusCode.ERROR)
+            throw e
+        } finally {
+            // End the span
+            span.end()
+        }
+
+        // Return the response
+        return response!!
+    }
+
+    fun getTracer(): Tracer {
+        return GlobalOpenTelemetry.getTracer("com.formulae.chef")
     }
 
     fun onRecipeStarred(message: ChatMessage) {
@@ -210,8 +264,14 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun deriveRecipesFromMessage(answer: String): List<Recipe> {
-        val recipesJsonText = _jsonGenerativeModel.generateContent(content { text(answer) }).text!!
+    private suspend fun deriveRecipesFromMessage(messageText: String): List<Recipe> {
+        val recipesJsonText = generateModelResponseInstrumented(
+            prompt = messageText,
+            responseFunction = { prompt ->
+                _jsonGenerativeModel.generateContent(content { text(prompt) })
+            },
+            spanName = "generateJsonModelResponse"
+        ).text!!
         val gson = Gson()
         val recipes = gson.fromJson(recipesJsonText.replace("```json", "").replace("```", ""), Recipes::class.java)
         return recipes.recipes.map(this::createRecipeFromJson)
@@ -246,37 +306,59 @@ class ChatViewModel(
 
 
     private fun createImageForRecipe(recipe: String): String {
-        val gson = Gson()
-        val prompt = IMAGE_PROMPT_TEMPLATE + recipe
-        val instancesJson = gson.toJson(mapOf("prompt" to prompt))
-        val instances = jsonToValue(instancesJson)
-
-        val paramsJson = gson.toJson(
-            mapOf(
-                "sampleCount" to 1,
-                "aspectRatio" to "4:3",
-                "storageUri" to "gs://$_projectId.firebasestorage.app/recipes",
-                "outputOptions" to
-                        mapOf(
-                            "mimeType" to "image/jpeg",
-                        )
-            )
-        )
-
-        val parameters = jsonToValue(paramsJson)
-
-        val predictRequest = PredictRequest.newBuilder()
-            .setEndpoint(_imagenEndpointName.toString())
-            .addAllInstances(listOf(instances))
-            .setParameters(parameters)
-            .build()
-        val response = _predictionServiceClient!!.predict(predictRequest)
-        val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
+        val gcsUri = generateImageInstrumented(recipe)
         val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
         val downloadUrl = runBlocking {
             Firebase.storage("gs://$_projectId.firebasestorage.app/").reference.child(storagePath).downloadUrl.await()
         }
         return downloadUrl.encodedPath.toString()
+    }
+
+    private fun generateImageInstrumented(recipe: String): String {
+        val gson = Gson()
+        val span = getTracer().spanBuilder("generateImage")
+            .startSpan()
+
+        try {
+            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+                val prompt = IMAGE_PROMPT_TEMPLATE + recipe
+                span.setAttribute("prompt", prompt) // Capture input
+
+                val instancesJson = gson.toJson(mapOf("prompt" to prompt))
+                val instances = jsonToValue(instancesJson)
+
+                val paramsJson = gson.toJson(
+                    mapOf(
+                        "sampleCount" to 1,
+                        "aspectRatio" to "4:3",
+                        "storageUri" to "gs://$_projectId.firebasestorage.app/recipes",
+                        "outputOptions" to mapOf("mimeType" to "image/jpeg")
+                    )
+                )
+
+                val parameters = jsonToValue(paramsJson)
+                span.setAttribute("parameters", paramsJson) // Capture parameters
+
+                val predictRequest = PredictRequest.newBuilder()
+                    .setEndpoint(_imagenEndpointName.toString())
+                    .addAllInstances(listOf(instances))
+                    .setParameters(parameters)
+                    .build()
+
+                val response = _predictionServiceClient!!.predict(predictRequest)
+                val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
+
+                span.setAttribute("gcsUri", gcsUri)
+
+                return gcsUri
+            }
+        } catch (e: Exception) {
+            span.recordException(e)
+            span.setStatus(StatusCode.ERROR)
+            throw e
+        } finally {
+            span.end()
+        }
     }
 
     // Converts JSON string to Protobuf Value

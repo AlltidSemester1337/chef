@@ -30,6 +30,13 @@ import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.initialize
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.resources.Resource
+import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 
 class MainActivity : ComponentActivity() {
 
@@ -45,6 +52,24 @@ class MainActivity : ComponentActivity() {
         val recipeRepository = RecipeRepositoryImpl()
 
         this.actionBar?.hide()
+
+        // Initialize the OTLP exporter
+        val spanExporter = OtlpGrpcSpanExporter.builder()
+            .addHeader("api_key", BuildConfig.phoenixApiKey)
+            .setEndpoint("https://app.phoenix.arize.com:4317")
+            .build()
+
+        val resource = Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "Chef-Android"))
+
+        // Initialize the OpenTelemetry SDK
+        val tracerProvider = SdkTracerProvider.builder()
+            .addResource(resource)
+            .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
+            .build()
+
+        OpenTelemetrySdk.builder()
+            .setTracerProvider(tracerProvider)
+            .buildAndRegisterGlobal()
 
         val userSessionService = UserSessionServiceFirebaseImpl()
 

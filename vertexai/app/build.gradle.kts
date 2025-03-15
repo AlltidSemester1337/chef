@@ -31,6 +31,7 @@ if (localPropertiesFile.exists()) {
 }
 
 val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
+val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
 
 android {
     namespace = "com.formulae.chef"
@@ -41,6 +42,12 @@ android {
             "String",
             "firebaseDbUrl",
             "\"${firebaseDbUrl}\""
+        )
+
+        buildConfigField(
+            "String",
+            "phoenixApiKey",
+            phoenixApiKey
         )
 
         applicationId = "com.formulae.chef"
@@ -103,6 +110,14 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     implementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.storage.ktx)
+    // OpenTelemetry API
+    implementation("io.opentelemetry:opentelemetry-api:1.48.0")
+    // OpenTelemetry SDK
+    implementation("io.opentelemetry:opentelemetry-sdk:1.48.0")
+    // OpenTelemetry Exporter (e.g., OTLP)
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.48.0")
+    // Android-specific OpenTelemetry SDK
+    implementation("io.opentelemetry.android:opentelemetry-android:1.48.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

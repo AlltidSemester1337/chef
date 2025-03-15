@@ -6,8 +6,7 @@ A personal cooking assistant / recipe generator and collection browsing Android 
 suggest recipes for cooking. Built on vertexai chat and
 firebase. Requires integration towards
 vertexai using google-services.json credentials for SA in order to run.
-Also requires a firebaseDbUrl to be set in local.properties when building the app to run using
-ChatHistoryRealtimeDatabasePersistence.
+Also requires a firebaseDbUrl and phoenixApiKey to be set in local.properties when building the app.
 
 Run the app from vertexai/app module.
 
@@ -22,6 +21,9 @@ Features:
 - 1.6.1 enable sharing URL (copy)
 - 1.6.2 search / filter recipes in collection. This replaces search functionality in chat.
 - 2.0.0 - Users and sessions
+- 3.0.0 - Recipe collection updates and browsing
+
+TODO: Start testing integration with Phoenix Arize observability platform
 
 ## Demos
 
