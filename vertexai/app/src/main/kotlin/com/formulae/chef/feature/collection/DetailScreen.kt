@@ -51,7 +51,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.formulae.chef.feature.chat.MessageInput
 import com.formulae.chef.feature.model.Recipe
 
 @Composable

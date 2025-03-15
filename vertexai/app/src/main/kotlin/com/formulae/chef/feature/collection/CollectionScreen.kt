@@ -17,6 +17,7 @@
 package com.formulae.chef.feature.collection
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,11 +28,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -57,13 +60,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.CollectionViewModelFactory
+import com.formulae.chef.R
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository
@@ -292,7 +300,8 @@ fun RecipeList(
                     recipe = recipe,
                     onRecipeClick = onRecipeClick,
                     onRecipeRemove = onRecipeRemove,
-                    recipeRemoveEnabled = recipeRemoveEnabled
+                    recipeRemoveEnabled = recipeRemoveEnabled,
+                    painter = rememberAsyncImagePainter(recipe.imageUrl)
                 )
             }
         }
@@ -305,7 +314,8 @@ fun RecipeItem(
     recipe: Recipe,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeRemove: (Recipe) -> Unit,
-    recipeRemoveEnabled: Boolean
+    recipeRemoveEnabled: Boolean,
+    painter: Painter
 ) {
     Card(
         modifier = Modifier
@@ -320,9 +330,19 @@ fun RecipeItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically // Ensures both items are aligned properly
         ) {
+            if (recipe.imageUrl?.isNotEmpty() == true) {
+                Image(
+                    painter = painter,
+                    contentDescription = "Recipe Image",
+                    modifier = Modifier
+                        .width(150.dp)
+                        .height(100.dp)
+                        .padding(end=10.dp)
+                )
+            }
             Text(
                 text = recipe.title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically)
@@ -361,5 +381,18 @@ fun PreviewRecipeListRoute() {
         filteredRecipes = listOf(Recipe(title = "West African Peanut stew"), Recipe(title = "Pasta Carbonara")),
         onRecipeClick = {},
         onRecipeRemoveClick = {},
+    )
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewRecipeItemWithImage() {
+    RecipeItem(
+        onRecipeClick = {},
+        onRecipeRemove = {},
+        recipe = Recipe(title = "Pasta Carbonara", imageUrl = "whatever"),
+        recipeRemoveEnabled = true,
+        painter = painterResource(id = R.drawable.test)
     )
 }
