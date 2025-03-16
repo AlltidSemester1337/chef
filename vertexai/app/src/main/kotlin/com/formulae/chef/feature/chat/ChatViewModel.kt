@@ -184,10 +184,14 @@ class ChatViewModel(
         val tracer: Tracer = getTracer()
 
         // Start a new span
-        val span: Span = tracer.spanBuilder(spanName).startSpan()
-
-        // Add the input parameter as an attribute
-        span.setAttribute("prompt", prompt)
+        val span: Span = tracer.spanBuilder(spanName)
+            .setAttribute("operation.name", "generateChatModelResponse")
+            .setAttribute("llm.model_name", "vertexai/gemini 2.0")
+            .setAttribute(
+                "llm.input_messages",
+                "[{\"message.role\": \"user\", \"message.content\": \"" + prompt + "\"}]"
+            )
+            .startSpan()
 
         // Initialize the response variable
         var response: GenerateContentResponse? = null
@@ -200,7 +204,10 @@ class ChatViewModel(
                 response = responseFunction(prompt)
 
                 // Add the output as an attribute
-                span.setAttribute("modelResponse", response.toString())
+                span.setAttribute(
+                    "llm.output_messages",
+                    "[{\"message.role\": \"model\", \"message.content\": \"" + response?.text + "\"}]"
+                )
             }
         } catch (e: Exception) {
             // Record any exceptions thrown during the method execution
@@ -316,13 +323,18 @@ class ChatViewModel(
 
     private fun generateImageInstrumented(recipe: String): String {
         val gson = Gson()
+        val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
+            .setAttribute("operation.name", "generateImage")
+            .setAttribute("llm.model_name", "vertexai/imagen3")
+            .setAttribute(
+                "llm.input_messages",
+                "[{\"message.role\": \"user\", \"message.content\": \"" + prompt + "\"}]"
+            )
             .startSpan()
 
         try {
             io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                val prompt = IMAGE_PROMPT_TEMPLATE + recipe
-                span.setAttribute("prompt", prompt) // Capture input
 
                 val instancesJson = gson.toJson(mapOf("prompt" to prompt))
                 val instances = jsonToValue(instancesJson)
@@ -337,7 +349,7 @@ class ChatViewModel(
                 )
 
                 val parameters = jsonToValue(paramsJson)
-                span.setAttribute("parameters", paramsJson) // Capture parameters
+                span.setAttribute("llm.invocation_parameters", paramsJson) // Capture parameters
 
                 val predictRequest = PredictRequest.newBuilder()
                     .setEndpoint(_imagenEndpointName.toString())
@@ -348,7 +360,10 @@ class ChatViewModel(
                 val response = _predictionServiceClient!!.predict(predictRequest)
                 val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
 
-                span.setAttribute("gcsUri", gcsUri)
+                span.setAttribute(
+                    "llm.output_messages",
+                    "[{\"message.role\": \"model\", \"message.content\": \"" + gcsUri + "\"}]"
+                )
 
                 return gcsUri
             }

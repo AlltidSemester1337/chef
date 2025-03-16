@@ -116,8 +116,6 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk:1.48.0")
     // OpenTelemetry Exporter (e.g., OTLP)
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.48.0")
-    // Android-specific OpenTelemetry SDK
-    implementation("io.opentelemetry.android:opentelemetry-android:1.48.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

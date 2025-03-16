@@ -32,6 +32,7 @@ import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.initialize
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.resources.Resource
@@ -54,17 +55,24 @@ class MainActivity : ComponentActivity() {
         this.actionBar?.hide()
 
         // Initialize the OTLP exporter
-        val spanExporter = OtlpGrpcSpanExporter.builder()
+        val spanExporter = OtlpHttpSpanExporter.builder()
+            .addHeader("Authorization", "Bearer ${BuildConfig.phoenixApiKey}")
             .addHeader("api_key", BuildConfig.phoenixApiKey)
-            .setEndpoint("https://app.phoenix.arize.com:4317")
+            .setEndpoint("https://app.phoenix.arize.com/v1/traces")
             .build()
 
-        val resource = Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "Chef-Android"))
+        val resource = Resource.create(
+            Attributes.builder()
+                .put(AttributeKey.stringKey("service.name"), "Chef-Android")
+                .put(AttributeKey.stringKey("project.name"), "Chef-Android")
+                .put(AttributeKey.stringKey("openinference.project.name"), "Chef-Android")
+                .build()
+        )
 
         // Initialize the OpenTelemetry SDK
         val tracerProvider = SdkTracerProvider.builder()
-            .addResource(resource)
             .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
+            .setResource(resource)
             .build()
 
         OpenTelemetrySdk.builder()

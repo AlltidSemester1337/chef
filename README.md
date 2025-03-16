@@ -23,8 +23,6 @@ Features:
 - 2.0.0 - Users and sessions
 - 3.0.0 - Recipe collection updates and browsing
 
-TODO: Start testing integration with Phoenix Arize observability platform
-
 ## Demos
 
 [Demos](https://www.youtube.com/playlist?list=PL3z3ETRVg-c4teb_hZ8OzLwx7ySJKoB1Q)
