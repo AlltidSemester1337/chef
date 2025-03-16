@@ -46,6 +46,9 @@ fun HomeScreen(
     if (isLoading) {
         CircularProgressIndicator() // Show loader while waiting for user state
     } else {
+        if (!userSessionService.anonymousSession && currentUser == null) {
+            onSignOut()
+        }
         HomeNavigationScreen(
             onNavigateToChat,
             onNavigateToCollection,
