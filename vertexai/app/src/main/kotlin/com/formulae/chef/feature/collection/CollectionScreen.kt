@@ -186,7 +186,7 @@ private fun getBrowseRecipeSourceList(
     .filter { recipe ->
         recipe.isFavourite
     }.filter { recipe ->
-        recipe.uid != currentUser!!.uid
+        recipe.uid != currentUser?.uid
     }
 
 @Composable
