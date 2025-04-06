@@ -35,11 +35,6 @@ import java.lang.String
 import java.nio.charset.Charset
 
 
-private const val CHAT_SYSTEM_INSTRUCTIONS =
-    "You are a personal chef / cooking assistant to help with coming up for new ideas on recipes. " +
-            "Use https://www.honestgreens.com/en/menu as inspiration for the whole foods, healthy, simple and savory cooking / recipe style. " +
-            "Please use metric units and centiliters / decilitres for liquid measurements and state the nutritional values for each recipe."
-
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
     "If the text content contains one or more recipes, output the following example JSON format:\n" +
             "\"recipes\": [{   \"title\": \"Chicken Enchiladas with Creamy Chipotle Sauce\",   \"summary\": \"\\n\\nThis recipe elevates classic chicken enchiladas with a smoky chipotle cream sauce and vibrant fresh ingredients, aligning with the Honest Greens ethos of whole foods and healthy cooking.\\n\\n**Yields:** 6-8 enchiladas\\n**Prep time:** 25 minutes\\n**Cook time:** 35 minutes\\n\\n\\n**Nutritional Information per serving (approximate):** *These values are estimates and will vary based on specific ingredients used.*\\n\\n* Calories: 380 kcal\\n* Protein: 28g\\n* Carbohydrates: 30g\\n* Fat: 12g\\n* Fiber: 4g\\n\\n\\n\",   \"ingredients\": \"**For the Chicken Filling:**\\n\\n* 15ml olive oil\\n* 1 medium onion (150g), finely chopped\\n* 2 cloves garlic (5g), minced\\n* 1 tsp chili powder\\n* 1/2 tsp cumin\\n* 1/4 tsp smoked paprika\\n* 1/4 tsp salt\\n* 1/4 tsp black pepper\\n* 500g boneless, skinless chicken breasts, cooked and shredded (you can use rotisserie chicken for convenience)\\n* 400g can diced tomatoes, undrained\\n* 120ml chicken broth (low sodium preferred)\\n* 60ml light cream (or full-fat coconut milk for a richer, vegan option)\\n* 1-2 chipotle peppers in adobo sauce, finely minced (adjust to your spice preference)\\n\\n\\n**For the Creamy Chipotle Sauce:**\\n\\n* 120ml tomato sauce (passata or homemade for better flavor)\\n* 60ml water\\n* 1 tbsp (15ml) olive oil\\n* 1 chipotle pepper in adobo sauce, finely minced (or more, to taste)\\n* 1 tbsp (15g) adobo sauce from the chipotle can\\n* 200ml Greek yogurt (full-fat for creaminess) or vegan alternative\\n* 1 tbsp lime juice\\n* 1/4 tsp salt\\n* 1/4 tsp black pepper\\n\\n\\n**For Assembling:**\\n\\n* 6-8 corn tortillas (choose low sodium options where possible)\\n* 120g shredded Monterey Jack cheese (or a blend of Mexican cheeses)\\n* Fresh cilantro, chopped (for garnish)\\n\\n\\n\",\n" +
@@ -65,13 +60,13 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                 isAssignableFrom(ChatViewModel::class.java) -> {
                     // Initialize a GenerativeModel with the `gemini-flash` AI model for chat
                     val chatGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.0-flash-001",
+                        modelName = "gemini-1.5-flash-002",
                         generationConfig = config,
-                        systemInstruction = content { text(CHAT_SYSTEM_INSTRUCTIONS) }
+                        systemInstruction = content { text(BuildConfig.chefMainChatPromptTemplate) }
                     )
 
                     val jsonGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.0-flash-001",
+                        modelName = "gemini-2.0-flash-lite-001",
                         generationConfig = config,
                         systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
                     )

@@ -1,5 +1,7 @@
 package com.formulae.chef.feature.model
 
+import com.google.firebase.database.PropertyName
+
 data class Recipe(
     var id: String? = null,
     var uid: String = "",
@@ -9,6 +11,8 @@ data class Recipe(
     var instructions: String = "",
     var imageUrl: String? = null,
     var updatedAt: String = "",
+    @get:PropertyName("isFavourite")
+    @set:PropertyName("isFavourite")
     var isFavourite: Boolean = false,
     var copyId: String? = null
 

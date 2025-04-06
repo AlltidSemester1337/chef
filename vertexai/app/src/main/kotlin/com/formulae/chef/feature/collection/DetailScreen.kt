@@ -16,13 +16,12 @@
 
 package com.formulae.chef.feature.collection
 
-import android.graphics.Color
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -55,19 +55,33 @@ import com.formulae.chef.feature.model.Recipe
 
 @Composable
 internal fun DetailRoute(
+    collectionViewModel: CollectionViewModel,
     recipe: Recipe,
     navController: NavController
 ) {
 
-    var showIngredients by remember { mutableStateOf(true) }
-    val scrollState = rememberScrollState()
-    var hasImage = recipe.imageUrl?.isNotEmpty() ?: false
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
+    val onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
 
     BackHandler {
         navController.navigate("collection")
     }
+
+    CreateDetailScreen(
+        recipe,
+        onToggleCookingModeClick,
+    )
+}
+
+@Composable
+private fun CreateDetailScreen(
+    recipe: Recipe,
+    onToggleCookingModeClick: () -> Unit,
+) {
+    var showIngredients by remember { mutableStateOf(true) }
+    val scrollState = rememberScrollState()
+    val hasImage = recipe.imageUrl?.isNotEmpty() ?: false
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -88,7 +102,13 @@ internal fun DetailRoute(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            //Button(
+            //    onClick = onToggleCookingModeClick,
+            //    modifier = Modifier
+            //        .fillMaxWidth()
+            //) {
+            //    Text("Start cooking!")
+            //}
         }
 
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
@@ -156,16 +176,16 @@ internal fun DetailRoute(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewDetailRoute() {
-    DetailRoute(
+fun PreviewCreateDetailScreen() {
+    CreateDetailScreen(
         Recipe(
             title = "West African Peanut Stew (Peanut Butter Stew)",
-            summary = "...", // Shortened for readability
-            ingredients = "...",
-            instructions = "...",
+            summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n**Yields:** 4 servings\\n\\n**Nutritional Information per serving (approximate):**\\n\\n* Calories: 550 kcal\\n* Protein: 30g\\n* Carbohydrates: 40g\\n* Fat: 25g\\n\\n\\n", // Shortened for readability
+            ingredients = "**Ingredients:**\\n\\n**For the Kafta Kebabs:**\\n\\n* 500g ground lamb or a mix of ground lamb and beef\\n* 1 large onion, finely chopped\\n* 2 cloves garlic, minced\\n* 1/2 cup (20g)  packed fresh parsley, finely chopped\\n* 1/4 cup (10g) packed fresh mint, finely chopped\\n* 1 tbsp (15g) ground cumin\\n* 1 tsp (5g) ground coriander\\n* 1/2 tsp (2.5g) allspice\\n* 1/4 tsp cayenne pepper (optional, adjust to taste)\\n* Salt and pepper to taste\\n\\n**For the Harissa Yogurt Sauce:**\\n\\n* 250g plain Greek yogurt\\n* 1 tbsp (15g) harissa paste (adjust to taste)\\n* 1 tbsp (15ml) lemon juice\\n* 1/4 tsp salt\\n\\n**For the Roasted Vegetables:**\\n\\n* 1 large sweet potato, peeled and cubed\\n* 1 red bell pepper, chopped\\n* 1/2 cup broccoli florets\\n* 1 tbsp olive oil\\n* 1/2 tsp salt\\n* 1/4 tsp black pepper\\n\\n\\n",
+            instructions = "1. **Prepare the Kafta:** In a large bowl, combine the ground lamb (or mix), onion, garlic, parsley, mint, cumin, coriander, allspice, cayenne pepper (if using), salt, and pepper. Gently mix with your hands until well combined. Do not overmix.\\n2. **Shape the Kebabs:** Divide the mixture into 4 equal portions. Shape each portion into a long kebab, about 10-15cm in length.  Alternatively, make small meatballs and skip the kebab step. \\n3. **Prepare the Harissa Yogurt Sauce:** In a bowl, combine the yogurt, harissa paste, lemon juice, and salt. Mix well.\\n4. **Prepare the Vegetables:** Preheat oven to 200\\u00b0C (400\\u00b0F). Toss the sweet potato, bell pepper, and broccoli with olive oil, salt, and pepper.  Spread in a single layer on a baking sheet lined with parchment paper. \\n5. **Roast the Vegetables:** Bake the vegetables for 20-25 minutes, or until tender and slightly caramelized. \\n6. **Cook the Kebabs:**  While the vegetables are roasting, heat a grill pan or skillet over medium-high heat. Add the kebabs to the pan and cook for 4-5 minutes per side, or until browned and cooked through. (Cooking time will vary depending on thickness).  Alternatively, grill them outdoors on the BBQ or cook in the oven (if small meatballs have been prepared).\\n7. **Serve:** Serve the kebabs with the harissa yogurt sauce and the roasted vegetables.\\n**Tips:***  For a milder flavour, reduce or omit the cayenne pepper. \\n* Feel free to use other vegetables for roasting, such as zucchini, carrots, or Brussels sprouts.\\n*  Serve the kebabs with pita bread, hummus, or tabbouleh for a complete Lebanese-style meal.Enjoy your delicious and flavorful Lebanese Kafta Kebabs!\\n",
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
-        navController = NavController(LocalContext.current)
+        onToggleCookingModeClick = {}
     )
 
 }

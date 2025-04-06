@@ -161,7 +161,7 @@ internal fun CollectionRoute(
                 )
             } else {
                 // Recipe Detail
-                DetailRoute(recipe = selectedRecipe!!, navController = navController)
+                DetailRoute(collectionViewModel = collectionViewModel, recipe = selectedRecipe!!, navController = navController)
             }
         }
     }

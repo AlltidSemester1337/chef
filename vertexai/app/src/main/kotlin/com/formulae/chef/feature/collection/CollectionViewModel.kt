@@ -51,6 +51,10 @@ class CollectionViewModel(
         _uiState.value = CollectionUiState(recipes = recipes)
     }
 
+    fun onToggleCookingMode() {
+        TODO("stop screen from locking, enlarge text, combined instructions and ingredients (replaces separate sections)")
+    }
+
     data class CollectionUiState(
         val recipes: List<Recipe> = emptyList()
     )

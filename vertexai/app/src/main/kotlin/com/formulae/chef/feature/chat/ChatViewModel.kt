@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
@@ -153,7 +154,6 @@ class ChatViewModel(
                     responseFunction = chat::sendMessage,
                     spanName = "generateChatModelResponse"
                 )
-
                 _uiState.value.replaceLastPendingMessage()
 
                 response.text?.let { modelResponse ->
@@ -186,11 +186,9 @@ class ChatViewModel(
         // Start a new span
         val span: Span = tracer.spanBuilder(spanName)
             .setAttribute("operation.name", "generateChatModelResponse")
-            .setAttribute("llm.model_name", "vertexai/gemini 2.0")
-            .setAttribute(
-                "llm.input_messages",
-                "[{\"message.role\": \"user\", \"message.content\": \"" + prompt + "\"}]"
-            )
+            .setAttribute("llm.model_name", "gemini-2.0-flash")
+            .setAttribute("llm.input_messages.0.message.role", "user")
+            .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
 
         // Initialize the response variable
@@ -204,10 +202,8 @@ class ChatViewModel(
                 response = responseFunction(prompt)
 
                 // Add the output as an attribute
-                span.setAttribute(
-                    "llm.output_messages",
-                    "[{\"message.role\": \"model\", \"message.content\": \"" + response?.text + "\"}]"
-                )
+                span.setAttribute("llm.output_messages.0.message.role", "model")
+                span.setAttribute("llm.output_messages.0.message.content", response?.text ?: "")
             }
         } catch (e: Exception) {
             // Record any exceptions thrown during the method execution
@@ -294,11 +290,12 @@ class ChatViewModel(
             throw Exception("Failed to derive details from recipe: $recipe")
         }
         var imageUrl: String? = null
-        try {
-            imageUrl = createImageForRecipe(recipe.toString())
-        } catch (e: Exception) {
-            Log.e("FirebaseSave", "Failed to generate image for recipe", e)
-        }
+        // TODO - Uncomment this after testing!
+        //try {
+        //    imageUrl = createImageForRecipe(recipe.toString())
+        //} catch (e: Exception) {
+        //    Log.e("FirebaseSave", "Failed to generate image for recipe", e)
+        //}
 
         val updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
         return Recipe(
@@ -318,7 +315,7 @@ class ChatViewModel(
         val downloadUrl = runBlocking {
             Firebase.storage("gs://$_projectId.firebasestorage.app/").reference.child(storagePath).downloadUrl.await()
         }
-        return downloadUrl.encodedPath.toString()
+        return "https://" + downloadUrl.host + downloadUrl.encodedPath + "?alt=media"
     }
 
     private fun generateImageInstrumented(recipe: String): String {
@@ -327,10 +324,8 @@ class ChatViewModel(
         val span = getTracer().spanBuilder("generateImage")
             .setAttribute("operation.name", "generateImage")
             .setAttribute("llm.model_name", "vertexai/imagen3")
-            .setAttribute(
-                "llm.input_messages",
-                "[{\"message.role\": \"user\", \"message.content\": \"" + prompt + "\"}]"
-            )
+            .setAttribute("llm.input_messages.0.message.role", "model")
+            .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
 
         try {
@@ -360,10 +355,8 @@ class ChatViewModel(
                 val response = _predictionServiceClient!!.predict(predictRequest)
                 val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
 
-                span.setAttribute(
-                    "llm.output_messages",
-                    "[{\"message.role\": \"model\", \"message.content\": \"" + gcsUri + "\"}]"
-                )
+                span.setAttribute("llm.output_messages.0.message.role", "model")
+                span.setAttribute("llm.output_messages.0.message.content", gcsUri)
 
                 return gcsUri
             }
