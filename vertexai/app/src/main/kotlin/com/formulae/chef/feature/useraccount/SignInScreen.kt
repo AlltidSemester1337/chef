@@ -51,7 +51,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.formulae.chef.R
 import com.formulae.chef.SignInViewModelFactory
-import com.formulae.chef.feature.collection.SearchBar
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.theme.Purple40
 

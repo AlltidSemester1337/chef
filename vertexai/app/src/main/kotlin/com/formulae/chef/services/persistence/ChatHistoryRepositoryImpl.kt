@@ -18,11 +18,11 @@ data class Part(
 )
 
 class ChatHistoryRepositoryImpl(override val uid: String) : ChatHistoryRepository {
-    private val CHAT_HISTORY_KEY = "users/$uid/chat_history"
+    private val _chatHistoryKey = "users/$uid/chat_history"
     private val _database = FirebaseInstance.database
 
     override fun saveNewEntries(newEntries: List<com.google.firebase.vertexai.type.Content>) {
-        val reference = _database.getReference(CHAT_HISTORY_KEY)
+        val reference = _database.getReference(_chatHistoryKey)
         for (entry in newEntries) {
             reference.push().setValue(entry).addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -36,7 +36,7 @@ class ChatHistoryRepositoryImpl(override val uid: String) : ChatHistoryRepositor
 
     override suspend fun loadChatHistoryLastTwentyEntries(): List<com.google.firebase.vertexai.type.Content> {
         return suspendCancellableCoroutine { continuation ->
-            _database.getReference(CHAT_HISTORY_KEY).get()
+            _database.getReference(_chatHistoryKey).get()
                 .addOnSuccessListener { dataSnapshot ->
                     val contentList = dataSnapshot.children.mapNotNull { child ->
                         child.getValue(Content::class.java)

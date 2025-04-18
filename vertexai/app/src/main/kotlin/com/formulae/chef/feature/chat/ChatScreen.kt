@@ -129,11 +129,10 @@ fun ChatBubbleItem(
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
             chatMessage.participant == Participant.ERROR
 
-    val backgroundColor = when {
-        chatMessage.participant == Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
-        chatMessage.participant == Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
-        chatMessage.participant == Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
-        else -> MaterialTheme.colorScheme.background
+    val backgroundColor = when (chatMessage.participant) {
+        Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
+        Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
+        Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
     }
 
     val bubbleShape = if (isModelMessage) {
@@ -282,7 +281,8 @@ fun PreviewChatList() {
                 text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry, showcasing the magic of slow cooking and aromatic spices.  The beef becomes incredibly tender as it simmers in a fragrant coconut milk-based curry.\\n\\n**Yields:** 4 servings\\n**Prep time:** 20 minutes\\n**Cook time:** 2 - 2.5 hours\\n\\n**",
                 participant = Participant.MODEL
             )
-        ), rememberLazyListState(), {})
+        ), rememberLazyListState()
+    ) {}
 }
 
 @Preview(showBackground = true)

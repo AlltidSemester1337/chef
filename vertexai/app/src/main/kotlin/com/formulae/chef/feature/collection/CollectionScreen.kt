@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -60,7 +59,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -161,7 +159,11 @@ internal fun CollectionRoute(
                 )
             } else {
                 // Recipe Detail
-                DetailRoute(collectionViewModel = collectionViewModel, recipe = selectedRecipe!!, navController = navController)
+                DetailRoute(
+                    collectionViewModel = collectionViewModel,
+                    recipe = selectedRecipe!!,
+                    navController = navController
+                )
             }
         }
     }
@@ -171,7 +173,7 @@ private fun getUserFavouritesRecipeSourceList(
     collectionUiState: CollectionViewModel.CollectionUiState,
     currentUser: UserInfo?
 ) = collectionUiState.recipes.filter { recipe ->
-    recipe.uid.contains(currentUser!!.uid) ?: false
+    recipe.uid.contains(currentUser!!.uid)
 }.filter { recipe ->
     recipe.isFavourite
 }
@@ -337,7 +339,7 @@ fun RecipeItem(
                     modifier = Modifier
                         .width(150.dp)
                         .height(100.dp)
-                        .padding(end=10.dp)
+                        .padding(end = 10.dp)
                 )
             }
             Text(

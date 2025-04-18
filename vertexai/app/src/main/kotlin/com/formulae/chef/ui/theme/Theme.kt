@@ -39,7 +39,8 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun GenerativeAISample(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // TODO: Implement design in light mode, add dark theme support later
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

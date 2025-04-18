@@ -57,7 +57,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.net.URLEncoder
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
@@ -219,7 +218,7 @@ class ChatViewModel(
         return response!!
     }
 
-    fun getTracer(): Tracer {
+    private fun getTracer(): Tracer {
         return GlobalOpenTelemetry.getTracer("com.formulae.chef")
     }
 
@@ -231,7 +230,7 @@ class ChatViewModel(
     }
 
 
-    fun saveRecipe(context: Context, message: ChatMessage) {
+    private fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
                 val newRecipes = withContext(Dispatchers.Default) {
@@ -290,12 +289,11 @@ class ChatViewModel(
             throw Exception("Failed to derive details from recipe: $recipe")
         }
         var imageUrl: String? = null
-        // TODO - Uncomment this after testing!
-        //try {
-        //    imageUrl = createImageForRecipe(recipe.toString())
-        //} catch (e: Exception) {
-        //    Log.e("FirebaseSave", "Failed to generate image for recipe", e)
-        //}
+        try {
+            imageUrl = createImageForRecipe(recipe.toString())
+        } catch (e: Exception) {
+            Log.e("FirebaseSave", "Failed to generate image for recipe", e)
+        }
 
         val updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
         return Recipe(
@@ -370,7 +368,7 @@ class ChatViewModel(
     }
 
     // Converts JSON string to Protobuf Value
-    fun jsonToValue(json: String): Value {
+    private fun jsonToValue(json: String): Value {
         val builder = Value.newBuilder()
         JsonFormat.parser().merge(json, builder)
         return builder.build()
