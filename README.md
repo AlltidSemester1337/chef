@@ -24,6 +24,8 @@ Features:
 - 3.0.0 - Recipe collection updates and browsing
 - 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
 
+Up next: GUI features and redesign
+
 ## Demos
 
 [Demos](https://www.youtube.com/playlist?list=PL3z3ETRVg-c4teb_hZ8OzLwx7ySJKoB1Q)
