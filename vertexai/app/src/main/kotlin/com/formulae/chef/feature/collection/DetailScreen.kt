@@ -48,6 +48,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.feature.model.Difficulty
+import com.formulae.chef.feature.model.Ingredient
+import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
 
 @Composable
@@ -171,6 +174,7 @@ private fun CreateDetailScreen(
     }
 }
 
+// TODO: Fix preview!
 @Preview(showBackground = true)
 @Composable
 fun PreviewCreateDetailScreen() {
@@ -178,8 +182,48 @@ fun PreviewCreateDetailScreen() {
         Recipe(
             title = "West African Peanut Stew (Peanut Butter Stew)",
             summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n**Yields:** 4 servings\\n\\n**Nutritional Information per serving (approximate):**\\n\\n* Calories: 550 kcal\\n* Protein: 30g\\n* Carbohydrates: 40g\\n* Fat: 25g\\n\\n\\n", // Shortened for readability
-            ingredients = "**Ingredients:**\\n\\n**For the Kafta Kebabs:**\\n\\n* 500g ground lamb or a mix of ground lamb and beef\\n* 1 large onion, finely chopped\\n* 2 cloves garlic, minced\\n* 1/2 cup (20g)  packed fresh parsley, finely chopped\\n* 1/4 cup (10g) packed fresh mint, finely chopped\\n* 1 tbsp (15g) ground cumin\\n* 1 tsp (5g) ground coriander\\n* 1/2 tsp (2.5g) allspice\\n* 1/4 tsp cayenne pepper (optional, adjust to taste)\\n* Salt and pepper to taste\\n\\n**For the Harissa Yogurt Sauce:**\\n\\n* 250g plain Greek yogurt\\n* 1 tbsp (15g) harissa paste (adjust to taste)\\n* 1 tbsp (15ml) lemon juice\\n* 1/4 tsp salt\\n\\n**For the Roasted Vegetables:**\\n\\n* 1 large sweet potato, peeled and cubed\\n* 1 red bell pepper, chopped\\n* 1/2 cup broccoli florets\\n* 1 tbsp olive oil\\n* 1/2 tsp salt\\n* 1/4 tsp black pepper\\n\\n\\n",
-            instructions = "1. **Prepare the Kafta:** In a large bowl, combine the ground lamb (or mix), onion, garlic, parsley, mint, cumin, coriander, allspice, cayenne pepper (if using), salt, and pepper. Gently mix with your hands until well combined. Do not overmix.\\n2. **Shape the Kebabs:** Divide the mixture into 4 equal portions. Shape each portion into a long kebab, about 10-15cm in length.  Alternatively, make small meatballs and skip the kebab step. \\n3. **Prepare the Harissa Yogurt Sauce:** In a bowl, combine the yogurt, harissa paste, lemon juice, and salt. Mix well.\\n4. **Prepare the Vegetables:** Preheat oven to 200\\u00b0C (400\\u00b0F). Toss the sweet potato, bell pepper, and broccoli with olive oil, salt, and pepper.  Spread in a single layer on a baking sheet lined with parchment paper. \\n5. **Roast the Vegetables:** Bake the vegetables for 20-25 minutes, or until tender and slightly caramelized. \\n6. **Cook the Kebabs:**  While the vegetables are roasting, heat a grill pan or skillet over medium-high heat. Add the kebabs to the pan and cook for 4-5 minutes per side, or until browned and cooked through. (Cooking time will vary depending on thickness).  Alternatively, grill them outdoors on the BBQ or cook in the oven (if small meatballs have been prepared).\\n7. **Serve:** Serve the kebabs with the harissa yogurt sauce and the roasted vegetables.\\n**Tips:***  For a milder flavour, reduce or omit the cayenne pepper. \\n* Feel free to use other vegetables for roasting, such as zucchini, carrots, or Brussels sprouts.\\n*  Serve the kebabs with pita bread, hummus, or tabbouleh for a complete Lebanese-style meal.Enjoy your delicious and flavorful Lebanese Kafta Kebabs!\\n",
+            servings = "4 servings",
+            prepTime = null,
+            cookingTime = null,
+            nutrientsPerServing = listOf(
+                Nutrient(name = "Calories", quantity = "550", unit = "kcal"),
+                Nutrient(name = "Protein", quantity = "30", unit = "g"),
+                Nutrient(name = "Carbohydrates", quantity = "40", unit = "g"),
+                Nutrient(name = "Fat", quantity = "25", unit = "g")
+            ),
+            ingredients = listOf(
+                Ingredient(name = "ground lamb or a mix of ground lamb and beef", quantity = "500", unit = "g"),
+                Ingredient(name = "large onion", quantity = "1", unit = "each"),
+                Ingredient(name = "garlic", quantity = "2", unit = "cloves"),
+                Ingredient(name = "fresh parsley", quantity = "1/2 cup", unit = "(20g)"),
+                Ingredient(name = "fresh mint", quantity = "1/4 cup", unit = "(10g)"),
+                Ingredient(name = "ground cumin", quantity = "1 tbsp", unit = "(15g)"),
+                Ingredient(name = "ground coriander", quantity = "1 tsp", unit = "(5g)"),
+                Ingredient(name = "allspice", quantity = "1/2 tsp", unit = "(2.5g)"),
+                Ingredient(name = "cayenne pepper", quantity = "1/4 tsp", unit = "(optional)"),
+                Ingredient(name = "Greek yogurt", quantity = "250g", unit = "plain"),
+                Ingredient(name = "harissa paste", quantity = "1 tbsp", unit = "(15g)"),
+                Ingredient(name = "lemon juice", quantity = "1 tbsp", unit = "(15ml)"),
+                Ingredient(name = "salt", quantity = "1/4 tsp", unit = null),
+                Ingredient(name = "sweet potato", quantity = "1 large", unit = null),
+                Ingredient(name = "red bell pepper", quantity = "1", unit = "each"),
+                Ingredient(name = "broccoli florets", quantity = "1/2 cup", unit = null),
+                Ingredient(name = "olive oil", quantity = "1 tbsp", unit = "(15ml)"),
+                Ingredient(name = "black pepper", quantity = "1/4 tsp", unit = null)
+            ),
+            difficulty = Difficulty.EASY,
+            instructions = listOf(
+                "Combine ground lamb (or mix), onion, garlic, parsley, mint, cumin, coriander, allspice, cayenne pepper (if using), salt, and pepper. Gently mix until combined.",
+                "Divide mixture into 4 portions. Shape into kebabs (~10-15cm) or make meatballs.",
+                "Mix yogurt, harissa paste, lemon juice, and salt to make sauce.",
+                "Toss sweet potato, bell pepper, and broccoli with olive oil, salt, and pepper. Spread on baking sheet.",
+                "Roast vegetables at 200°C (400°F) for 20-25 minutes until tender.",
+                "Cook kebabs in a pan/skillet over medium-high heat for 4-5 minutes per side, or use grill/oven for meatballs.",
+                "Serve kebabs with sauce and roasted vegetables"
+            ),
+            tipsAndTricks = "For milder flavor: reduce/omit cayenne pepper.\n" +
+                    "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
+                    "Serve with pita, hummus, or tabbouleh for a complete meal.",
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
         onToggleCookingModeClick = {}

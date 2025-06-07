@@ -36,11 +36,163 @@ import java.nio.charset.Charset
 
 
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
-    "If the text content contains one or more recipes, output the following example JSON format:\n" +
-            "\"recipes\": [{   \"title\": \"Chicken Enchiladas with Creamy Chipotle Sauce\",   \"summary\": \"\\n\\nThis recipe elevates classic chicken enchiladas with a smoky chipotle cream sauce and vibrant fresh ingredients, aligning with the Honest Greens ethos of whole foods and healthy cooking.\\n\\n**Yields:** 6-8 enchiladas\\n**Prep time:** 25 minutes\\n**Cook time:** 35 minutes\\n\\n\\n**Nutritional Information per serving (approximate):** *These values are estimates and will vary based on specific ingredients used.*\\n\\n* Calories: 380 kcal\\n* Protein: 28g\\n* Carbohydrates: 30g\\n* Fat: 12g\\n* Fiber: 4g\\n\\n\\n\",   \"ingredients\": \"**For the Chicken Filling:**\\n\\n* 15ml olive oil\\n* 1 medium onion (150g), finely chopped\\n* 2 cloves garlic (5g), minced\\n* 1 tsp chili powder\\n* 1/2 tsp cumin\\n* 1/4 tsp smoked paprika\\n* 1/4 tsp salt\\n* 1/4 tsp black pepper\\n* 500g boneless, skinless chicken breasts, cooked and shredded (you can use rotisserie chicken for convenience)\\n* 400g can diced tomatoes, undrained\\n* 120ml chicken broth (low sodium preferred)\\n* 60ml light cream (or full-fat coconut milk for a richer, vegan option)\\n* 1-2 chipotle peppers in adobo sauce, finely minced (adjust to your spice preference)\\n\\n\\n**For the Creamy Chipotle Sauce:**\\n\\n* 120ml tomato sauce (passata or homemade for better flavor)\\n* 60ml water\\n* 1 tbsp (15ml) olive oil\\n* 1 chipotle pepper in adobo sauce, finely minced (or more, to taste)\\n* 1 tbsp (15g) adobo sauce from the chipotle can\\n* 200ml Greek yogurt (full-fat for creaminess) or vegan alternative\\n* 1 tbsp lime juice\\n* 1/4 tsp salt\\n* 1/4 tsp black pepper\\n\\n\\n**For Assembling:**\\n\\n* 6-8 corn tortillas (choose low sodium options where possible)\\n* 120g shredded Monterey Jack cheese (or a blend of Mexican cheeses)\\n* Fresh cilantro, chopped (for garnish)\\n\\n\\n\",\n" +
-            "   \"instructions\": \"1. **Prepare the Chicken Filling:** Heat olive oil in a large skillet over medium heat. Add onion and garlic and cook until softened, about 5 minutes. Stir in chili powder, cumin, smoked paprika, salt, and pepper. Cook for 1 minute more.2. Add shredded chicken, diced tomatoes, chicken broth, light cream, and minced chipotle peppers to the skillet. Bring to a simmer and cook for 5-7 minutes, stirring occasionally, until the sauce has thickened slightly.3. **Prepare the Creamy Chipotle Sauce:** In a small bowl, whisk together tomato sauce, water, olive oil, minced chipotle pepper, adobo sauce, Greek yogurt, lime juice, salt, and pepper. Taste and adjust seasoning as needed. You might prefer more chipotle for a spicier kick.4. **Assemble the Enchiladas:** Preheat oven to 180\\\\u00b0C. Warm tortillas slightly (either in a dry skillet or microwave) to make them more pliable. Fill each tortilla with about 2 tablespoons of the chicken filling, sprinkle with cheese, and roll up tightly.5. Place the enchiladas seam-down in a lightly greased 9x13 inch baking dish. Pour the creamy chipotle sauce evenly over the enchiladas, ensuring they are fully coated.6. Bake for 20-25 minutes, or until the cheese is melted and bubbly, and the sauce is heated through.7. Garnish with fresh cilantro and serve immediately. Optional additions: Serve with a dollop of plain Greek yogurt or a side of fresh salsa.\\n**Tips & Variations:*** For a vegetarian version, substitute the chicken with 200g cooked black beans or a mixture of cooked vegetables like bell peppers, zucchini, and mushrooms.\\n* Add a sprinkle of cotija cheese for a tangy topping.\\n* Adjust the amount of chipotle peppers to control the spice level. Start with less and add more to taste.\\n* For a gluten-free option, use corn tortillas or gluten-free wraps.Enjoy your delicious and healthy Chicken Enchiladas with Creamy Chipotle Sauce!\\n\",\n" +
-            "  }] \n" +
-            "Please include notes and variations at the end of instruction steps in the same property as well as nutritional values at the end in the same property as summary."
+    """If the text content contains one or more recipes, output the following example JSON format:\n" +
+            "recipes": [
+                {
+                    "title": "Chicken Enchiladas with Creamy Chipotle Sauce",
+                    "summary": "This recipe elevates classic chicken enchiladas with a smoky chipotle cream sauce and vibrant fresh ingredients, aligning with the Honest Greens ethos of whole foods and healthy cooking.",
+                    "servings": "6-8 enchiladas",
+                    "prepTime": "25 minutes",
+                    "cookingTime": "35 minutes",
+                    "nutrientsPerServing": [
+                        {
+                            "name": "Calories",
+                            "quantity": "380",
+                            "unit": "kcal"
+                        },
+                        {
+                            "name": "Protein",
+                            "quantity": "28",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "Carbohydrates",
+                            "quantity": "30",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "Fat",
+                            "quantity": "12",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "Fiber",
+                            "quantity": "4",
+                            "unit": "g"
+                        }
+                    ],
+                    "ingredients": [
+                        {
+                            "name": "olive oil",
+                            "quantity": "30",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "medium onion",
+                            "quantity": "150",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "garlic",
+                            "quantity": "5",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "chili powder",
+                            "quantity": "1",
+                            "unit": "tsp"
+                        },
+                        {
+                            "name": "cumin",
+                            "quantity": "1/2",
+                            "unit": "tsp"
+                        },
+                        {
+                            "name": "smoked paprika",
+                            "quantity": "1/4",
+                            "unit": "tsp"
+                        },
+                        {
+                            "name": "salt",
+                            "quantity": "1/2",
+                            "unit": "tsp"
+                        },
+                        {
+                            "name": "black pepper",
+                            "quantity": "1/2",
+                            "unit": "tsp"
+                        },
+                        {
+                            "name": "boneless, skinless chicken breasts",
+                            "quantity": "500",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "diced tomatoes",
+                            "quantity": "400",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "chicken broth",
+                            "quantity": "120",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "light cream",
+                            "quantity": "60",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "chipotle peppers",
+                            "quantity": "1-2",
+                            "unit": "each"
+                        },
+                        {
+                            "name": "tomato sauce",
+                            "quantity": "120",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "water",
+                            "quantity": "60",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "chipotle pepper",
+                            "quantity": "1"
+                        },
+                        {
+                            "name": "adobo sauce",
+                            "quantity": "15",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "Greek yogurt (or vegan alternative)",
+                            "quantity": "200",
+                            "unit": "ml"
+                        },
+                        {
+                            "name": "lime juice",
+                            "quantity": "1",
+                            "unit": "tbsp"
+                        },
+                        {
+                            "name": "corn tortillas",
+                            "quantity": "6-8"
+                        },
+                        {
+                            "name": "shredded Monterey Jack cheese (or Mexican cheese blend)",
+                            "quantity": "120",
+                            "unit": "g"
+                        },
+                        {
+                            "name": "fresh cilantro for garnish"
+                        }
+                    ],
+                    "difficulty": "EASY",
+                    "instructions": [
+                        "Prepare the Chicken Filling:** Heat 15 ml olive oil in a large skillet over medium heat. Add 2 medium onions and 5g garlic and cook until softened, about 5 minutes. Stir in 1 tsp chili powder, 1/2 tsp cumin, 1/4 tsp smoked paprika, 1/4 tsp salt, and 1/4 tsp pepper. Cook for 1 minute more.",
+                        "Add 500 g shredded chicken, 400 g diced tomatoes, 120 ml chicken broth, 60 ml light cream, and 1 minced chipotle pepper to the skillet. Bring to a simmer and cook for 5-7 minutes, stirring occasionally, until the sauce has thickened slightly.",
+                        "Prepare the Creamy Chipotle Sauce:** In a small bowl, whisk together 120 ml tomato sauce, 60 ml water, 15 ml olive oil, 1 minced chipotle pepper, 15 g adobo sauce, 200 ml Greek yogurt, 1 tbsp lime juice, 1/4 tsp salt, and 1/4 tsp pepper. Taste and adjust seasoning as needed. You might prefer more chipotle for a spicier kick.",
+                        "Assemble the Enchiladas:** Preheat oven to 180°C. Warm 6-8 corn tortillas slightly (either in a dry skillet or microwave) to make them more pliable. Fill each tortilla with about 2 tablespoons of the chicken filling, sprinkle with 120 g cheese, and roll up tightly.",
+                        "Place the enchiladas seam-down in a lightly greased 9x13 inch baking dish. Pour the creamy chipotle sauce evenly over the enchiladas, ensuring they are fully coated.",
+                        "Bake for 20-25 minutes, or until the cheese is melted and bubbly, and the sauce is heated through.",
+                        "Garnish with fresh cilantro and serve immediately."
+                    ],
+                    "tipsAndTricks": "Optional additions: Serve with a dollop of plain Greek yogurt or a side of fresh salsa."
+                }
+            ]
+            "If any of the fields are not applicable, do not add them to the JSON output."""
 
 val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(

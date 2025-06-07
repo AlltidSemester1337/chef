@@ -282,8 +282,8 @@ class ChatViewModel(
     private fun createRecipeFromJson(recipe: Recipe): Recipe {
         val title = recipe.title.replace("##", "").trim()
         val summary = recipe.summary.replace("##", "").trim()
-        val ingredients = recipe.ingredients.replace("##", "").trim()
-        val instructions = recipe.instructions //.replace("\n\n", "")???
+        val ingredients = recipe.ingredients
+        val instructions = recipe.instructions
 
         if (title.isEmpty() || summary.isEmpty() || ingredients.isEmpty() || instructions.isEmpty()) {
             throw Exception("Failed to derive details from recipe: $recipe")
