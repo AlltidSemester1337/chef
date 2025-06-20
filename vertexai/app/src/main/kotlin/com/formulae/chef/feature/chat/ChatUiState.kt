@@ -17,6 +17,7 @@
 package com.formulae.chef.feature.chat
 
 import androidx.compose.runtime.toMutableStateList
+import com.formulae.chef.feature.chat.ui.ChatMessage
 
 class ChatUiState(
     messages: List<ChatMessage> = emptyList()

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.formulae.chef.feature.collection
+package com.formulae.chef.feature.collection.ui
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
@@ -75,6 +76,7 @@ internal fun DetailRoute(
 @Composable
 private fun CreateDetailScreen(
     recipe: Recipe,
+    // TODO: DEV-47
     onToggleCookingModeClick: () -> Unit,
 ) {
     var showIngredients by remember { mutableStateOf(true) }
@@ -143,12 +145,12 @@ private fun CreateDetailScreen(
         if (showIngredients) {
             Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.ingredients.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
+            Text(text = recipe.ingredients.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
         } else {
             Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.instructions.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
+            Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
         }
 
         // Centered Share Button
@@ -174,7 +176,6 @@ private fun CreateDetailScreen(
     }
 }
 
-// TODO: Fix preview!
 @Preview(showBackground = true)
 @Composable
 fun PreviewCreateDetailScreen() {
@@ -183,8 +184,8 @@ fun PreviewCreateDetailScreen() {
             title = "West African Peanut Stew (Peanut Butter Stew)",
             summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n**Yields:** 4 servings\\n\\n**Nutritional Information per serving (approximate):**\\n\\n* Calories: 550 kcal\\n* Protein: 30g\\n* Carbohydrates: 40g\\n* Fat: 25g\\n\\n\\n", // Shortened for readability
             servings = "4 servings",
-            prepTime = null,
-            cookingTime = null,
+            prepTime = "30 minutes",
+            cookingTime = "2 hours",
             nutrientsPerServing = listOf(
                 Nutrient(name = "Calories", quantity = "550", unit = "kcal"),
                 Nutrient(name = "Protein", quantity = "30", unit = "g"),

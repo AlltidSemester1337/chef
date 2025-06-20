@@ -31,7 +31,7 @@ dependencies {
 }
 
 tasks.register<JavaExec>("ktlintCheck") {
-    val outputDir = "${project.buildDir}/reports/ktlint/"
+    val outputDir = "${layout.buildDirectory.asFile.get()}/reports/ktlint/"
     val inputFiles = project.fileTree("src").include("**/*.kt")
     val outputFile = "${outputDir}ktlint-checkstyle-report.xml"
 
@@ -85,6 +85,6 @@ tasks.withType<DependencyUpdatesTask> {
 
 tasks {
     register("clean", Delete::class) {
-        delete(rootProject.buildDir)
+        delete(layout.buildDirectory.asFile)
     }
 }

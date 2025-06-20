@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.formulae.chef.feature.chat.ChatRoute
-import com.formulae.chef.feature.collection.CollectionRoute
-import com.formulae.chef.feature.useraccount.SignInRoute
+import com.formulae.chef.feature.chat.ui.ChatRoute
+import com.formulae.chef.feature.collection.ui.CollectionRoute
+import com.formulae.chef.feature.useraccount.ui.SignInRoute
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository
 

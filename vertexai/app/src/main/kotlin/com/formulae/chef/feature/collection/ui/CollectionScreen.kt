@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.formulae.chef.feature.collection
+package com.formulae.chef.feature.collection.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -70,6 +70,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.CollectionViewModelFactory
 import com.formulae.chef.R
+import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository

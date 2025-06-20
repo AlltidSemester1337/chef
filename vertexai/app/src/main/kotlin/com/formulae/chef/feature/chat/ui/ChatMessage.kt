@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.formulae.chef.feature.chat
+package com.formulae.chef.feature.chat.ui
 
 import java.util.UUID
 

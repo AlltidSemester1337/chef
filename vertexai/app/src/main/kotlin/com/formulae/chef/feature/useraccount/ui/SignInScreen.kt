@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.formulae.chef.feature.useraccount
+package com.formulae.chef.feature.useraccount.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -51,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.formulae.chef.R
 import com.formulae.chef.SignInViewModelFactory
+import com.formulae.chef.feature.useraccount.SignInViewModel
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.theme.Purple40
 

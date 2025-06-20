@@ -22,6 +22,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.feature.chat.ui.ChatMessage
+import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.services.authentication.UserSessionService
@@ -296,14 +298,7 @@ class ChatViewModel(
         }
 
         val updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
-        return Recipe(
-            title = title,
-            summary = summary,
-            ingredients = ingredients,
-            instructions = instructions,
-            imageUrl = imageUrl,
-            updatedAt = updatedAt
-        )
+        return recipe.copyOf(title = title, summary = summary, imageUrl = imageUrl, updatedAt = updatedAt)
     }
 
 

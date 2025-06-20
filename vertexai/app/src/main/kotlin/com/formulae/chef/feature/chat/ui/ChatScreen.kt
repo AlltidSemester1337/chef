@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.formulae.chef.feature.chat
+package com.formulae.chef.feature.chat.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
+import com.formulae.chef.feature.chat.ChatViewModel
 import kotlinx.coroutines.launch
 
 @Composable
