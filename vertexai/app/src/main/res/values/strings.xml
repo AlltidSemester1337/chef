@@ -29,11 +29,15 @@
 
     <!-- Sign in strings -->
     <string name="sign_in">Sign in</string>
-    <string name="sign_up">Sign up</string>
+    <string name="carrot">Carrot</string>
+    <string name="create_account">Create account</string>
     <string name="sign_out">Sign out</string>
     <string name="skip_sign_up">Sign up later</string>
     <string name="password">Password</string>
-    <string name="email">Email</string>
+    <string name="password_placeholder">Password</string>
+    <string name="password_supporting_text">Password should be at least 8 characters</string>
+    <string name="email">Email address</string>
+    <string name="welcome_message">Welcome to Chef!</string>
 
     <!-- Summarize sample strings -->
     <string name="summarize_label">Text</string>

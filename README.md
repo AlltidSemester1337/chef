@@ -1,6 +1,6 @@
 # Chef
 
-![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/ic_launcher_new_round.webp)
+![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/logo_round.webp)
 
 A personal cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
 suggest recipes for cooking. Built on Google firebase and vertexai platform.
@@ -23,8 +23,10 @@ Features:
 - 2.0.0 - Users and sessions
 - 3.0.0 - Recipe collection updates and browsing
 - 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
+- 4.0.0 - Restructured Recipe data format, added more information. Also complete redesign of the
+  app!
 
-Up next: GUI features and redesign
+Up next: Refer to Linear
 
 ## Demos
 
