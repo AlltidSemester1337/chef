@@ -1,6 +1,8 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Before any actions are taken in new sessions, all documentation and instructions in ./.ai/ folder MUST be read.
+No files in this directory are allowed to edit unless explicitly instructed in prompt.
 
 ## Project Overview
 
@@ -35,6 +37,8 @@ The project requires JDK 17 and Android SDK with platform 36. Three properties m
 Use pragmatic TDD: write unit tests for models, ViewModels, and business logic where tests add real value. Avoid overly complex or brittle tests — don't mock deeply nested Firebase/AI dependencies just for coverage. UI flows and Firebase integration are covered by E2E testing, not unit tests.
 
 ## Architecture
+
+Use abstractions such as service and UI layers to adhere to SRP and keep business logic cleanly separated from other responsibilities.
 
 ### Module Structure
 
