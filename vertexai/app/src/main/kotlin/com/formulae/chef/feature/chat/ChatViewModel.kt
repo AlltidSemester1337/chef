@@ -63,7 +63,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
 private const val IMAGE_PROMPT_TEMPLATE =
-    "As a professional photographer specializing in 100mm Macro lens natural lightning food photography, please create a photorealistic, colorful, visually appealing image for use in a recipe collection webpage of a single serving for the following recipe: "
+    "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
 
 class ChatViewModel(
     chatGenerativeModel: GenerativeModel,
@@ -78,7 +78,7 @@ class ChatViewModel(
 
     private val _imagenEndpointName =
         EndpointName.ofProjectLocationPublisherModelName(
-            _projectId, location, "google", "imagen-3.0-generate-002"
+            _projectId, location, "google", "imagen-4.0-generate-001"
         )
     private val _predictionServiceClient = predictionServiceClient
     private val _userSessionService = userSessionService
@@ -187,7 +187,7 @@ class ChatViewModel(
         // Start a new span
         val span: Span = tracer.spanBuilder(spanName)
             .setAttribute("operation.name", "generateChatModelResponse")
-            .setAttribute("llm.model_name", "gemini-2.0-flash")
+            .setAttribute("llm.model_name", "gemini-2.5-flash")
             .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
@@ -277,7 +277,7 @@ class ChatViewModel(
             spanName = "generateJsonModelResponse"
         ).text!!
         val gson = Gson()
-        val recipes = gson.fromJson(recipesJsonText.replace("```json", "").replace("```", ""), Recipes::class.java)
+        val recipes = gson.fromJson(recipesJsonText, Recipes::class.java)
         return recipes.recipes.map(this::createRecipeFromJson)
     }
 
@@ -316,7 +316,7 @@ class ChatViewModel(
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
             .setAttribute("operation.name", "generateImage")
-            .setAttribute("llm.model_name", "vertexai/imagen3")
+            .setAttribute("llm.model_name", "vertexai/imagen4")
             .setAttribute("llm.input_messages.0.message.role", "model")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
