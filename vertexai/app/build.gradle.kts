@@ -32,7 +32,7 @@ if (localPropertiesFile.exists()) {
 
 val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
 val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
-val chefMainChatPromptTemplate: String =
+val chefMainChatPromptTempladsdte: String =
     localProperties.getProperty("chefMainChatPromptTemplate")
 
 android {
