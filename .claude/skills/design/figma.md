@@ -4,4 +4,5 @@ description: Use whenever there is a need to access UX design related matters.
 ---
 
 Figma
-The Figma design for the app can be found on https://www.figma.com/design/8kbl0cYD5XiHtKdk57YwGn/Chef-UI?node-id=0-1&p=f&t=Y7fM4jVq4C1uHpoT-0 via local MCP server.
+The Figma design for the app can be found on the local MCP server.
+We are using designs from the file Chef UI and the page Final UI. To the left on that page, you can find the base components that build bigger components. On the same page, there are screens laying out the flow for the signup and onboarding. There are also screens specifying the main screens including homepage, recipe page, collections screen, and chat screen. 
