@@ -1,4 +1,9 @@
-# Overall business guidelines
+---
+name: consult-business-goals
+description: Use whenever there is a need to make a business decision.
+---
+
+Overall business guidelines
 
 - Refer to README.md for supported features. In case of changes please update the file.
 - This is not a large scale, global application with high enterprise-grade requirements. Instead we aim for speed to deliver new functionality and features, without compromising unless valuable.
