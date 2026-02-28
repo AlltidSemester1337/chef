@@ -1,9 +1,13 @@
 package com.formulae.chef
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -18,8 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.theme.BackgroundColor
 import com.google.firebase.auth.UserInfo
-
 
 @Composable
 fun HomeScreen(
@@ -49,7 +53,7 @@ fun HomeScreen(
         if (!userSessionService.anonymousSession && currentUser == null) {
             onSignOut()
         }
-        HomeNavigationScreen(
+        HomeScreenContent(
             onNavigateToChat,
             onNavigateToCollection,
             onSignOut,
@@ -59,7 +63,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeNavigationScreen(
+private fun HomeScreenContent(
     onNavigateToChat: () -> Unit,
     onNavigateToCollection: () -> Unit,
     onSignOut: () -> Unit,
@@ -96,7 +100,7 @@ private fun HomeNavigationScreen(
 @Preview(showBackground = true)
 @Composable
 fun PreviewHomeNavigationScreen() {
-    HomeNavigationScreen(
+    HomeScreenContent(
         onNavigateToChat = {},
         onNavigateToCollection = {},
         onSignOut = {},
