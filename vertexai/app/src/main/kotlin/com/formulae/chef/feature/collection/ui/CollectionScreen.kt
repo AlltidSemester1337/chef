@@ -132,6 +132,7 @@ internal fun CollectionRoute(
             recipe.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
     }
 
+<<<<<<< HEAD
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
     var showChefOverlay by remember { mutableStateOf(false) }
 
@@ -140,6 +141,8 @@ internal fun CollectionRoute(
         overlayViewModel.reset()
     }
 
+=======
+>>>>>>> 30785eb0 (WIP)
     BackHandler {
         navController.navigate("home")
     }
@@ -350,7 +353,10 @@ fun RecipeList(
     }
 }
 
+<<<<<<< HEAD
 @OptIn(ExperimentalLayoutApi::class)
+=======
+>>>>>>> 30785eb0 (WIP)
 @Composable
 fun RecipeItem(
     recipe: Recipe,
