@@ -29,11 +29,10 @@ import com.google.firebase.Firebase
 import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
-import org.json.JSONObject
 import java.io.InputStream
 import java.lang.String
 import java.nio.charset.Charset
-
+import org.json.JSONObject
 
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
     """Extract recipes from the provided text and return them as JSON matching this schema:
@@ -90,7 +89,6 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         generationConfig = jsonConfig,
                         systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
                     )
-
 
                     val settingsStream: InputStream =
                         application.applicationContext.assets.open("gcp.json")

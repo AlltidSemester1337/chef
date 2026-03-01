@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class CollectionViewModel(
-    private val repository: RecipeRepository,
+    private val repository: RecipeRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CollectionUiState())
     val uiState: StateFlow<CollectionUiState> = _uiState.asStateFlow()
@@ -18,11 +18,10 @@ class CollectionViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _selectedRecipe = MutableStateFlow<Recipe?>(null)  // Holds selected recipe
+    private val _selectedRecipe = MutableStateFlow<Recipe?>(null) // Holds selected recipe
     val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
 
     private var recipes: List<Recipe> = emptyList()
-
 
     init {
         fetchRecipes()
@@ -52,7 +51,9 @@ class CollectionViewModel(
     }
 
     fun onToggleCookingMode() {
-        TODO("stop screen from locking, enlarge text, combined instructions and ingredients (replaces separate sections)")
+        TODO(
+            "stop screen from locking, enlarge text, combined instructions and ingredients (replaces separate sections)"
+        )
     }
 
     data class CollectionUiState(

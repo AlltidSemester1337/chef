@@ -12,11 +12,11 @@ import com.facebook.FacebookCallback
 import com.facebook.FacebookException
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.FragmentFacebookBinding
 
@@ -68,7 +68,7 @@ class FacebookLoginFragment : BaseFragment() {
                     Log.d(TAG, "facebook:onError", error)
                     updateUI(null)
                 }
-            },
+            }
         )
     }
 
@@ -97,7 +97,7 @@ class FacebookLoginFragment : BaseFragment() {
                     Toast.makeText(
                         context,
                         "Authentication failed.",
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     ).show()
                     updateUI(null)
                 }

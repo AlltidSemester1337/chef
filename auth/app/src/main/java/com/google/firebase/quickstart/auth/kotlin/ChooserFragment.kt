@@ -35,7 +35,7 @@ class ChooserFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         _binding = FragmentChooserBinding.inflate(inflater, container, false)
         return binding.root
@@ -57,7 +57,7 @@ class ChooserFragment : Fragment() {
 
     class MyArrayAdapter(
         private val ctx: Context,
-        resource: Int,
+        resource: Int
     ) : ArrayAdapter<String>(ctx, resource, CLASS_NAMES) {
         private var descriptionIds: IntArray? = null
 
@@ -97,7 +97,7 @@ class ChooserFragment : Fragment() {
             R.id.action_firebaseui,
             R.id.action_customauth,
             R.id.action_genericidp,
-            R.id.action_mfa,
+            R.id.action_mfa
         )
         private val CLASS_NAMES = arrayOf(
             "GoogleSignInFragment",
@@ -109,7 +109,7 @@ class ChooserFragment : Fragment() {
             "FirebaseUIFragment",
             "CustomAuthFragment",
             "GenericIdpFragment",
-            "MultiFactorFragment",
+            "MultiFactorFragment"
         )
         private val DESCRIPTION_IDS = intArrayOf(
             R.string.desc_google_sign_in,
@@ -121,7 +121,7 @@ class ChooserFragment : Fragment() {
             R.string.desc_firebase_ui,
             R.string.desc_custom_auth,
             R.string.desc_generic_idp,
-            R.string.desc_multi_factor,
+            R.string.desc_multi_factor
         )
     }
 }

@@ -6,13 +6,13 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthActionCodeException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.actionCodeSettings
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.ActivityPasswordlessBinding
 
@@ -106,7 +106,7 @@ class PasswordlessActivity : BaseActivity(), View.OnClickListener {
             setAndroidPackageName(
                 packageName,
                 false,
-                null, // minimum app version
+                null // minimum app version
             ) // install if not available?
             handleCodeInApp = true
             url = "https://kotlin.auth.example.com/emailSignInLink"
@@ -198,7 +198,7 @@ class PasswordlessActivity : BaseActivity(), View.OnClickListener {
             binding.status.text = getString(
                 R.string.passwordless_status_fmt,
                 user.email,
-                user.isEmailVerified,
+                user.isEmailVerified
             )
             binding.passwordlessButtons.visibility = View.GONE
             binding.signOutButton.visibility = View.VISIBLE

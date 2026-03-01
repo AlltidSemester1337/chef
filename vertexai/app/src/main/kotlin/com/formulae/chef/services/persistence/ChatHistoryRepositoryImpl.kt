@@ -1,12 +1,9 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-
-
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 data class Content(
     var role: String = "user", // Default value, must be mutable (var)
@@ -43,7 +40,8 @@ class ChatHistoryRepositoryImpl(override val uid: String) : ChatHistoryRepositor
                     }.takeLast(20).map { content ->
                         com.google.firebase.vertexai.type.Content(
                             content.role,
-                            content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) })
+                            content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) }
+                        )
                     }
                     continuation.resume(contentList)
                 }.addOnFailureListener { exception ->

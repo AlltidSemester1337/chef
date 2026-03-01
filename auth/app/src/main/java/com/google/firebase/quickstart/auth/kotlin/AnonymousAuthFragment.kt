@@ -7,11 +7,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import com.google.firebase.Firebase
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.FragmentAnonymousAuthBinding
 
@@ -25,7 +25,7 @@ class AnonymousAuthFragment : BaseFragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         _binding = FragmentAnonymousAuthBinding.inflate(inflater, container, false)
         return binding.root
@@ -72,7 +72,7 @@ class AnonymousAuthFragment : BaseFragment() {
                     Toast.makeText(
                         context,
                         "Authentication failed.",
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     ).show()
                     updateUI(null)
                 }
@@ -113,7 +113,7 @@ class AnonymousAuthFragment : BaseFragment() {
                     Toast.makeText(
                         context,
                         "Authentication failed.",
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     ).show()
                     updateUI(null)
                 }

@@ -50,6 +50,8 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,8 +61,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
 
 private const val IMAGE_PROMPT_TEMPLATE =
     "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
@@ -78,7 +78,10 @@ class ChatViewModel(
 
     private val _imagenEndpointName =
         EndpointName.ofProjectLocationPublisherModelName(
-            _projectId, location, "google", "imagen-4.0-generate-001"
+            _projectId,
+            location,
+            "google",
+            "imagen-4.0-generate-001"
         )
     private val _predictionServiceClient = predictionServiceClient
     private val _userSessionService = userSessionService
@@ -231,7 +234,6 @@ class ChatViewModel(
         }
     }
 
-
     private fun saveRecipe(context: Context, message: ChatMessage) {
         viewModelScope.launch {
             try {
@@ -301,7 +303,6 @@ class ChatViewModel(
         return recipe.copyOf(title = title, summary = summary, imageUrl = imageUrl, updatedAt = updatedAt)
     }
 
-
     private fun createImageForRecipe(recipe: String): String {
         val gcsUri = generateImageInstrumented(recipe)
         val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
@@ -323,7 +324,6 @@ class ChatViewModel(
 
         try {
             io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-
                 val instancesJson = gson.toJson(mapOf("prompt" to prompt))
                 val instances = jsonToValue(instancesJson)
 
@@ -368,6 +368,4 @@ class ChatViewModel(
         JsonFormat.parser().merge(json, builder)
         return builder.build()
     }
-
-
 }

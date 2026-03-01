@@ -60,16 +60,15 @@ internal fun DetailRoute(
     recipe: Recipe,
     navController: NavController
 ) {
-
     val onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
 
     BackHandler {
-        navController.navigate("collection")
+        navController.navigate("collections")
     }
 
     CreateDetailScreen(
         recipe,
-        onToggleCookingModeClick,
+        onToggleCookingModeClick
     )
 }
 
@@ -77,7 +76,7 @@ internal fun DetailRoute(
 private fun CreateDetailScreen(
     recipe: Recipe,
     // TODO: DEV-47
-    onToggleCookingModeClick: () -> Unit,
+    onToggleCookingModeClick: () -> Unit
 ) {
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
@@ -88,9 +87,8 @@ private fun CreateDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState),
+            .verticalScroll(scrollState)
     ) {
-
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -104,13 +102,13 @@ private fun CreateDetailScreen(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            //Button(
+            // Button(
             //    onClick = onToggleCookingModeClick,
             //    modifier = Modifier
             //        .fillMaxWidth()
-            //) {
+            // ) {
             //    Text("Start cooking!")
-            //}
+            // }
         }
 
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
@@ -223,13 +221,10 @@ fun PreviewCreateDetailScreen() {
                 "Serve kebabs with sauce and roasted vegetables"
             ),
             tipsAndTricks = "For milder flavor: reduce/omit cayenne pepper.\n" +
-                    "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
-                    "Serve with pita, hummus, or tabbouleh for a complete meal.",
+                "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
+                "Serve with pita, hummus, or tabbouleh for a complete meal.",
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
         onToggleCookingModeClick = {}
     )
-
 }
-
-

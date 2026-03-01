@@ -14,7 +14,7 @@ class InvalidImportDetectorTest {
       public final class Hello {
         public static final class drawable {
         }
-      }""",
+      }"""
     ).indented()
 
     @Test
@@ -30,8 +30,8 @@ class InvalidImportDetectorTest {
           import com.google.firebase.Hello;
 
           class Example {
-          }""",
-                ).indented(),
+          }"""
+                ).indented()
             )
             .issues(ISSUE_INVALID_IMPORT)
             .run()
@@ -51,8 +51,8 @@ class InvalidImportDetectorTest {
           import com.google.firebase.java.Hello;
 
           class Example {
-          }""",
-                ).indented(),
+          }"""
+                ).indented()
             )
             .issues(ISSUE_INVALID_IMPORT)
             .run()
@@ -62,7 +62,7 @@ class InvalidImportDetectorTest {
           |import com.google.firebase.java.Hello;
           |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           |1 errors, 0 warnings
-                """.trimMargin(),
+                """.trimMargin()
             )
     }
 }

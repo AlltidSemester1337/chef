@@ -24,7 +24,6 @@ import androidx.navigation.NavController
 import com.formulae.chef.feature.useraccount.SignInViewModel
 import com.formulae.chef.services.authentication.UserSessionService
 
-
 class SignInViewModelFactory(
     private val userSessionService: UserSessionService,
     private val navController: NavController

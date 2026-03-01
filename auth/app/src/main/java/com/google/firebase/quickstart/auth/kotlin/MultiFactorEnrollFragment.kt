@@ -8,13 +8,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.navigation.fragment.findNavController
+import com.google.firebase.Firebase
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.PhoneMultiFactorGenerator
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.databinding.FragmentPhoneAuthBinding
 import java.util.concurrent.TimeUnit
 
@@ -52,13 +52,13 @@ class MultiFactorEnrollFragment : BaseFragment() {
                 // Auto-retrieval has also been disabled (timeout is set to 0).
                 // This should never be triggered.
                 throw RuntimeException(
-                    "onVerificationCompleted() triggered with instant-validation and auto-retrieval disabled.",
+                    "onVerificationCompleted() triggered with instant-validation and auto-retrieval disabled."
                 )
             }
 
             override fun onCodeSent(
                 verificationId: String,
-                token: PhoneAuthProvider.ForceResendingToken,
+                token: PhoneAuthProvider.ForceResendingToken
             ) {
                 Log.d(TAG, "onCodeSent:$verificationId")
                 Toast.makeText(context, "SMS code has been sent", Toast.LENGTH_SHORT)
@@ -91,7 +91,7 @@ class MultiFactorEnrollFragment : BaseFragment() {
                     Toast.makeText(
                         context,
                         "Failed to get session: ${task.exception}",
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     )
                         .show()
                 }
@@ -122,7 +122,7 @@ class MultiFactorEnrollFragment : BaseFragment() {
                 Toast.makeText(
                     context,
                     "MFA enrollment was unsuccessful. $e",
-                    Toast.LENGTH_LONG,
+                    Toast.LENGTH_LONG
                 )
                     .show()
             }
