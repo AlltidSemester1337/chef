@@ -161,9 +161,9 @@ internal fun CollectionRoute(
             } else {
                 // Recipe Detail
                 DetailRoute(
-                    collectionViewModel = collectionViewModel,
                     recipe = selectedRecipe!!,
-                    navController = navController
+                    onBack = { navController.navigate("collection") },
+                    onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
                 )
             }
         }

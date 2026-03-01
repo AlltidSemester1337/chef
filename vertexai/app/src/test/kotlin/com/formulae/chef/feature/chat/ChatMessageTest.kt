@@ -2,6 +2,7 @@ package com.formulae.chef.feature.chat
 
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
+import com.formulae.chef.feature.model.Recipe
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -19,6 +20,8 @@ class ChatMessageTest {
         assertEquals(Participant.USER, message.participant)
         assertFalse(message.isPending)
         assertFalse(message.isStarred)
+        assertTrue(message.recipes.isEmpty())
+        assertTrue(message.starredRecipeIds.isEmpty())
     }
 
     @Test
@@ -79,6 +82,41 @@ class ChatMessageTest {
         assertEquals(original.id, copy.id)
         assertEquals(original.text, copy.text)
         assertTrue(copy.isStarred)
+    }
+
+    @Test
+    fun `recipe grid message carries recipes and no text`() {
+        val recipes = listOf(
+            Recipe(id = "r1", title = "Pasta Carbonara"),
+            Recipe(id = "r2", title = "Chicken Curry")
+        )
+        val message = ChatMessage(participant = Participant.MODEL, recipes = recipes)
+
+        assertEquals(2, message.recipes.size)
+        assertEquals("Pasta Carbonara", message.recipes[0].title)
+        assertEquals("Chicken Curry", message.recipes[1].title)
+        assertEquals("", message.text)
+    }
+
+    @Test
+    fun `copy preserves recipes and updates starredRecipeIds`() {
+        val recipes = listOf(Recipe(id = "r1", title = "Pasta"))
+        val original = ChatMessage(participant = Participant.MODEL, recipes = recipes)
+
+        val starred = original.copy(starredRecipeIds = setOf("r1"))
+
+        assertEquals(original.id, starred.id)
+        assertEquals(1, starred.recipes.size)
+        assertTrue(starred.starredRecipeIds.contains("r1"))
+    }
+
+    @Test
+    fun `starred recipe ids are independent per message`() {
+        val msg1 = ChatMessage(participant = Participant.MODEL, starredRecipeIds = setOf("r1"))
+        val msg2 = ChatMessage(participant = Participant.MODEL, starredRecipeIds = emptySet())
+
+        assertTrue(msg1.starredRecipeIds.contains("r1"))
+        assertFalse(msg2.starredRecipeIds.contains("r1"))
     }
 }
 
