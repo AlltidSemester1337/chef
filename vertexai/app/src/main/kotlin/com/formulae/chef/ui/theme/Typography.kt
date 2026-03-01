@@ -15,8 +15,11 @@ val FigtreeFamily = FontFamily(
     Font(R.font.figtree_bold, FontWeight.Bold),
     Font(R.font.figtree_extrabold, FontWeight.ExtraBold)
 )
+<<<<<<< HEAD
 
 // TODO: Delete if not used, also ttf font file
+=======
+>>>>>>> 30785eb0 (WIP)
 val RobotoFamily = FontFamily(
     Font(R.font.roboto_regular, FontWeight.Normal)
 )
@@ -24,17 +27,16 @@ val RobotoFamily = FontFamily(
 // Fallback to default system fonts if custom fonts are not available
 val SafeFigtreeFamily = try {
     FigtreeFamily
-} catch (e: Exception) {
+} catch (_: Exception) {
     FontFamily.Default
 }
 
 val SafeRobotoFamily = try {
     RobotoFamily
-} catch (e: Exception) {
+} catch (_: Exception) {
     FontFamily.Default
 }
 
-// TODO: Delete if not used
 val AppTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = SafeFigtreeFamily,

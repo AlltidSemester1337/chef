@@ -1,0 +1,38 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <!-- Horizontal line (rim) -->
+    <path
+        android:pathData="M1.667,10H18.333"
+        android:strokeWidth="1.66667"
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Basket body -->
+    <path
+        android:pathData="M16.667,10V16.667C16.667,17.109 16.491,17.533 16.179,17.845C15.866,18.158 15.442,18.333 15,18.333H5C4.558,18.333 4.134,18.158 3.821,17.845C3.509,17.533 3.333,17.109 3.333,16.667V10"
+        android:strokeWidth="1.66667"
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Angled line (handle/lid) -->
+    <path
+        android:pathData="M3.333,6.667L16.667,3.333"
+        android:strokeWidth="1.66667"
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Jar/tag shape -->
+    <path
+        android:pathData="M7.383,5.65L7.008,4.142C6.955,3.929 6.943,3.709 6.975,3.492C7.007,3.275 7.081,3.067 7.193,2.879C7.305,2.691 7.453,2.527 7.629,2.396C7.805,2.265 8.004,2.17 8.217,2.117L9.833,1.717C10.046,1.663 10.268,1.652 10.485,1.684C10.702,1.716 10.91,1.791 11.099,1.904C11.287,2.017 11.451,2.166 11.581,2.343C11.712,2.52 11.806,2.72 11.858,2.933L12.233,4.433"
+        android:strokeWidth="1.66667"
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

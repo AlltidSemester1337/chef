@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -242,13 +243,17 @@ private fun SignUpScreen(
 @Composable
 fun PreviewSignUpScreen() {
     SignUpScreen(
-        email = object : State<String> {
-            override val value: String
-                get() = "Email"
+        email = remember {
+            object : State<String> {
+                override val value: String
+                    get() = "Email"
+            }
         },
-        password = object : State<String> {
-            override val value: String
-                get() = "Password"
+        password = remember {
+            object : State<String> {
+                override val value: String
+                    get() = "Password"
+            }
         },
         onUpdateEmail = { },
         onUpdatePassword = { },

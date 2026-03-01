@@ -54,11 +54,16 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
+<<<<<<< HEAD
 import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
+=======
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+>>>>>>> 30785eb0 (WIP)
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -93,7 +98,18 @@ class ChatViewModel(
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
 
+<<<<<<< HEAD
     private val _imageGenerativeModel = imageGenerativeModel
+=======
+    private val _imagenEndpointName =
+        EndpointName.ofProjectLocationPublisherModelName(
+            _projectId,
+            location,
+            "google",
+            "imagen-4.0-generate-001"
+        )
+    private val _predictionServiceClient = predictionServiceClient
+>>>>>>> 30785eb0 (WIP)
     private val _userSessionService = userSessionService
     private val _jsonGenerativeModel = jsonGenerativeModel
 
@@ -532,8 +548,18 @@ class ChatViewModel(
         return response!!
     }
 
+<<<<<<< HEAD
     private fun getTracer(): Tracer {
         return GlobalOpenTelemetry.getTracer("com.formulae.chef")
+=======
+    private fun createImageForRecipe(recipe: String): String {
+        val gcsUri = generateImageInstrumented(recipe)
+        val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
+        val downloadUrl = runBlocking {
+            Firebase.storage("gs://$_projectId.firebasestorage.app/").reference.child(storagePath).downloadUrl.await()
+        }
+        return "https://" + downloadUrl.host + downloadUrl.encodedPath + "?alt=media"
+>>>>>>> 30785eb0 (WIP)
     }
 
     private suspend fun generateImageInstrumented(recipe: String): String {
@@ -546,6 +572,7 @@ class ChatViewModel(
             .startSpan()
 
         try {
+<<<<<<< HEAD
             val response = _imageGenerativeModel.generateContent(content { text(prompt) })
             val imagePart = response.candidates?.firstOrNull()?.content?.parts
                 ?.filterIsInstance<ImagePart>()
@@ -556,6 +583,11 @@ class ChatViewModel(
             imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
             val imageBytes = outputStream.toByteArray()
             val imagePath = "recipes/${UUID.randomUUID()}.jpg"
+=======
+            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+                val instancesJson = gson.toJson(mapOf("prompt" to prompt))
+                val instances = jsonToValue(instancesJson)
+>>>>>>> 30785eb0 (WIP)
 
             Firebase.storage("gs://$_projectId.firebasestorage.app/")
                 .reference.child(imagePath)
