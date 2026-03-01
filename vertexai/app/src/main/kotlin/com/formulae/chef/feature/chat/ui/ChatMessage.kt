@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.chat.ui
 
+import com.formulae.chef.feature.model.Recipe
 import java.util.UUID
 
 enum class Participant {
@@ -27,5 +28,7 @@ data class ChatMessage(
     var text: String = "",
     val participant: Participant = Participant.USER,
     var isPending: Boolean = false,
-    var isStarred: Boolean = false
+    var isStarred: Boolean = false,
+    val recipes: List<Recipe> = emptyList(),
+    val starredRecipeIds: Set<String> = emptySet()
 )

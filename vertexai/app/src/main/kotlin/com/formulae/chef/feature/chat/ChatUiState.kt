@@ -18,6 +18,7 @@ package com.formulae.chef.feature.chat
 
 import androidx.compose.runtime.toMutableStateList
 import com.formulae.chef.feature.chat.ui.ChatMessage
+import com.formulae.chef.feature.model.Recipe
 
 class ChatUiState(
     messages: List<ChatMessage> = emptyList()
@@ -42,6 +43,22 @@ class ChatUiState(
         val index = _messages.indexOfFirst { it.id == msg.id }
         if (index != -1) {
             _messages[index] = msg.copy(isStarred = isStarred)
+        }
+    }
+
+    fun updateMessageRecipes(messageId: String, recipes: List<Recipe>) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            _messages[index] = _messages[index].copy(recipes = recipes)
+        }
+    }
+
+    fun updateRecipeStarred(messageId: String, recipeId: String, isStarred: Boolean) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            val newStarredIds = if (isStarred) msg.starredRecipeIds + recipeId else msg.starredRecipeIds - recipeId
+            _messages[index] = msg.copy(starredRecipeIds = newStarredIds)
         }
     }
 }

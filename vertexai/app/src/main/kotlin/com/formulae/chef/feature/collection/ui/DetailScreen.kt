@@ -46,9 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
@@ -56,21 +54,12 @@ import com.formulae.chef.feature.model.Recipe
 
 @Composable
 internal fun DetailRoute(
-    collectionViewModel: CollectionViewModel,
     recipe: Recipe,
-    navController: NavController
+    onBack: () -> Unit,
+    onToggleCookingModeClick: () -> Unit = {}
 ) {
-
-    val onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
-
-    BackHandler {
-        navController.navigate("collection")
-    }
-
-    CreateDetailScreen(
-        recipe,
-        onToggleCookingModeClick,
-    )
+    BackHandler { onBack() }
+    CreateDetailScreen(recipe, onToggleCookingModeClick)
 }
 
 @Composable

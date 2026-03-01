@@ -36,6 +36,12 @@ The project requires JDK 17 and Android SDK with platform 36. Three properties m
 
 Use pragmatic TDD: write unit tests for models, ViewModels, and business logic where tests add real value. Avoid overly complex or brittle tests — don't mock deeply nested Firebase/AI dependencies just for coverage. UI flows and Firebase integration are covered by E2E testing, not unit tests.
 
+**Tests are mandatory alongside implementation.** For every new feature or change, tests covering the new logic must be included in the same session — never deferred. Specifically:
+- New data model fields → add assertions to the existing model test class
+- New state management methods (e.g. in `*UiState`) → add or extend a `*UiStateTest` class
+- New ViewModel logic (where injectable/fakeable) → extend or create a `*ViewModelTest` with fake dependencies
+- Skip tests only for code that has deep Firebase/AI constructor dependencies that cannot be injected (e.g. `ChatViewModel`, `SignInViewModel`)
+
 ## Architecture
 
 Use abstractions such as service and UI layers to adhere to SRP and keep business logic cleanly separated from other responsibilities.
