@@ -39,14 +39,26 @@ Avoid:
 Extract tokens from Figma and define them in theme:
 
 ### Colors
-- Primary: #XXXXXX
-- Secondary: #XXXXXX
-- Background: #XXXXXX
+- Background: #FFFDFFC
+- BackgroundAccent: #FFF1ED
+- White: #FFFFFF
+- TextPrimary: #403633
+- TextSecondary: #736864
+- TextSupporting: #5F5451
+- Accent (brand): #C45234
+
+### Font Family
+- Primary: Figtree (Regular, SemiBold, Bold, ExtraBold)
+- Fallback: Roboto Regular (bodySmall only), then system default
 
 ### Typography
-- HeadingLarge
-- BodyMedium
-- LabelSmall
+Material3 slot names as defined in `AppTypography` (`ui/theme/Typography.kt`):
+- `headlineLarge` — Figtree ExtraBold Italic, 24sp/29sp, TextPrimary
+- `labelMedium` — Figtree SemiBold, 14sp, TextPrimary
+- `bodyLarge` — Figtree Regular, 16sp/24sp, TextSecondary
+- `bodyMedium` — Figtree Regular, 14sp, TextSupporting
+- `labelLarge` — Figtree SemiBold, 16sp/20sp, White
+- `bodySmall` — Roboto Regular, 14sp/20sp, 0.25sp tracking, TextPrimary
 
 ### Shapes
 - Small: 8dp

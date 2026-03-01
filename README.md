@@ -22,9 +22,10 @@ Features:
 - 1.6.2 search / filter recipes in collection. This replaces search functionality in chat.
 - 2.0.0 - Users and sessions
 - 3.0.0 - Recipe collection updates and browsing
-- 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
+- 3.1.0 (Current) - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily) 
 - 4.0.0 - Restructured Recipe data format, added more information. Also complete redesign of the
   app!
+- 4.1.0 Chef suggests multiple options (grid with images) in chat when applicable.
 
 Up next: Refer to Linear
 
