@@ -20,8 +20,8 @@ val ISSUE_INVALID_IMPORT = Issue.create(
     Severity.ERROR,
     Implementation(
         InvalidImportDetector::class.java,
-        Scope.JAVA_FILE_SCOPE,
-    ),
+        Scope.JAVA_FILE_SCOPE
+    )
 )
 
 class InvalidImportDetector : Detector(), Detector.UastScanner {

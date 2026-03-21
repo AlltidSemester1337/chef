@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
             ImageInfo(R.drawable.favorite, R.string.pattern1_title, R.string.pattern1_id),
             ImageInfo(R.drawable.flash, R.string.pattern2_title, R.string.pattern2_id),
             ImageInfo(R.drawable.face, R.string.pattern3_title, R.string.pattern3_id),
-            ImageInfo(R.drawable.whitebalance, R.string.pattern4_title, R.string.pattern4_id),
+            ImageInfo(R.drawable.whitebalance, R.string.pattern4_title, R.string.pattern4_id)
         )
     }
 
@@ -235,7 +235,7 @@ class MainActivity : AppCompatActivity() {
     inner class ImagePagerAdapter(
         fm: FragmentManager,
         private val infos: Array<ImageInfo>,
-        lifecyle: Lifecycle,
+        lifecyle: Lifecycle
     ) : FragmentStateAdapter(fm, lifecyle) {
 
         fun getPageTitle(position: Int): CharSequence? {

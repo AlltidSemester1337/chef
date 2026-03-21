@@ -10,10 +10,10 @@ import androidx.fragment.app.Fragment
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.BuildConfig
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.FragmentFirebaseUiBinding
@@ -35,7 +35,7 @@ class FirebaseUIFragment : Fragment() {
     // Build FirebaseUI sign in intent. For documentation on this operation and all
     // possible customization see: https://github.com/firebase/firebaseui-android
     private val signInLauncher = registerForActivityResult(
-        FirebaseAuthUIActivityResultContract(),
+        FirebaseAuthUIActivityResultContract()
     ) { result -> this.onSignInResult(result) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

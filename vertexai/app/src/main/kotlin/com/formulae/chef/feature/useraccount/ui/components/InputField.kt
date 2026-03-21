@@ -10,7 +10,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,33 +61,31 @@ fun InputField(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    //TODO: Test and check if purple shit is also displayed on phone. WHY???
+                    // TODO: Test and check if purple shit is also displayed on phone. WHY???
                     OutlinedTextField(
                         value = value ?: "",
                         onValueChange = onValueChange,
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(color = Color.Transparent)
-                        //.border(
+                            .background(color = Color.Transparent),
+                        // .border(
                         //    BorderStroke(width = 2.dp, color = Purple40),
                         //    shape = RoundedCornerShape(50)
-                        ,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
-                        //textStyle = TextStyle(
+                        // textStyle = TextStyle(
                         //    fontSize = 16.sp,
                         //    fontWeight = FontWeight.Normal,
                         //    lineHeight = 24.sp
-                        //),
-                        //modifier = Modifier.weight(1f),
+                        // ),
+                        // modifier = Modifier.weight(1f),
                         placeholder = { Text(placeholder) },
                         visualTransformation = visualTransformation ?: VisualTransformation.None
                     )
-
                 }
             }
 

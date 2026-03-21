@@ -11,13 +11,13 @@ class EntryChoiceActivity : BaseEntryChoiceActivity() {
             Choice(
                 "Java",
                 "Run the Firebase Crash quickstart written in Java.",
-                Intent(this, com.google.samples.quickstart.crash.java.MainActivity::class.java),
+                Intent(this, com.google.samples.quickstart.crash.java.MainActivity::class.java)
             ),
             Choice(
                 "Kotlin",
                 "Run the Firebase Crash quickstart written in Kotlin.",
-                Intent(this, com.google.samples.quickstart.crash.kotlin.MainActivity::class.java),
-            ),
+                Intent(this, com.google.samples.quickstart.crash.kotlin.MainActivity::class.java)
+            )
         )
     }
 }

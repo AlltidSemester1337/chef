@@ -108,7 +108,7 @@ internal fun ChatRoute(
 fun ChatList(
     chatMessages: List<ChatMessage>,
     listState: LazyListState,
-    onStarClicked: (ChatMessage) -> Unit,
+    onStarClicked: (ChatMessage) -> Unit
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -125,10 +125,10 @@ fun ChatList(
 @Composable
 fun ChatBubbleItem(
     chatMessage: ChatMessage,
-    onStarClicked: (ChatMessage) -> Unit,
+    onStarClicked: (ChatMessage) -> Unit
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
-            chatMessage.participant == Participant.ERROR
+        chatMessage.participant == Participant.ERROR
 
     val backgroundColor = when (chatMessage.participant) {
         Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
@@ -160,7 +160,6 @@ fun ChatBubbleItem(
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
-
         Row {
             if (chatMessage.isPending) {
                 CircularProgressIndicator(
@@ -179,7 +178,7 @@ fun ChatBubbleItem(
                         Text(
                             modifier = Modifier
                                 .fillMaxWidth(),
-                            text = chatMessage.text,
+                            text = chatMessage.text
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -188,7 +187,7 @@ fun ChatBubbleItem(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = backgroundColor),
                         shape = bubbleShape,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         IconButton(
                             onClick = {
@@ -282,7 +281,8 @@ fun PreviewChatList() {
                 text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry, showcasing the magic of slow cooking and aromatic spices.  The beef becomes incredibly tender as it simmers in a fragrant coconut milk-based curry.\\n\\n**Yields:** 4 servings\\n**Prep time:** 20 minutes\\n**Cook time:** 2 - 2.5 hours\\n\\n**",
                 participant = Participant.MODEL
             )
-        ), rememberLazyListState()
+        ),
+        rememberLazyListState()
     ) {}
 }
 

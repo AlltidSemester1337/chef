@@ -90,6 +90,4 @@ class SignInViewModel(
             navController.navigate("home")
         }
     }
-
-
 }

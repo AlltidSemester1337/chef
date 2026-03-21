@@ -13,9 +13,9 @@ import android.telephony.TelephonyManager
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.firebase.Firebase
 import com.google.firebase.crashlytics.crashlytics
 import com.google.firebase.crashlytics.setCustomKeys
-import com.google.firebase.Firebase
 import kotlinx.coroutines.internal.synchronized
 
 /**
@@ -92,7 +92,7 @@ class CustomKeySamples(private val context: Context, private var callback: Netwo
                 key(
                     "Network Metered",
                     networkCapabilities
-                        .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+                        .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
                 )
                 // This key is long and not as easy to filter by.
                 key("Network Capabilities", networkCapabilities.toString())

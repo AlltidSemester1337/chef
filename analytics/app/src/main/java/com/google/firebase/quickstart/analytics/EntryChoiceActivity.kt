@@ -13,17 +13,17 @@ class EntryChoiceActivity : BaseEntryChoiceActivity() {
                 "Run the Firebase Analytics quickstart written in Java.",
                 Intent(
                     this,
-                    com.google.firebase.quickstart.analytics.java.MainActivity::class.java,
-                ),
+                    com.google.firebase.quickstart.analytics.java.MainActivity::class.java
+                )
             ),
             Choice(
                 "Kotlin",
                 "Run the Firebase Analytics quickstart written in Kotlin.",
                 Intent(
                     this,
-                    com.google.firebase.quickstart.analytics.kotlin.MainActivity::class.java,
-                ),
-            ),
+                    com.google.firebase.quickstart.analytics.kotlin.MainActivity::class.java
+                )
+            )
         )
     }
 }

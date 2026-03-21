@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.Firebase
 import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuth
@@ -17,7 +18,6 @@ import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.FragmentPhoneAuthBinding
 import java.util.concurrent.TimeUnit
@@ -104,7 +104,7 @@ class PhoneAuthFragment : Fragment() {
                     Snackbar.make(
                         view,
                         "Quota exceeded.",
-                        Snackbar.LENGTH_SHORT,
+                        Snackbar.LENGTH_SHORT
                     ).show()
                 }
 
@@ -114,7 +114,7 @@ class PhoneAuthFragment : Fragment() {
 
             override fun onCodeSent(
                 verificationId: String,
-                token: PhoneAuthProvider.ForceResendingToken,
+                token: PhoneAuthProvider.ForceResendingToken
             ) {
                 // The SMS verification code has been sent to the provided phone number, we
                 // now need to ask the user to enter the code and then construct a credential
@@ -173,7 +173,7 @@ class PhoneAuthFragment : Fragment() {
 
     private fun resendVerificationCode(
         phoneNumber: String,
-        token: PhoneAuthProvider.ForceResendingToken?,
+        token: PhoneAuthProvider.ForceResendingToken?
     ) {
         val optionsBuilder = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phoneNumber) // Phone number to verify
@@ -228,7 +228,7 @@ class PhoneAuthFragment : Fragment() {
     private fun updateUI(
         uiState: Int,
         user: FirebaseUser? = auth.currentUser,
-        cred: PhoneAuthCredential? = null,
+        cred: PhoneAuthCredential? = null
     ) {
         when (uiState) {
             STATE_INITIALIZED -> {
@@ -243,7 +243,7 @@ class PhoneAuthFragment : Fragment() {
                     binding.buttonVerifyPhone,
                     binding.buttonResend,
                     binding.fieldPhoneNumber,
-                    binding.fieldVerificationCode,
+                    binding.fieldVerificationCode
                 )
                 disableViews(binding.buttonStartVerification)
                 binding.detail.setText(R.string.status_code_sent)
@@ -255,7 +255,7 @@ class PhoneAuthFragment : Fragment() {
                     binding.buttonVerifyPhone,
                     binding.buttonResend,
                     binding.fieldPhoneNumber,
-                    binding.fieldVerificationCode,
+                    binding.fieldVerificationCode
                 )
                 binding.detail.setText(R.string.status_verification_failed)
             }
@@ -266,7 +266,7 @@ class PhoneAuthFragment : Fragment() {
                     binding.buttonVerifyPhone,
                     binding.buttonResend,
                     binding.fieldPhoneNumber,
-                    binding.fieldVerificationCode,
+                    binding.fieldVerificationCode
                 )
                 binding.detail.setText(R.string.status_verification_succeeded)
 

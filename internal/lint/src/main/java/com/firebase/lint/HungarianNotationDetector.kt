@@ -19,8 +19,8 @@ val ISSUE_HUNGARIAN_NOTATION = Issue.create(
     Severity.ERROR,
     Implementation(
         HungarianNotationDetector::class.java,
-        Scope.JAVA_FILE_SCOPE,
-    ),
+        Scope.JAVA_FILE_SCOPE
+    )
 )
 
 class HungarianNotationDetector : Detector(), Detector.UastScanner {

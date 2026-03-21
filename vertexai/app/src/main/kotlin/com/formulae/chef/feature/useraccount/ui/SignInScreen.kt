@@ -29,16 +29,15 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,7 +106,6 @@ private fun SignUpScreen(
                 .align(Alignment.TopEnd)
                 .padding(16.dp, 0.dp)
         ) {
-
             // Sign in link
             Text(
                 text = stringResource(R.string.sign_in),
@@ -115,7 +113,7 @@ private fun SignUpScreen(
                 textAlign = TextAlign.Right,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                //TODO: Should be waved underline if possible?
+                // TODO: Should be waved underline if possible?
                 textDecoration = TextDecoration.Underline
             )
         }
@@ -172,9 +170,6 @@ private fun SignUpScreen(
             )
         }
 
-
-
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -183,7 +178,6 @@ private fun SignUpScreen(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             InputField(
                 label = stringResource(R.string.email),
                 placeholder = "name@email.com",
@@ -191,7 +185,7 @@ private fun SignUpScreen(
                 onValueChange = onUpdateEmail
             )
 
-            //TODO: Double check this spacing with Figma design, generated code miss?
+            // TODO: Double check this spacing with Figma design, generated code miss?
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -207,13 +201,10 @@ private fun SignUpScreen(
                 visualTransformation = PasswordVisualTransformation()
             )
 
-
             // Can be re-enabled to support anonymous sessions (decided by design to remove for now)
-            //TextButton(onClick = onSkipSignUpClick) {
+            // TextButton(onClick = onSkipSignUpClick) {
             //    Text(text = stringResource(R.string.skip_sign_up), fontSize = 16.sp)
-            //}
-
-
+            // }
         }
         // Button section
         Column(
@@ -252,13 +243,17 @@ private fun SignUpScreen(
 @Composable
 fun PreviewSignUpScreen() {
     SignUpScreen(
-        email = object : State<String> {
-            override val value: String
-                get() = "Email"
+        email = remember {
+            object : State<String> {
+                override val value: String
+                    get() = "Email"
+            }
         },
-        password = object : State<String> {
-            override val value: String
-                get() = "Password"
+        password = remember {
+            object : State<String> {
+                override val value: String
+                    get() = "Password"
+            }
         },
         onUpdateEmail = { },
         onUpdatePassword = { },

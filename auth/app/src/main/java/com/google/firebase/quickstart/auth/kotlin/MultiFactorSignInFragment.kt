@@ -47,7 +47,7 @@ class MultiFactorSignInFragment : BaseFragment() {
             binding.phoneFactor2,
             binding.phoneFactor3,
             binding.phoneFactor4,
-            binding.phoneFactor5,
+            binding.phoneFactor5
         )
         for (button in phoneFactorButtonList) {
             button.visibility = View.GONE
@@ -88,7 +88,7 @@ class MultiFactorSignInFragment : BaseFragment() {
                     .setMultiFactorHint(phoneMultiFactorInfo)
                     .setCallbacks(generateCallbacks()) // A timeout of 0 disables SMS-auto-retrieval.
                     .setTimeout(0L, TimeUnit.SECONDS)
-                    .build(),
+                    .build()
             )
         }
     }
@@ -127,7 +127,7 @@ class MultiFactorSignInFragment : BaseFragment() {
             }
             lastPhoneAuthCredential = PhoneAuthProvider.getCredential(
                 lastVerificationId!!,
-                binding.smsCode.text.toString(),
+                binding.smsCode.text.toString()
             )
         }
         multiFactorResolver

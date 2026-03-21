@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.navigation.fragment.findNavController
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneMultiFactorInfo
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.databinding.FragmentMultiFactorSignInBinding
 
 class MultiFactorUnenrollFragment : BaseFragment() {
@@ -34,7 +34,7 @@ class MultiFactorUnenrollFragment : BaseFragment() {
             binding.phoneFactor2,
             binding.phoneFactor3,
             binding.phoneFactor4,
-            binding.phoneFactor5,
+            binding.phoneFactor5
         )
         for (button in phoneFactorButtonList) {
             button.visibility = View.GONE
@@ -57,14 +57,14 @@ class MultiFactorUnenrollFragment : BaseFragment() {
                             Toast.makeText(
                                 context,
                                 "Successfully unenrolled!",
-                                Toast.LENGTH_SHORT,
+                                Toast.LENGTH_SHORT
                             ).show()
                             findNavController().popBackStack()
                         } else {
                             Toast.makeText(
                                 context,
                                 "Unable to unenroll second factor. ${task.exception}",
-                                Toast.LENGTH_SHORT,
+                                Toast.LENGTH_SHORT
                             )
                                 .show()
                         }

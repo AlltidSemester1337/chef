@@ -9,11 +9,11 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.navigation.fragment.findNavController
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneMultiFactorInfo
 import com.google.firebase.auth.auth
-import com.google.firebase.Firebase
 import com.google.firebase.quickstart.auth.R
 import com.google.firebase.quickstart.auth.databinding.FragmentMultiFactorBinding
 
@@ -77,14 +77,14 @@ class MultiFactorFragment : BaseFragment() {
                     Toast.makeText(
                         context,
                         "Verification email sent to " + user.email,
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     ).show()
                 } else {
                     Log.e(TAG, "sendEmailVerification", task.exception)
                     Toast.makeText(
                         context,
                         "Failed to send verification email.",
-                        Toast.LENGTH_SHORT,
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -97,14 +97,14 @@ class MultiFactorFragment : BaseFragment() {
                 Toast.makeText(
                     context,
                     "Reload successful!",
-                    Toast.LENGTH_SHORT,
+                    Toast.LENGTH_SHORT
                 ).show()
             } else {
                 Log.e(TAG, "reload", task.exception)
                 Toast.makeText(
                     context,
                     "Failed to reload user.",
-                    Toast.LENGTH_SHORT,
+                    Toast.LENGTH_SHORT
                 ).show()
             }
         }
@@ -116,7 +116,7 @@ class MultiFactorFragment : BaseFragment() {
             binding.status.text = getString(
                 R.string.emailpassword_status_fmt,
                 user.email,
-                user.isEmailVerified,
+                user.isEmailVerified
             )
             binding.detail.text = getString(R.string.firebase_status_fmt, user.uid)
             val secondFactors = user.multiFactor.enrolledFactors
@@ -152,8 +152,8 @@ class MultiFactorFragment : BaseFragment() {
             .setTitle("Warning")
             .setMessage(
                 "Multi-factor authentication with SMS is currently only available for " +
-                        "Google Cloud Identity Platform projects. For more information see: " +
-                        "https://cloud.google.com/identity-platform/docs/android/mfa",
+                    "Google Cloud Identity Platform projects. For more information see: " +
+                    "https://cloud.google.com/identity-platform/docs/android/mfa"
             )
             .setPositiveButton("OK", null)
             .show()
