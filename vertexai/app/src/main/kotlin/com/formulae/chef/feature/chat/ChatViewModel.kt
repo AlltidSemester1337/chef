@@ -81,7 +81,7 @@ class ChatViewModel(
 
     private val _imagenEndpointName =
         EndpointName.ofProjectLocationPublisherModelName(
-            _projectId, location, "google", "imagen-4.0-generate-001"
+            _projectId, location, "google", "imagen-4.0-fast-generate-001"
         )
     private val _predictionServiceClient = predictionServiceClient
     private val _userSessionService = userSessionService
@@ -379,7 +379,7 @@ class ChatViewModel(
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
             .setAttribute("operation.name", "generateImage")
-            .setAttribute("llm.model_name", "vertexai/imagen4")
+            .setAttribute("llm.model_name", "vertexai/imagen4-fast")
             .setAttribute("llm.input_messages.0.message.role", "model")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
