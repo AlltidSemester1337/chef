@@ -10,7 +10,6 @@ import com.formulae.chef.feature.useraccount.ui.SignInRoute
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeRepository
 
-
 @Composable
 fun AppNavigation(recipeRepository: RecipeRepository, userSessionService: UserSessionService) {
     val navController = rememberNavController()
@@ -23,8 +22,8 @@ fun AppNavigation(recipeRepository: RecipeRepository, userSessionService: UserSe
                 onNavigateToCollection = { navController.navigate("collection") },
                 onSignOut = {
                     userSessionService.signOut(); navController.navigate("signIn") {
-                    popUpTo("home") { inclusive = true }
-                }
+                        popUpTo("home") { inclusive = true }
+                    }
                 }
             )
         }

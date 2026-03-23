@@ -50,6 +50,9 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -61,12 +64,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.util.UUID
 
-private const val IMAGE_PROMPT_TEMPLATE =
-    "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
+private val IMAGE_PROMPT_TEMPLATE =
+    "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, " +
+        "create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
 
 class ChatViewModel(
     chatGenerativeModel: GenerativeModel,
@@ -81,7 +82,10 @@ class ChatViewModel(
 
     private val _imagenEndpointName =
         EndpointName.ofProjectLocationPublisherModelName(
-            _projectId, location, "google", "imagen-4.0-fast-generate-001"
+            _projectId,
+            location,
+            "google",
+            "imagen-4.0-fast-generate-001"
         )
     private val _predictionServiceClient = predictionServiceClient
     private val _userSessionService = userSessionService

@@ -47,6 +47,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,6 +95,13 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     val isLoading by chatViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val messageCount = chatUiState.messages.size
+
+    LaunchedEffect(messageCount) {
+        if (messageCount > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -162,7 +171,7 @@ fun ChatBubbleItem(
     onRecipeStarredFromGrid: (String, Recipe) -> Unit
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
-            chatMessage.participant == Participant.ERROR
+        chatMessage.participant == Participant.ERROR
 
     val horizontalAlignment = if (isModelMessage) Alignment.Start else Alignment.End
 
@@ -215,7 +224,7 @@ fun ChatBubbleItem(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 modifier = Modifier.fillMaxWidth(),
-                                text = chatMessage.text,
+                                text = chatMessage.text
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -224,7 +233,7 @@ fun ChatBubbleItem(
                         Card(
                             colors = CardDefaults.cardColors(containerColor = backgroundColor),
                             shape = bubbleShape,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             IconButton(
                                 onClick = { onStarClicked(chatMessage) },
@@ -232,7 +241,11 @@ fun ChatBubbleItem(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Star,
-                                    contentDescription = if (chatMessage.isStarred) "Remove recipe from collection" else "Save recipe to collection",
+                                    contentDescription = if (chatMessage.isStarred) {
+                                        "Remove recipe from collection"
+                                    } else {
+                                        "Save recipe to collection"
+                                    },
                                     tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
                                 )
                             }
@@ -271,8 +284,10 @@ private fun RecipeGrid(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                repeat(3 - rowRecipes.size) {
-                    Spacer(modifier = Modifier.weight(1f))
+                if (recipes.size >= 3) {
+                    repeat(3 - rowRecipes.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
@@ -335,6 +350,7 @@ fun MessageInput(
     resetScroll: () -> Unit = {}
 ) {
     var userMessage by rememberSaveable { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
     ElevatedCard(
         modifier = Modifier
             .padding(bottom = 40.dp)
@@ -363,6 +379,7 @@ fun MessageInput(
                         onSendMessage(userMessage)
                         userMessage = ""
                         resetScroll()
+                        keyboardController?.hide()
                     }
                 },
                 modifier = Modifier
@@ -388,9 +405,10 @@ fun PreviewChatList() {
         chatMessages = listOf(
             ChatMessage(text = "Can you give me a recipe for coq au vin?"),
             ChatMessage(
-                text = "Beef Rendang (Indonesian Beef Curry)\\n\\nThis recipe delivers a rich and flavorful Indonesian beef curry.",
+                text = "Beef Rendang (Indonesian Beef Curry)\\n\\n" +
+                    "This recipe delivers a rich and flavorful Indonesian beef curry.",
                 participant = Participant.MODEL
-            ),
+            )
         ),
         listState = rememberLazyListState(),
         onStarClicked = {},
@@ -413,7 +431,7 @@ fun PreviewRecipeGrid() {
         Recipe(id = "2", title = "Pasta Carbonara", imageUrl = null),
         Recipe(id = "3", title = "Chicken Tikka Masala", imageUrl = null),
         Recipe(id = "4", title = "Beef Rendang", imageUrl = null),
-        Recipe(id = "5", title = "Coq au Vin", imageUrl = null),
+        Recipe(id = "5", title = "Coq au Vin", imageUrl = null)
     )
     ChatBubbleItem(
         chatMessage = ChatMessage(

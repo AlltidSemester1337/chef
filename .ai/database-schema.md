@@ -129,18 +129,18 @@ ROOT
 
 ## Field Type Reference
 
-| Field | Type | Notes |
-|---|---|---|
-| `difficulty` | string (enum) | "EASY" or "MEDIUM" |
-| `isFavourite` | boolean | |
-| `id` | string | Firebase push ID, duplicated inside the object |
-| `uid` | string | Firebase Auth UID |
-| `updatedAt` | string | ISO 8601 with timezone offset |
-| `cookingTime`, `prepTime` | string | Human-readable duration or empty string |
-| `quantity` (ingredient/nutrient) | string | Numeric or fractional; stored as string not number |
-| `unit` (ingredient/nutrient) | string | May be empty string |
-| `role` (chat) | string (enum) | "user" or "model" |
-| `imageUrl` | string | `https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/...` |
+| Field | Type | Notes                                                                         |
+|---|---|-------------------------------------------------------------------------------|
+| `difficulty` | string (enum) | "EASY" or "MEDIUM"                                                            |
+| `isFavourite` | boolean |                                                                               |
+| `id` | string | Firebase push ID, duplicated inside the object                                |
+| `uid` | string | Firebase Auth UID                                                             |
+| `updatedAt` | string | ISO 8601 with timezone offset                                                 |
+| `cookingTime`, `prepTime` | string | Human-readable duration or empty string                                       |
+| `quantity` (ingredient/nutrient) | string | Numeric or fractional; stored as string not number                            |
+| `unit` (ingredient/nutrient) | string | May be empty string                                                           |
+| `role` (chat) | string (enum) | "user" or "model"                                                             |
+| `imageUrl` | string | `https://storage.googleapis.com/{PROJECT_ID}.firebasestorage.app/recipes/...` |
 
 ---
 

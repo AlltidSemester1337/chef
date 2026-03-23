@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
     init {
         Firebase.initialize(context = this)
         Firebase.appCheck.installAppCheckProviderFactory(
-            DebugAppCheckProviderFactory.getInstance(),
+            DebugAppCheckProviderFactory.getInstance()
         )
     }
 

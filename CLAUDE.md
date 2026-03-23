@@ -31,6 +31,20 @@ The project requires JDK 17 and Android SDK with platform 36. Three properties m
 ./gradlew dependencyUpdates
 ```
 
+## Database Schema Changes
+
+**Before making any changes to the Firebase Realtime Database schema, a backup of the current database state MUST be created first.**
+
+Run the following Firebase CLI command to export the full database to a timestamped local backup file:
+
+```bash
+firebase database:get / --project $PROJECT_ID > db-backups/backup-$(date +%Y%m%d-%H%M%S).json
+```
+
+Backup files are stored in `db-backups/` (gitignored — never committed). Verify the backup file is non-empty before proceeding with any schema changes.
+
+**This step is mandatory — no schema changes may proceed without a confirmed backup.**
+
 ## Development Practices
 
 Use pragmatic TDD: write unit tests for models, ViewModels, and business logic where tests add real value. Avoid overly complex or brittle tests — don't mock deeply nested Firebase/AI dependencies just for coverage. UI flows and Firebase integration are covered by E2E testing, not unit tests.
@@ -118,6 +132,33 @@ adb install -r vertexai/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Use `/adb-troubleshoot` to run a guided troubleshooting session against the connected device.
+
+## Integration Tests
+
+Integration tests for Firebase services (Realtime Database, Authentication) live in `vertexai/app/src/androidTest/`. They require the **Firebase Emulator Suite** to be running locally.
+
+### Setup
+
+```bash
+# Install Firebase CLI (if not installed)
+npm install -g firebase-tools
+
+# Start emulators (from project root)
+firebase emulators:start --only database,auth
+```
+
+Default emulator ports: `9000` (Realtime Database), `9099` (Authentication).
+
+### Running
+
+```bash
+# Requires a connected Android device or running Android emulator
+./gradlew :vertexai:app:connectedAndroidTest
+```
+
+### AI Model API Calls
+
+Vertex AI (Gemini) and Imagen API regression testing requires real GCP credentials and incurs API costs. These are covered by manual E2E testing sessions, not automated integration tests.
 
 ## Context Hub (chub)
 

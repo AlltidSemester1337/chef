@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.tasks.await
 
-
 class UserSessionServiceFirebaseImpl : UserSessionService {
 
     override val currentUser: Flow<FirebaseUser?>
@@ -56,6 +55,4 @@ class UserSessionServiceFirebaseImpl : UserSessionService {
     override suspend fun deleteUser(uid: String) {
         Firebase.auth.currentUser!!.delete().await()
     }
-
-
 }

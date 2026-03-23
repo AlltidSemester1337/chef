@@ -2,16 +2,18 @@ package com.formulae.chef.services.persistence
 
 import android.util.Log
 import com.formulae.chef.feature.model.Recipe
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.tasks.await
 
 private const val RECIPES_KEY = "recipes"
 
-class RecipeRepositoryImpl : RecipeRepository {
-    private val _database = FirebaseInstance.database
-    private val recipesRef = _database.getReference(RECIPES_KEY)
+class RecipeRepositoryImpl(
+    private val database: FirebaseDatabase = FirebaseInstance.database
+) : RecipeRepository {
+    private val recipesRef = database.getReference(RECIPES_KEY)
 
     override fun saveRecipe(recipe: Recipe) {
-        val reference = _database.getReference(RECIPES_KEY)
+        val reference = database.getReference(RECIPES_KEY)
         val newDocumentRef = reference.push()
         val recipeWithId = recipe.copy(id = newDocumentRef.key)
 
@@ -44,7 +46,7 @@ class RecipeRepositoryImpl : RecipeRepository {
     }
 
     override fun removeRecipe(recipeId: String) {
-        val reference = _database.getReference(RECIPES_KEY)
+        val reference = database.getReference(RECIPES_KEY)
 
         reference.child(recipeId).removeValue()
             .addOnSuccessListener {
@@ -56,7 +58,7 @@ class RecipeRepositoryImpl : RecipeRepository {
     }
 
     override fun removeRecipeUid(recipeId: String) {
-        val reference = _database.getReference(RECIPES_KEY)
+        val reference = database.getReference(RECIPES_KEY)
 
         reference.child(recipeId).updateChildren(mapOf("uid" to null))
             .addOnSuccessListener {

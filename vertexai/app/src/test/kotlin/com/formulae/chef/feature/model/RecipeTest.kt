@@ -135,6 +135,34 @@ class RecipeTest {
     }
 
     @Test
+    fun `copyOf preserves non-empty list fields when no overrides`() {
+        val ingredients = listOf(Ingredient("Flour", "200", "g"), Ingredient("Eggs", "2", ""))
+        val instructions = listOf("Mix", "Bake", "Cool")
+        val nutrients = listOf(Nutrient("Calories", "350", "kcal"))
+        val original = Recipe(
+            id = "1",
+            ingredients = ingredients,
+            instructions = instructions,
+            nutrientsPerServing = nutrients,
+            tipsAndTricks = "Room temperature butter works best",
+            imageUrl = "https://example.com/img.jpg",
+            copyId = "copy-1"
+        )
+
+        val copy = original.copyOf()
+
+        assertEquals(2, copy.ingredients.size)
+        assertEquals("Flour", copy.ingredients[0].name)
+        assertEquals(3, copy.instructions.size)
+        assertEquals("Bake", copy.instructions[1])
+        assertEquals(1, copy.nutrientsPerServing!!.size)
+        assertEquals("Calories", copy.nutrientsPerServing!![0].name)
+        assertEquals("Room temperature butter works best", copy.tipsAndTricks)
+        assertEquals("https://example.com/img.jpg", copy.imageUrl)
+        assertEquals("copy-1", copy.copyId)
+    }
+
+    @Test
     fun `data class equality works correctly`() {
         val recipe1 = Recipe(id = "1", title = "Cake")
         val recipe2 = Recipe(id = "1", title = "Cake")
