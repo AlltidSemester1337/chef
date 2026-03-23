@@ -15,6 +15,7 @@ val FigtreeFamily = FontFamily(
     Font(R.font.figtree_bold, FontWeight.Bold),
     Font(R.font.figtree_extrabold, FontWeight.ExtraBold)
 )
+
 // TODO: Delete if not used, also ttf font file
 val RobotoFamily = FontFamily(
     Font(R.font.roboto_regular, FontWeight.Normal)

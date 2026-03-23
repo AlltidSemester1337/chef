@@ -46,9 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
@@ -56,28 +54,19 @@ import com.formulae.chef.feature.model.Recipe
 
 @Composable
 internal fun DetailRoute(
-    collectionViewModel: CollectionViewModel,
     recipe: Recipe,
-    navController: NavController
+    onBack: () -> Unit,
+    onToggleCookingModeClick: () -> Unit = {}
 ) {
-
-    val onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
-
-    BackHandler {
-        navController.navigate("collection")
-    }
-
-    CreateDetailScreen(
-        recipe,
-        onToggleCookingModeClick,
-    )
+    BackHandler { onBack() }
+    CreateDetailScreen(recipe, onToggleCookingModeClick)
 }
 
 @Composable
 private fun CreateDetailScreen(
     recipe: Recipe,
     // TODO: DEV-47
-    onToggleCookingModeClick: () -> Unit,
+    onToggleCookingModeClick: () -> Unit
 ) {
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
@@ -88,9 +77,8 @@ private fun CreateDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState),
+            .verticalScroll(scrollState)
     ) {
-
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -104,13 +92,13 @@ private fun CreateDetailScreen(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            //Button(
+            // Button(
             //    onClick = onToggleCookingModeClick,
             //    modifier = Modifier
             //        .fillMaxWidth()
-            //) {
+            // ) {
             //    Text("Start cooking!")
-            //}
+            // }
         }
 
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
@@ -123,7 +111,11 @@ private fun CreateDetailScreen(
             Button(
                 onClick = { showIngredients = true },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (showIngredients) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                    containerColor = if (showIngredients) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
                 )
             ) {
                 Text("Ingredients")
@@ -132,7 +124,11 @@ private fun CreateDetailScreen(
             Button(
                 onClick = { showIngredients = false },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!showIngredients) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                    containerColor = if (!showIngredients) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
                 )
             ) {
                 Text("Instructions")
@@ -182,7 +178,10 @@ fun PreviewCreateDetailScreen() {
     CreateDetailScreen(
         Recipe(
             title = "West African Peanut Stew (Peanut Butter Stew)",
-            summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n**Yields:** 4 servings\\n\\n**Nutritional Information per serving (approximate):**\\n\\n* Calories: 550 kcal\\n* Protein: 30g\\n* Carbohydrates: 40g\\n* Fat: 25g\\n\\n\\n", // Shortened for readability
+            summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, " +
+                "served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n" +
+                "**Yields:** 4 servings\\n\\n**Nutritional Information per serving (approximate):**\\n\\n" +
+                "* Calories: 550 kcal\\n* Protein: 30g\\n* Carbohydrates: 40g\\n* Fat: 25g\\n\\n\\n",
             servings = "4 servings",
             prepTime = "30 minutes",
             cookingTime = "2 hours",
@@ -214,22 +213,23 @@ fun PreviewCreateDetailScreen() {
             ),
             difficulty = Difficulty.EASY,
             instructions = listOf(
-                "Combine ground lamb (or mix), onion, garlic, parsley, mint, cumin, coriander, allspice, cayenne pepper (if using), salt, and pepper. Gently mix until combined.",
+                "Combine ground lamb (or mix), onion, garlic, parsley, mint, cumin, coriander, allspice, " +
+                    "cayenne pepper (if using), salt, and pepper. Gently mix until combined.",
                 "Divide mixture into 4 portions. Shape into kebabs (~10-15cm) or make meatballs.",
                 "Mix yogurt, harissa paste, lemon juice, and salt to make sauce.",
-                "Toss sweet potato, bell pepper, and broccoli with olive oil, salt, and pepper. Spread on baking sheet.",
+                "Toss sweet potato, bell pepper, and broccoli with olive oil, salt, and pepper. " +
+                    "Spread on baking sheet.",
                 "Roast vegetables at 200°C (400°F) for 20-25 minutes until tender.",
-                "Cook kebabs in a pan/skillet over medium-high heat for 4-5 minutes per side, or use grill/oven for meatballs.",
+                "Cook kebabs in a pan/skillet over medium-high heat for 4-5 minutes per side, " +
+                    "or use grill/oven for meatballs.",
                 "Serve kebabs with sauce and roasted vegetables"
             ),
             tipsAndTricks = "For milder flavor: reduce/omit cayenne pepper.\n" +
-                    "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
-                    "Serve with pita, hummus, or tabbouleh for a complete meal.",
-            imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
+                "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
+                "Serve with pita, hummus, or tabbouleh for a complete meal.",
+            imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/" +
+                "recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
         onToggleCookingModeClick = {}
     )
-
 }
-
-

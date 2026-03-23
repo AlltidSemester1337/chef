@@ -2,15 +2,21 @@ package com.formulae.chef.feature.useraccount.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,33 +68,31 @@ fun InputField(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    //TODO: Test and check if purple shit is also displayed on phone. WHY???
+                    // TODO: Test and check if purple shit is also displayed on phone. WHY???
                     OutlinedTextField(
                         value = value ?: "",
                         onValueChange = onValueChange,
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(color = Color.Transparent)
-                        //.border(
+                            .background(color = Color.Transparent),
+                        // .border(
                         //    BorderStroke(width = 2.dp, color = Purple40),
                         //    shape = RoundedCornerShape(50)
-                        ,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
-                        //textStyle = TextStyle(
+                        // textStyle = TextStyle(
                         //    fontSize = 16.sp,
                         //    fontWeight = FontWeight.Normal,
                         //    lineHeight = 24.sp
-                        //),
-                        //modifier = Modifier.weight(1f),
+                        // ),
+                        // modifier = Modifier.weight(1f),
                         placeholder = { Text(placeholder) },
                         visualTransformation = visualTransformation ?: VisualTransformation.None
                     )
-
                 }
             }
 

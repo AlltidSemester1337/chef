@@ -122,7 +122,6 @@ internal fun CollectionRoute(
         recipe.title.contains(searchQuery, ignoreCase = true)
     }
 
-
     BackHandler {
         navController.navigate("home")
     }
@@ -161,9 +160,9 @@ internal fun CollectionRoute(
             } else {
                 // Recipe Detail
                 DetailRoute(
-                    collectionViewModel = collectionViewModel,
                     recipe = selectedRecipe!!,
-                    navController = navController
+                    onBack = { navController.navigate("collection") },
+                    onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
                 )
             }
         }
@@ -215,7 +214,7 @@ private fun RecipeListRoute(
 
         SearchBar(
             searchQuery = searchQuery,
-            onSearchQueryChanged = onSearchQueryChanged,
+            onSearchQueryChanged = onSearchQueryChanged
         )
         RecipeList(
             recipes = filteredRecipes,
@@ -242,7 +241,11 @@ private fun ToggleButtonRow(
             onClick = onClickUserFavourites,
             enabled = signedIn,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (recipesSource == RecipeSource.USER_FAVOURITES) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                containerColor = if (recipesSource == RecipeSource.USER_FAVOURITES) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                }
             )
         ) {
             Text("My favourites")
@@ -251,7 +254,11 @@ private fun ToggleButtonRow(
         Button(
             onClick = onClickAllRecipes,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (recipesSource == RecipeSource.ALL_RECIPES) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                containerColor = if (recipesSource == RecipeSource.ALL_RECIPES) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                }
             )
         ) {
             Text("Browse all recipes")
@@ -262,7 +269,7 @@ private fun ToggleButtonRow(
 @Composable
 fun SearchBar(
     searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
+    onSearchQueryChanged: (String) -> Unit
 ) {
     OutlinedTextField(
         value = searchQuery,
@@ -291,12 +298,12 @@ fun RecipeList(
             modifier = Modifier
                 .fillMaxSize()
                 .wrapContentSize(Alignment.Center),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineSmall
         )
     } else {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         ) {
             items(recipes) { recipe ->
                 RecipeItem(
@@ -311,7 +318,6 @@ fun RecipeList(
     }
 }
 
-
 @Composable
 fun RecipeItem(
     recipe: Recipe,
@@ -325,7 +331,7 @@ fun RecipeItem(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { onRecipeClick(recipe) },
-        elevation = CardDefaults.elevatedCardElevation(4.dp),
+        elevation = CardDefaults.elevatedCardElevation(4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -369,7 +375,6 @@ fun RecipeItem(
     }
 }
 
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewRecipeListRoute() {
@@ -383,10 +388,9 @@ fun PreviewRecipeListRoute() {
         listState = rememberLazyListState(),
         filteredRecipes = listOf(Recipe(title = "West African Peanut stew"), Recipe(title = "Pasta Carbonara")),
         onRecipeClick = {},
-        onRecipeRemoveClick = {},
+        onRecipeRemoveClick = {}
     )
 }
-
 
 @Preview(showBackground = true)
 @Composable

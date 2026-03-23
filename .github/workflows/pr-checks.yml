@@ -1,0 +1,65 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+# Cancel in-progress runs for the same PR when a new commit is pushed
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint · Build · Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle  # handles ~/.gradle/caches and wrapper caching
+
+      # google-services.json is gitignored; the mock file has a com.formulae.chef
+      # entry and is safe for CI builds (no real Firebase project credentials).
+      - name: Provide google-services.json
+        run: cp mock-google-services.json vertexai/app/google-services.json
+
+      # local.properties is gitignored; reconstruct it from repository secrets.
+      #
+      # Secret formats expected (set under repo Settings → Secrets → Actions):
+      #   FIREBASE_DB_URL              — raw URL, e.g. https://my-project-default-rtdb.firebaseio.com
+      #   PHOENIX_API_KEY              — raw key value (quotes added by this step)
+      #   CHEF_MAIN_CHAT_PROMPT_TEMPLATE — raw prompt text (quotes added by this step)
+      #
+      # Note: firebaseDbUrl is quoted in build.gradle.kts ("\"${value}\""), so the
+      # secret must be the raw URL without surrounding quotes. phoenixApiKey and
+      # chefMainChatPromptTemplate are inserted as-is into buildConfigField, so this
+      # step wraps them in double quotes to produce valid Java string literals.
+      - name: Create local.properties
+        run: |
+          echo "firebaseDbUrl=${{ secrets.FIREBASE_DB_URL }}" >> local.properties
+          echo 'phoenixApiKey="${{ secrets.PHOENIX_API_KEY }}"' >> local.properties
+          echo 'chefMainChatPromptTemplate="${{ secrets.CHEF_MAIN_CHAT_PROMPT_TEMPLATE }}"' >> local.properties
+
+      - name: ktlint
+        run: ./gradlew ktlintCheck
+
+      - name: Build debug APK
+        run: ./gradlew :vertexai:app:assembleDebug
+
+      - name: Unit tests
+        run: ./gradlew :vertexai:app:testDebugUnitTest
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: vertexai/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14

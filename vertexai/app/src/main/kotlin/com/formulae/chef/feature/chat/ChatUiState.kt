@@ -18,6 +18,7 @@ package com.formulae.chef.feature.chat
 
 import androidx.compose.runtime.toMutableStateList
 import com.formulae.chef.feature.chat.ui.ChatMessage
+import com.formulae.chef.feature.model.Recipe
 
 class ChatUiState(
     messages: List<ChatMessage> = emptyList()
@@ -30,11 +31,9 @@ class ChatUiState(
     }
 
     fun replaceLastPendingMessage() {
-        val lastMessage = _messages.lastOrNull()
-        lastMessage?.let {
-            val newMessage = lastMessage.apply { isPending = false }
-            _messages.removeAt(_messages.lastIndex)
-            _messages.add(newMessage)
+        val index = _messages.indexOfLast { it.isPending }
+        if (index != -1) {
+            _messages[index] = _messages[index].copy(isPending = false)
         }
     }
 
@@ -42,6 +41,41 @@ class ChatUiState(
         val index = _messages.indexOfFirst { it.id == msg.id }
         if (index != -1) {
             _messages[index] = msg.copy(isStarred = isStarred)
+        }
+    }
+
+    fun updateMessageRecipes(messageId: String, recipes: List<Recipe>) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            _messages[index] = _messages[index].copy(recipes = recipes)
+        }
+    }
+
+    fun updateRecipeImage(messageId: String, recipeId: String, imageUrl: String) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            val newRecipes = msg.recipes.map { r ->
+                if (r.id == recipeId) r.copyOf(imageUrl = imageUrl) else r
+            }
+            _messages[index] = msg.copy(recipes = newRecipes)
+        }
+    }
+
+    fun markRecipeImageFailed(messageId: String, recipeId: String) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            _messages[index] = msg.copy(failedImageRecipeIds = msg.failedImageRecipeIds + recipeId)
+        }
+    }
+
+    fun updateRecipeStarred(messageId: String, recipeId: String, isStarred: Boolean) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            val newStarredIds = if (isStarred) msg.starredRecipeIds + recipeId else msg.starredRecipeIds - recipeId
+            _messages[index] = msg.copy(starredRecipeIds = newStarredIds)
         }
     }
 }

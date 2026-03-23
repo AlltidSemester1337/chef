@@ -63,7 +63,6 @@ data class Recipe(
     }
 }
 
-
 data class Ingredient(
     var name: String? = "",
     var quantity: String? = "",
