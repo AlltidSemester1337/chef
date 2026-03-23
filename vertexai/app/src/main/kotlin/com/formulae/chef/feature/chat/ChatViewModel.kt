@@ -233,16 +233,13 @@ class ChatViewModel(
         coroutineScope {
             recipes.map { recipe ->
                 async {
+                    val recipeId = recipe.id ?: return@async
                     try {
                         val imageUrl = createImageForRecipeAsync(recipe.toString())
-                        val currentRecipes = _uiState.value.messages
-                            .firstOrNull { it.id == messageId }?.recipes ?: return@async
-                        val updatedRecipes = currentRecipes.map { r ->
-                            if (r.id == recipe.id) r.copyOf(imageUrl = imageUrl) else r
-                        }
-                        _uiState.value.updateMessageRecipes(messageId, updatedRecipes)
+                        _uiState.value.updateRecipeImage(messageId, recipeId, imageUrl)
                     } catch (e: Exception) {
                         Log.e("ChatViewModel", "Image generation failed for ${recipe.title}", e)
+                        _uiState.value.markRecipeImageFailed(messageId, recipeId)
                     }
                 }
             }.awaitAll()
@@ -411,7 +408,9 @@ class ChatViewModel(
                     .setParameters(parameters)
                     .build()
 
-                val response = _predictionServiceClient!!.predict(predictRequest)
+                val client = _predictionServiceClient
+                    ?: throw IllegalStateException("Image generation is not available: prediction client not initialized")
+                val response = client.predict(predictRequest)
                 val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
 
                 span.setAttribute("llm.output_messages.0.message.role", "model")

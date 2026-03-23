@@ -5,6 +5,7 @@ import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -121,6 +122,69 @@ class ChatUiStateTest {
         state.updateMessageRecipes("nonexistent", listOf(Recipe(title = "Pasta")))
 
         assertTrue(state.messages[0].recipes.isEmpty())
+    }
+
+    @Test
+    fun `updateRecipeImage sets imageUrl on matching recipe`() {
+        val messageId = "msg-1"
+        val recipe = Recipe(id = "r1", title = "Pasta")
+        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
+
+        state.updateRecipeImage(messageId, "r1", "https://example.com/pasta.jpg")
+
+        assertEquals("https://example.com/pasta.jpg", state.messages[0].recipes[0].imageUrl)
+    }
+
+    @Test
+    fun `updateRecipeImage does not affect other recipes`() {
+        val messageId = "msg-1"
+        val recipes = listOf(Recipe(id = "r1", title = "Pasta"), Recipe(id = "r2", title = "Pizza"))
+        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = recipes)))
+
+        state.updateRecipeImage(messageId, "r1", "https://example.com/pasta.jpg")
+
+        assertNull(state.messages[0].recipes[1].imageUrl)
+    }
+
+    @Test
+    fun `updateRecipeImage does nothing for unknown message id`() {
+        val messageId = "msg-1"
+        val recipe = Recipe(id = "r1", title = "Pasta")
+        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
+
+        state.updateRecipeImage("nonexistent", "r1", "https://example.com/pasta.jpg")
+
+        assertNull(state.messages[0].recipes[0].imageUrl)
+    }
+
+    @Test
+    fun `markRecipeImageFailed adds recipe id to failedImageRecipeIds`() {
+        val messageId = "msg-1"
+        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL)))
+
+        state.markRecipeImageFailed(messageId, "r1")
+
+        assertTrue(state.messages[0].failedImageRecipeIds.contains("r1"))
+    }
+
+    @Test
+    fun `markRecipeImageFailed does not affect other messages`() {
+        val msg1 = ChatMessage(id = "msg-1", participant = Participant.MODEL)
+        val msg2 = ChatMessage(id = "msg-2", participant = Participant.MODEL)
+        val state = ChatUiState(listOf(msg1, msg2))
+
+        state.markRecipeImageFailed("msg-1", "r1")
+
+        assertTrue(state.messages[1].failedImageRecipeIds.isEmpty())
+    }
+
+    @Test
+    fun `markRecipeImageFailed does nothing for unknown message id`() {
+        val state = ChatUiState(listOf(ChatMessage(id = "msg-1", participant = Participant.MODEL)))
+
+        state.markRecipeImageFailed("nonexistent", "r1")
+
+        assertTrue(state.messages[0].failedImageRecipeIds.isEmpty())
     }
 
     @Test

@@ -51,6 +51,25 @@ class ChatUiState(
         }
     }
 
+    fun updateRecipeImage(messageId: String, recipeId: String, imageUrl: String) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            val newRecipes = msg.recipes.map { r ->
+                if (r.id == recipeId) r.copyOf(imageUrl = imageUrl) else r
+            }
+            _messages[index] = msg.copy(recipes = newRecipes)
+        }
+    }
+
+    fun markRecipeImageFailed(messageId: String, recipeId: String) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            val msg = _messages[index]
+            _messages[index] = msg.copy(failedImageRecipeIds = msg.failedImageRecipeIds + recipeId)
+        }
+    }
+
     fun updateRecipeStarred(messageId: String, recipeId: String, isStarred: Boolean) {
         val index = _messages.indexOfFirst { it.id == messageId }
         if (index != -1) {

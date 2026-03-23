@@ -30,5 +30,6 @@ data class ChatMessage(
     var isPending: Boolean = false,
     var isStarred: Boolean = false,
     val recipes: List<Recipe> = emptyList(),
-    val starredRecipeIds: Set<String> = emptySet()
+    val starredRecipeIds: Set<String> = emptySet(),
+    val failedImageRecipeIds: Set<String> = emptySet()
 )

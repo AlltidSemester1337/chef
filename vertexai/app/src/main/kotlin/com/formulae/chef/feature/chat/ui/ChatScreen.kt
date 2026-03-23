@@ -191,6 +191,7 @@ fun ChatBubbleItem(
             RecipeGrid(
                 recipes = chatMessage.recipes,
                 starredRecipeIds = chatMessage.starredRecipeIds,
+                failedImageRecipeIds = chatMessage.failedImageRecipeIds,
                 onRecipeClick = onRecipeClick,
                 onStarClick = { recipe -> onRecipeStarredFromGrid(chatMessage.id, recipe) }
             )
@@ -261,6 +262,7 @@ fun ChatBubbleItem(
 private fun RecipeGrid(
     recipes: List<Recipe>,
     starredRecipeIds: Set<String>,
+    failedImageRecipeIds: Set<String>,
     onRecipeClick: (Recipe) -> Unit,
     onStarClick: (Recipe) -> Unit
 ) {
@@ -279,6 +281,7 @@ private fun RecipeGrid(
                     RecipeSuggestionCard(
                         recipe = recipe,
                         isStarred = recipe.id in starredRecipeIds,
+                        isImageFailed = recipe.id != null && recipe.id in failedImageRecipeIds,
                         onRecipeClick = { onRecipeClick(recipe) },
                         onStarClick = { onStarClick(recipe) },
                         modifier = Modifier.weight(1f)
@@ -298,6 +301,7 @@ private fun RecipeGrid(
 private fun RecipeSuggestionCard(
     recipe: Recipe,
     isStarred: Boolean,
+    isImageFailed: Boolean,
     onRecipeClick: () -> Unit,
     onStarClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -318,6 +322,12 @@ private fun RecipeSuggestionCard(
                         contentDescription = recipe.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
+                    )
+                } else if (isImageFailed) {
+                    Text(
+                        text = "Image unavailable",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     CircularProgressIndicator()
