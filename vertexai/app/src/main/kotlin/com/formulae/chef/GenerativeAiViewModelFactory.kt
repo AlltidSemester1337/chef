@@ -85,7 +85,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                     )
 
                     val imageConfig = generationConfig {
-                        responseModalities = listOf(ResponseModality.IMAGE)
+                        responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
                     }
 
                     val imageGenerativeModel = Firebase.vertexAI.generativeModel(

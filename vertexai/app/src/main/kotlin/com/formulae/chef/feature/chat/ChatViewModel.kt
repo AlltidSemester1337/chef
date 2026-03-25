@@ -38,7 +38,9 @@ import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.GenerateContentResponse
-import com.google.firebase.vertexai.type.InlineDataPart
+import android.graphics.Bitmap
+import com.google.firebase.vertexai.type.ImagePart
+import java.io.ByteArrayOutputStream
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
@@ -375,11 +377,13 @@ class ChatViewModel(
         try {
             val response = _imageGenerativeModel.generateContent(content { text(prompt) })
             val imagePart = response.candidates?.firstOrNull()?.content?.parts
-                ?.filterIsInstance<InlineDataPart>()
+                ?.filterIsInstance<ImagePart>()
                 ?.firstOrNull()
                 ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
 
-            val imageBytes = imagePart.inlineData.data
+            val outputStream = ByteArrayOutputStream()
+            imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+            val imageBytes = outputStream.toByteArray()
             val imagePath = "recipes/${UUID.randomUUID()}.jpg"
 
             Firebase.storage("gs://$_projectId.firebasestorage.app/")

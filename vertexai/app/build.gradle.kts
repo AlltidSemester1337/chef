@@ -116,7 +116,7 @@ dependencies {
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-appcheck-debug")
 
-    implementation("com.google.firebase:firebase-vertexai:16.0.2")
+    implementation("com.google.firebase:firebase-vertexai:16.5.0")
 
     implementation("io.opentelemetry:opentelemetry-api:1.52.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.52.0")
