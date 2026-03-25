@@ -22,17 +22,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
-import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.aiplatform.v1.PredictionServiceClient
-import com.google.cloud.aiplatform.v1.PredictionServiceSettings
 import com.google.firebase.Firebase
+import com.google.firebase.vertexai.type.ResponseModality
 import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
-import java.io.InputStream
-import java.lang.String
-import java.nio.charset.Charset
-import org.json.JSONObject
 
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
     """Extract recipes from the provided text and return them as JSON matching this schema:
@@ -90,33 +84,21 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
                     )
 
-                    val settingsStream: InputStream =
-                        application.applicationContext.assets.open("gcp.json")
-                    val configString = settingsStream.bufferedReader(Charset.defaultCharset()).use { it.readText() }
-                    val location = JSONObject(configString).getString("location")
+                    val imageConfig = generationConfig {
+                        responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
+                    }
 
-                    val credentialsStream: InputStream =
-                        application.applicationContext.assets.open("imagen-google-services.json")
-                    val credentials = GoogleCredentials.fromStream(credentialsStream)
-                        .createScoped(listOf("https://www.googleapis.com/auth/cloud-platform"))
-
-                    val endpoint = String.format("$location-aiplatform.googleapis.com:443")
-
-                    val predictionServiceSettings: PredictionServiceSettings =
-                        PredictionServiceSettings.newBuilder()
-                            .setCredentialsProvider { credentials }
-                            .setEndpoint(endpoint)
-                            .build()
-
-                    val predictionServiceClient = PredictionServiceClient.create(predictionServiceSettings)
+                    val imageGenerativeModel = Firebase.vertexAI.generativeModel(
+                        modelName = "gemini-2.5-flash-image",
+                        generationConfig = imageConfig
+                    )
 
                     val userSessionService = UserSessionServiceFirebaseImpl()
 
                     ChatViewModel(
                         chatGenerativeModel = chatGenerativeModel,
                         jsonGenerativeModel = jsonGenerativeModel,
-                        predictionServiceClient = predictionServiceClient,
-                        location = location,
+                        imageGenerativeModel = imageGenerativeModel,
                         application = application,
                         userSessionService = userSessionService
                     )

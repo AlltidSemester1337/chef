@@ -30,9 +30,6 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
-import com.google.cloud.aiplatform.v1.EndpointName
-import com.google.cloud.aiplatform.v1.PredictRequest
-import com.google.cloud.aiplatform.v1.PredictionServiceClient
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
@@ -41,11 +38,12 @@ import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.GenerateContentResponse
+import android.graphics.Bitmap
+import com.google.firebase.vertexai.type.ImagePart
+import java.io.ByteArrayOutputStream
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
-import com.google.protobuf.Value
-import com.google.protobuf.util.JsonFormat
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
@@ -72,22 +70,14 @@ private val IMAGE_PROMPT_TEMPLATE =
 class ChatViewModel(
     chatGenerativeModel: GenerativeModel,
     jsonGenerativeModel: GenerativeModel,
-    predictionServiceClient: PredictionServiceClient?,
-    location: String,
+    imageGenerativeModel: GenerativeModel,
     application: Application,
     userSessionService: UserSessionService
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
 
-    private val _imagenEndpointName =
-        EndpointName.ofProjectLocationPublisherModelName(
-            _projectId,
-            location,
-            "google",
-            "imagen-4.0-fast-generate-001"
-        )
-    private val _predictionServiceClient = predictionServiceClient
+    private val _imageGenerativeModel = imageGenerativeModel
     private val _userSessionService = userSessionService
     private val _jsonGenerativeModel = jsonGenerativeModel
 
@@ -247,7 +237,7 @@ class ChatViewModel(
     }
 
     private suspend fun createImageForRecipeAsync(recipe: String): String {
-        val gcsUri = withContext(Dispatchers.IO) { generateImageInstrumented(recipe) }
+        val gcsUri = generateImageInstrumented(recipe)
         val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
         val downloadUrl = Firebase.storage("gs://$_projectId.firebasestorage.app/")
             .reference.child(storagePath).downloadUrl.await()
@@ -375,49 +365,38 @@ class ChatViewModel(
         return GlobalOpenTelemetry.getTracer("com.formulae.chef")
     }
 
-    private fun generateImageInstrumented(recipe: String): String {
-        val gson = Gson()
+    private suspend fun generateImageInstrumented(recipe: String): String {
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
             .setAttribute("operation.name", "generateImage")
-            .setAttribute("llm.model_name", "vertexai/imagen4-fast")
-            .setAttribute("llm.input_messages.0.message.role", "model")
+            .setAttribute("llm.model_name", "vertexai/gemini-flash-image")
+            .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
 
         try {
-            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                val instancesJson = gson.toJson(mapOf("prompt" to prompt))
-                val instances = jsonToValue(instancesJson)
+            val response = _imageGenerativeModel.generateContent(content { text(prompt) })
+            val imagePart = response.candidates?.firstOrNull()?.content?.parts
+                ?.filterIsInstance<ImagePart>()
+                ?.firstOrNull()
+                ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
 
-                val paramsJson = gson.toJson(
-                    mapOf(
-                        "sampleCount" to 1,
-                        "aspectRatio" to "4:3",
-                        "storageUri" to "gs://$_projectId.firebasestorage.app/recipes",
-                        "outputOptions" to mapOf("mimeType" to "image/jpeg")
-                    )
-                )
+            val outputStream = ByteArrayOutputStream()
+            imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+            val imageBytes = outputStream.toByteArray()
+            val imagePath = "recipes/${UUID.randomUUID()}.jpg"
 
-                val parameters = jsonToValue(paramsJson)
-                span.setAttribute("llm.invocation_parameters", paramsJson)
+            Firebase.storage("gs://$_projectId.firebasestorage.app/")
+                .reference.child(imagePath)
+                .putBytes(imageBytes)
+                .await()
 
-                val predictRequest = PredictRequest.newBuilder()
-                    .setEndpoint(_imagenEndpointName.toString())
-                    .addAllInstances(listOf(instances))
-                    .setParameters(parameters)
-                    .build()
+            val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
 
-                val client = _predictionServiceClient
-                    ?: throw IllegalStateException("Image generation is not available: prediction client not initialized")
-                val response = client.predict(predictRequest)
-                val gcsUri = response.predictionsList[0].structValue.getFieldsOrThrow("gcsUri").stringValue
+            span.setAttribute("llm.output_messages.0.message.role", "model")
+            span.setAttribute("llm.output_messages.0.message.content", gcsUri)
 
-                span.setAttribute("llm.output_messages.0.message.role", "model")
-                span.setAttribute("llm.output_messages.0.message.content", gcsUri)
-
-                return gcsUri
-            }
+            return gcsUri
         } catch (e: Exception) {
             span.recordException(e)
             span.setStatus(StatusCode.ERROR)
@@ -425,11 +404,5 @@ class ChatViewModel(
         } finally {
             span.end()
         }
-    }
-
-    private fun jsonToValue(json: String): Value {
-        val builder = Value.newBuilder()
-        JsonFormat.parser().merge(json, builder)
-        return builder.build()
     }
 }
