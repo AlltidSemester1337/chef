@@ -71,7 +71,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         val systemPrompt = application.assets
             .open("chat_system_prompt.txt")
             .bufferedReader()
-            .readText()
+            .use { it.readText() }
 
         return with(viewModelClass) {
             when {
