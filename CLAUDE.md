@@ -12,7 +12,7 @@ Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that g
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. Three properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`, `chefMainChatPromptTemplate`. A valid `google-services.json` is also required.
+The project requires JDK 17 and Android SDK with platform 36. Two properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`. A valid `google-services.json` is also required. The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
 
 ```bash
 # Build the main Chef app
