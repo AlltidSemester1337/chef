@@ -68,6 +68,11 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
 
         val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
 
+        val systemPrompt = application.assets
+            .open("chat_system_prompt.txt")
+            .bufferedReader()
+            .readText()
+
         return with(viewModelClass) {
             when {
                 isAssignableFrom(ChatViewModel::class.java) -> {
@@ -75,7 +80,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                     val chatGenerativeModel = Firebase.vertexAI.generativeModel(
                         modelName = "gemini-2.5-flash",
                         generationConfig = chatConfig,
-                        systemInstruction = content { text(BuildConfig.chefMainChatPromptTemplate) }
+                        systemInstruction = content { text(systemPrompt) }
                     )
 
                     val jsonGenerativeModel = Firebase.vertexAI.generativeModel(
