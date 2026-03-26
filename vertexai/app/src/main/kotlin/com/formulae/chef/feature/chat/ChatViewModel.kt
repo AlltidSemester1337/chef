@@ -265,6 +265,7 @@ class ChatViewModel(
     }
 
     private suspend fun runCompactionIfNeeded() {
+        if (_currentUser == null) return
         try {
             val allEntries = _chatHistoryPersistenceImpl.loadAllEntries()
             val entriesToCompact = selectEntriesToCompact(allEntries)
@@ -289,9 +290,9 @@ class ChatViewModel(
                 )
                 _userPreferencesRepository.savePreferences(updatedPrefs)
                 _cachedPreferences = updatedPrefs
+                _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
+                Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")
             }
-            _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
-            Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Compaction failed (non-critical)", e)
         }
