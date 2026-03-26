@@ -5,6 +5,7 @@ import com.google.firebase.database.FirebaseDatabase
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 
 data class Content(
     var role: String = "user", // Default value, must be mutable (var)
@@ -78,18 +79,10 @@ class ChatHistoryRepositoryImpl(
         }
     }
 
-    override fun deleteEntries(pushIds: List<String>) {
+    override suspend fun deleteEntries(pushIds: List<String>) {
         val reference = database.getReference(_chatHistoryKey)
         for (pushId in pushIds) {
-            reference.child(pushId).removeValue().addOnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    Log.e(
-                        "ChatHistoryRealtimeDatabasePersistence",
-                        "Failed to delete entry $pushId",
-                        task.exception
-                    )
-                }
-            }
+            reference.child(pushId).removeValue().await()
         }
     }
 }

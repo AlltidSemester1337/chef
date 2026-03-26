@@ -81,6 +81,12 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
             responseMimeType = "application/json"
         }
 
+        val textConfig = generationConfig {
+            temperature = 0.2f
+            maxOutputTokens = 8192
+            topP = 0.95f
+        }
+
         val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
 
         val systemPrompt = application.assets
@@ -121,7 +127,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
 
                     val compactionGenerativeModel = Firebase.vertexAI.generativeModel(
                         modelName = "gemini-2.5-flash-lite",
-                        generationConfig = jsonConfig,
+                        generationConfig = textConfig,
                         systemInstruction = content { text(COMPACT_HISTORY_SYSTEM_INSTRUCTIONS) }
                     )
 
@@ -134,7 +140,6 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         preferencesGenerativeModel = preferencesGenerativeModel,
                         compactionGenerativeModel = compactionGenerativeModel,
                         imageGenerativeModel = imageGenerativeModel,
-                        location = location,
                         application = application,
                         userSessionService = userSessionService,
                         applicationScope = applicationScope

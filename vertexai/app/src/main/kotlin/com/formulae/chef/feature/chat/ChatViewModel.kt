@@ -83,7 +83,6 @@ class ChatViewModel(
     private val preferencesGenerativeModel: GenerativeModel,
     private val compactionGenerativeModel: GenerativeModel,
     imageGenerativeModel: GenerativeModel,
-    location: String,
     application: Application,
     userSessionService: UserSessionService,
     private val applicationScope: CoroutineScope
@@ -110,11 +109,17 @@ class ChatViewModel(
     private var _currentUser: UserInfo? = null
     private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
     private lateinit var _userPreferencesRepository: UserPreferencesRepository
+    private var _cachedPreferences: UserPreferences? = null
 
     init {
         viewModelScope.launch {
             _isLoading.value = true
             _currentUser = _userSessionService.currentUser.first()
+            if (_currentUser == null) {
+                Log.e("ChatViewModel", "No authenticated user, aborting chat init")
+                _isLoading.value = false
+                return@launch
+            }
             _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(_currentUser!!.uid)
             _userPreferencesRepository = UserPreferencesRepositoryImpl(_currentUser!!.uid)
 
@@ -122,6 +127,7 @@ class ChatViewModel(
             val prefsDeferred = async { loadUserPreferences() }
             val persistedHistory = historyDeferred.await()
             val prefs = prefsDeferred.await()
+            _cachedPreferences = prefs
 
             val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs)
             _chatHistory.value = fullHistory
@@ -228,7 +234,7 @@ class ChatViewModel(
 
     private suspend fun detectAndSavePreferences(userMessage: String) {
         try {
-            val currentPrefs = try { _userPreferencesRepository.loadPreferences() } catch (e: Exception) { null }
+            val currentPrefs = _cachedPreferences
             val prompt = if (currentPrefs?.summary?.isNotBlank() == true) {
                 "Previously known preferences: ${currentPrefs.summary}\n\nUser message: $userMessage"
             } else {
@@ -239,12 +245,12 @@ class ChatViewModel(
             val gson = Gson()
             val result = gson.fromJson(responseText, PreferenceDetectionResult::class.java)
             if (result.detected && result.updatedSummary.isNotBlank()) {
-                _userPreferencesRepository.savePreferences(
-                    UserPreferences(
-                        summary = result.updatedSummary,
-                        updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
-                    )
+                val updated = UserPreferences(
+                    summary = result.updatedSummary,
+                    updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
                 )
+                _userPreferencesRepository.savePreferences(updated)
+                _cachedPreferences = updated
                 Log.d("ChatViewModel", "Preferences updated: ${result.updatedSummary}")
             }
         } catch (e: Exception) {
@@ -267,7 +273,7 @@ class ChatViewModel(
             val transcript = entriesToCompact.joinToString("\n") { (_, entryContent) ->
                 "${entryContent.role}: ${entryContent.parts.filterIsInstance<TextPart>().firstOrNull()?.text ?: ""}"
             }
-            val currentPrefs = try { _userPreferencesRepository.loadPreferences() } catch (e: Exception) { null }
+            val currentPrefs = _cachedPreferences
             val prompt = buildString {
                 if (currentPrefs?.summary?.isNotBlank() == true) {
                     append("Existing preferences: ${currentPrefs.summary}\n\n")
@@ -277,12 +283,12 @@ class ChatViewModel(
             val response = compactionGenerativeModel.generateContent(content { text(prompt) })
             val newSummary = response.text?.trim() ?: return
             if (newSummary.isNotBlank()) {
-                _userPreferencesRepository.savePreferences(
-                    UserPreferences(
-                        summary = newSummary,
-                        updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
-                    )
+                val updatedPrefs = UserPreferences(
+                    summary = newSummary,
+                    updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
                 )
+                _userPreferencesRepository.savePreferences(updatedPrefs)
+                _cachedPreferences = updatedPrefs
             }
             _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
             Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")

@@ -11,5 +11,5 @@ interface ChatHistoryRepository {
 
     suspend fun loadAllEntries(): List<Pair<String, Content>>
 
-    fun deleteEntries(pushIds: List<String>)
+    suspend fun deleteEntries(pushIds: List<String>)
 }

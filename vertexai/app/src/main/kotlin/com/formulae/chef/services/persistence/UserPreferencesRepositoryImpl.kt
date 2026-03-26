@@ -6,6 +6,7 @@ import com.google.firebase.database.FirebaseDatabase
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 
 class UserPreferencesRepositoryImpl(
     override val uid: String,
@@ -27,13 +28,7 @@ class UserPreferencesRepositoryImpl(
     }
 
     override suspend fun savePreferences(preferences: UserPreferences) {
-        database.getReference(_prefsKey).setValue(preferences)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d("UserPreferencesRepo", "Preferences saved successfully")
-                } else {
-                    Log.e("UserPreferencesRepo", "Failed to save preferences", task.exception)
-                }
-            }
+        database.getReference(_prefsKey).setValue(preferences).await()
+        Log.d("UserPreferencesRepo", "Preferences saved successfully")
     }
 }
