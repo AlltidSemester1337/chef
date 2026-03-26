@@ -26,10 +26,13 @@ import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
+import com.formulae.chef.feature.model.UserPreferences
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
+import com.formulae.chef.services.persistence.UserPreferencesRepository
+import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
@@ -41,6 +44,7 @@ import com.google.firebase.vertexai.type.GenerateContentResponse
 import android.graphics.Bitmap
 import com.google.firebase.vertexai.type.ImagePart
 import java.io.ByteArrayOutputStream
+import com.google.firebase.vertexai.type.TextPart
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
@@ -51,6 +55,7 @@ import io.opentelemetry.api.trace.Tracer
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -67,12 +72,21 @@ private val IMAGE_PROMPT_TEMPLATE =
     "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, " +
         "create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
 
+private data class PreferenceDetectionResult(
+    val detected: Boolean = false,
+    val updatedSummary: String = ""
+)
+
 class ChatViewModel(
     chatGenerativeModel: GenerativeModel,
     jsonGenerativeModel: GenerativeModel,
+    private val preferencesGenerativeModel: GenerativeModel,
+    private val compactionGenerativeModel: GenerativeModel,
     imageGenerativeModel: GenerativeModel,
+    location: String,
     application: Application,
-    userSessionService: UserSessionService
+    userSessionService: UserSessionService,
+    private val applicationScope: CoroutineScope
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
@@ -95,16 +109,25 @@ class ChatViewModel(
     private lateinit var chat: Chat
     private var _currentUser: UserInfo? = null
     private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
+    private lateinit var _userPreferencesRepository: UserPreferencesRepository
 
     init {
         viewModelScope.launch {
             _isLoading.value = true
             _currentUser = _userSessionService.currentUser.first()
             _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(_currentUser!!.uid)
-            _chatHistory.value = initializeChatHistory()
-            chat = chatGenerativeModel.startChat(history = _chatHistory.value)
+            _userPreferencesRepository = UserPreferencesRepositoryImpl(_currentUser!!.uid)
+
+            val historyDeferred = async { initializeChatHistory() }
+            val prefsDeferred = async { loadUserPreferences() }
+            val persistedHistory = historyDeferred.await()
+            val prefs = prefsDeferred.await()
+
+            val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs)
+            _chatHistory.value = fullHistory
+            chat = chatGenerativeModel.startChat(history = fullHistory)
             _isLoading.value = false
-            updateUiStateMessages(_chatHistory.value)
+            updateUiStateMessages(persistedHistory)
         }
     }
 
@@ -114,6 +137,15 @@ class ChatViewModel(
         } catch (e: Exception) {
             Log.e("FirebaseDB", "Error fetching chat history", e)
             emptyList()
+        }
+    }
+
+    private suspend fun loadUserPreferences(): UserPreferences? {
+        return try {
+            _userPreferencesRepository.loadPreferences()
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Error loading user preferences", e)
+            null
         }
     }
 
@@ -154,6 +186,8 @@ class ChatViewModel(
                     _chatHistory.value += newModelContent
                     _chatHistoryPersistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
 
+                    launch { detectAndSavePreferences(userMessage) }
+
                     val extractedRecipes = try {
                         extractRecipeDetailsFromMessage(modelResponse)
                     } catch (e: Exception) {
@@ -189,6 +223,71 @@ class ChatViewModel(
                     )
                 )
             }
+        }
+    }
+
+    private suspend fun detectAndSavePreferences(userMessage: String) {
+        try {
+            val currentPrefs = try { _userPreferencesRepository.loadPreferences() } catch (e: Exception) { null }
+            val prompt = if (currentPrefs?.summary?.isNotBlank() == true) {
+                "Previously known preferences: ${currentPrefs.summary}\n\nUser message: $userMessage"
+            } else {
+                "User message: $userMessage"
+            }
+            val response = preferencesGenerativeModel.generateContent(content { text(prompt) })
+            val responseText = response.text ?: return
+            val gson = Gson()
+            val result = gson.fromJson(responseText, PreferenceDetectionResult::class.java)
+            if (result.detected && result.updatedSummary.isNotBlank()) {
+                _userPreferencesRepository.savePreferences(
+                    UserPreferences(
+                        summary = result.updatedSummary,
+                        updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
+                    )
+                )
+                Log.d("ChatViewModel", "Preferences updated: ${result.updatedSummary}")
+            }
+        } catch (e: Exception) {
+            Log.w("ChatViewModel", "Preference detection failed (non-critical)", e)
+        }
+    }
+
+    fun onNavigateAway() {
+        applicationScope.launch {
+            runCompactionIfNeeded()
+        }
+    }
+
+    private suspend fun runCompactionIfNeeded() {
+        try {
+            val allEntries = _chatHistoryPersistenceImpl.loadAllEntries()
+            val entriesToCompact = selectEntriesToCompact(allEntries)
+            if (entriesToCompact.isEmpty()) return
+
+            val transcript = entriesToCompact.joinToString("\n") { (_, entryContent) ->
+                "${entryContent.role}: ${entryContent.parts.filterIsInstance<TextPart>().firstOrNull()?.text ?: ""}"
+            }
+            val currentPrefs = try { _userPreferencesRepository.loadPreferences() } catch (e: Exception) { null }
+            val prompt = buildString {
+                if (currentPrefs?.summary?.isNotBlank() == true) {
+                    append("Existing preferences: ${currentPrefs.summary}\n\n")
+                }
+                append("Chat transcript to summarize:\n$transcript")
+            }
+            val response = compactionGenerativeModel.generateContent(content { text(prompt) })
+            val newSummary = response.text?.trim() ?: return
+            if (newSummary.isNotBlank()) {
+                _userPreferencesRepository.savePreferences(
+                    UserPreferences(
+                        summary = newSummary,
+                        updatedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
+                    )
+                )
+            }
+            _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
+            Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Compaction failed (non-critical)", e)
         }
     }
 
@@ -403,6 +502,30 @@ class ChatViewModel(
             throw e
         } finally {
             span.end()
+        }
+    }
+
+    companion object {
+        fun buildChatHistoryWithPreferences(
+            history: List<Content>,
+            prefs: UserPreferences?
+        ): List<Content> {
+            if (prefs == null || prefs.summary.isBlank()) return history
+            val syntheticUser = content(role = "user") {
+                text("My food preferences and context: ${prefs.summary}")
+            }
+            val syntheticModel = content(role = "model") {
+                text("Understood, I'll keep these preferences in mind throughout our conversation.")
+            }
+            return listOf(syntheticUser, syntheticModel) + history
+        }
+
+        fun selectEntriesToCompact(
+            allEntries: List<Pair<String, Content>>,
+            keepLast: Int = 20
+        ): List<Pair<String, Content>> {
+            if (allEntries.size <= keepLast) return emptyList()
+            return allEntries.dropLast(keepLast)
         }
     }
 }

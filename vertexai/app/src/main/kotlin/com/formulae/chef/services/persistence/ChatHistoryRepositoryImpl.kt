@@ -53,4 +53,43 @@ class ChatHistoryRepositoryImpl(
                 }
         }
     }
+
+    override suspend fun loadAllEntries(): List<Pair<String, com.google.firebase.vertexai.type.Content>> {
+        return suspendCancellableCoroutine { continuation ->
+            database.getReference(_chatHistoryKey).get()
+                .addOnSuccessListener { dataSnapshot ->
+                    val entries = dataSnapshot.children.mapNotNull { child ->
+                        val content = child.getValue(Content::class.java) ?: return@mapNotNull null
+                        val key = child.key ?: return@mapNotNull null
+                        Pair(
+                            key,
+                            com.google.firebase.vertexai.type.Content(
+                                content.role,
+                                content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) }
+                            )
+                        )
+                    }
+                    continuation.resume(entries)
+                }
+                .addOnFailureListener { exception ->
+                    Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting all data", exception)
+                    continuation.resumeWithException(exception)
+                }
+        }
+    }
+
+    override fun deleteEntries(pushIds: List<String>) {
+        val reference = database.getReference(_chatHistoryKey)
+        for (pushId in pushIds) {
+            reference.child(pushId).removeValue().addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.e(
+                        "ChatHistoryRealtimeDatabasePersistence",
+                        "Failed to delete entry $pushId",
+                        task.exception
+                    )
+                }
+            }
+        }
+    }
 }

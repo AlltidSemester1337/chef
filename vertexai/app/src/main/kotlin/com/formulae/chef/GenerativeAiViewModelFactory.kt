@@ -28,6 +28,21 @@ import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
 
+private const val EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS =
+    """You are a preference detector for a cooking assistant. Given a user message, detect if the user
+explicitly states a personal food preference (dietary restriction, measurement system preference,
+cuisine preference, or similar). Return JSON matching this exact schema:
+{"detected": true, "updatedSummary": "complete merged summary of all stated preferences"}
+If nothing preference-related is detected, return:
+{"detected": false, "updatedSummary": ""}
+The updatedSummary should incorporate any previously known preferences provided in context."""
+
+private const val COMPACT_HISTORY_SYSTEM_INSTRUCTIONS =
+    """You are a memory compactor for a cooking assistant. Given a chat transcript and an existing
+preference summary, produce a single updated prose summary capturing all stated user preferences,
+dietary restrictions, and recurring cooking context. Be concise but complete. Return only the
+summary text, no JSON wrapping."""
+
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
     """Extract recipes from the provided text and return them as JSON matching this schema:
 {
@@ -98,14 +113,31 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         generationConfig = imageConfig
                     )
 
+                    val preferencesGenerativeModel = Firebase.vertexAI.generativeModel(
+                        modelName = "gemini-2.5-flash-lite",
+                        generationConfig = jsonConfig,
+                        systemInstruction = content { text(EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS) }
+                    )
+
+                    val compactionGenerativeModel = Firebase.vertexAI.generativeModel(
+                        modelName = "gemini-2.5-flash-lite",
+                        generationConfig = jsonConfig,
+                        systemInstruction = content { text(COMPACT_HISTORY_SYSTEM_INSTRUCTIONS) }
+                    )
+
                     val userSessionService = UserSessionServiceFirebaseImpl()
+                    val applicationScope = (application as ChefApplication).applicationScope
 
                     ChatViewModel(
                         chatGenerativeModel = chatGenerativeModel,
                         jsonGenerativeModel = jsonGenerativeModel,
+                        preferencesGenerativeModel = preferencesGenerativeModel,
+                        compactionGenerativeModel = compactionGenerativeModel,
                         imageGenerativeModel = imageGenerativeModel,
+                        location = location,
                         application = application,
-                        userSessionService = userSessionService
+                        userSessionService = userSessionService,
+                        applicationScope = applicationScope
                     )
                 }
 
