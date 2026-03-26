@@ -128,7 +128,8 @@ class ChatUiStateTest {
     fun `updateRecipeImage sets imageUrl on matching recipe`() {
         val messageId = "msg-1"
         val recipe = Recipe(id = "r1", title = "Pasta")
-        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
+        val state =
+            ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
 
         state.updateRecipeImage(messageId, "r1", "https://example.com/pasta.jpg")
 
@@ -150,7 +151,8 @@ class ChatUiStateTest {
     fun `updateRecipeImage does nothing for unknown message id`() {
         val messageId = "msg-1"
         val recipe = Recipe(id = "r1", title = "Pasta")
-        val state = ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
+        val state =
+            ChatUiState(listOf(ChatMessage(id = messageId, participant = Participant.MODEL, recipes = listOf(recipe))))
 
         state.updateRecipeImage("nonexistent", "r1", "https://example.com/pasta.jpg")
 
