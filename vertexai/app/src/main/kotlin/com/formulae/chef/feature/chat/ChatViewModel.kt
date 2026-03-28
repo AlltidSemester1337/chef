@@ -18,18 +18,22 @@ package com.formulae.chef.feature.chat
 
 import android.app.Application
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
+import com.formulae.chef.feature.model.LikedMessage
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
+import com.formulae.chef.services.persistence.LikedMessagesRepository
+import com.formulae.chef.services.persistence.LikedMessagesRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
@@ -41,9 +45,7 @@ import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.GenerateContentResponse
-import android.graphics.Bitmap
 import com.google.firebase.vertexai.type.ImagePart
-import java.io.ByteArrayOutputStream
 import com.google.firebase.vertexai.type.TextPart
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
@@ -52,6 +54,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
+import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -109,7 +112,9 @@ class ChatViewModel(
     private var _currentUser: UserInfo? = null
     private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
     private lateinit var _userPreferencesRepository: UserPreferencesRepository
+    private lateinit var _likedMessagesRepository: LikedMessagesRepository
     private var _cachedPreferences: UserPreferences? = null
+    private var _cachedLikedMessages: List<Pair<String, LikedMessage>> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -120,16 +125,25 @@ class ChatViewModel(
                 _isLoading.value = false
                 return@launch
             }
-            _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(_currentUser!!.uid)
-            _userPreferencesRepository = UserPreferencesRepositoryImpl(_currentUser!!.uid)
+            val uid = _currentUser!!.uid
+            _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(uid)
+            _userPreferencesRepository = UserPreferencesRepositoryImpl(uid)
+            _likedMessagesRepository = LikedMessagesRepositoryImpl(uid)
 
             val historyDeferred = async { initializeChatHistory() }
             val prefsDeferred = async { loadUserPreferences() }
+            val collectionTitlesDeferred = async { loadCollectionTitles(uid) }
+            val likedMessagesDeferred = async { loadLikedMessages() }
+
             val persistedHistory = historyDeferred.await()
             val prefs = prefsDeferred.await()
-            _cachedPreferences = prefs
+            val collectionTitles = collectionTitlesDeferred.await()
+            val likedMessages = likedMessagesDeferred.await()
 
-            val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs)
+            _cachedPreferences = prefs
+            _cachedLikedMessages = likedMessages
+
+            val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs, collectionTitles)
             _chatHistory.value = fullHistory
             chat = chatGenerativeModel.startChat(history = fullHistory)
             _isLoading.value = false
@@ -152,6 +166,26 @@ class ChatViewModel(
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Error loading user preferences", e)
             null
+        }
+    }
+
+    private suspend fun loadCollectionTitles(uid: String): List<String> {
+        return try {
+            _recipeRepositoryImpl.loadUserRecipes(uid)
+                .filter { it.isFavourite }
+                .map { it.title }
+        } catch (e: Exception) {
+            Log.w("ChatViewModel", "Failed to load collection titles (non-critical)", e)
+            emptyList()
+        }
+    }
+
+    private suspend fun loadLikedMessages(): List<Pair<String, LikedMessage>> {
+        return try {
+            _likedMessagesRepository.loadLikedMessages()
+        } catch (e: Exception) {
+            Log.w("ChatViewModel", "Failed to load liked messages (non-critical)", e)
+            emptyList()
         }
     }
 
@@ -232,6 +266,17 @@ class ChatViewModel(
         }
     }
 
+    fun onMessageLiked(message: ChatMessage) {
+        if (message.isLiked) return
+        _likedMessagesRepository.saveLikedMessage(message.text)
+        val liked = LikedMessage(
+            text = message.text,
+            likedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
+        )
+        _cachedLikedMessages = _cachedLikedMessages + Pair("", liked)
+        _uiState.value.updateMessageLiked(message.id, isLiked = true)
+    }
+
     private suspend fun detectAndSavePreferences(userMessage: String) {
         try {
             val currentPrefs = _cachedPreferences
@@ -275,9 +320,14 @@ class ChatViewModel(
                 "${entryContent.role}: ${entryContent.parts.filterIsInstance<TextPart>().firstOrNull()?.text ?: ""}"
             }
             val currentPrefs = _cachedPreferences
+            val likedToCompact = _cachedLikedMessages
             val prompt = buildString {
                 if (currentPrefs?.summary?.isNotBlank() == true) {
                     append("Existing preferences: ${currentPrefs.summary}\n\n")
+                }
+                if (likedToCompact.isNotEmpty()) {
+                    val likedText = likedToCompact.joinToString("\n---\n") { (_, msg) -> msg.text }
+                    append("Responses the user has explicitly liked:\n$likedText\n\n")
                 }
                 append("Chat transcript to summarize:\n$transcript")
             }
@@ -291,6 +341,11 @@ class ChatViewModel(
                 _userPreferencesRepository.savePreferences(updatedPrefs)
                 _cachedPreferences = updatedPrefs
                 _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
+                val likedIdsToDelete = likedToCompact.map { it.first }.filter { it.isNotBlank() }
+                if (likedIdsToDelete.isNotEmpty()) {
+                    _likedMessagesRepository.deleteMessages(likedIdsToDelete)
+                }
+                _cachedLikedMessages = emptyList()
                 Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")
             }
         } catch (e: Exception) {
@@ -515,12 +570,24 @@ class ChatViewModel(
     companion object {
         fun buildChatHistoryWithPreferences(
             history: List<Content>,
-            prefs: UserPreferences?
+            prefs: UserPreferences?,
+            collectionTitles: List<String> = emptyList()
         ): List<Content> {
-            if (prefs == null || prefs.summary.isBlank()) return history
-            val syntheticUser = content(role = "user") {
-                text("My food preferences and context: ${prefs.summary}")
+            val hasSummary = prefs != null && prefs.summary.isNotBlank()
+            val hasTitles = collectionTitles.isNotEmpty()
+            if (!hasSummary && !hasTitles) return history
+
+            val contextText = buildString {
+                if (hasSummary) {
+                    append("My food preferences and context: ${prefs!!.summary}")
+                }
+                if (hasTitles) {
+                    if (hasSummary) append("\n\n")
+                    append("Recipes I have saved to my collection: ${collectionTitles.joinToString(", ")}")
+                }
             }
+
+            val syntheticUser = content(role = "user") { text(contextText) }
             val syntheticModel = content(role = "model") {
                 text("Understood, I'll keep these preferences in mind throughout our conversation.")
             }

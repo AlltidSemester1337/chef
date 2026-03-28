@@ -29,6 +29,7 @@ data class ChatMessage(
     val participant: Participant = Participant.USER,
     var isPending: Boolean = false,
     var isStarred: Boolean = false,
+    var isLiked: Boolean = false,
     val recipes: List<Recipe> = emptyList(),
     val starredRecipeIds: Set<String> = emptySet(),
     val failedImageRecipeIds: Set<String> = emptySet()

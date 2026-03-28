@@ -66,7 +66,8 @@ Each user is keyed by their Firebase Auth UID.
 
 ```
 User {
-  chat_history: { [pushId]: ChatMessage }   // Map of chat messages keyed by Firebase push ID
+  chat_history:    { [pushId]: ChatMessage }    // Map of chat messages keyed by Firebase push ID
+  liked_messages:  { [pushId]: LikedMessage }   // Map of liked AI responses keyed by Firebase push ID
 }
 ```
 
@@ -86,6 +87,17 @@ ChatMessage {
 ```
 MessagePart {
   text: string    // Message content; can be long markdown-formatted AI response
+}
+```
+
+### `LikedMessage`
+
+**Path:** `users/{uid}/liked_messages/{pushId}`
+
+```
+LikedMessage {
+  text:     string    // The model message text that was liked
+  likedAt:  string    // ISO 8601 timestamp
 }
 ```
 
@@ -118,11 +130,15 @@ ROOT
 │
 └── users (object)
     └── {uid} (object)
-        └── chat_history (object)
+        ├── chat_history (object)
+        │   └── {pushId} (object)
+        │       ├── role:  "user" | "model"
+        │       └── parts: array
+        │           └── [n]: { text: string }
+        └── liked_messages (object)
             └── {pushId} (object)
-                ├── role:  "user" | "model"
-                └── parts: array
-                    └── [n]: { text: string }
+                ├── text:     string   // model message text the user liked
+                └── likedAt:  string   // ISO 8601 timestamp
 ```
 
 ---
