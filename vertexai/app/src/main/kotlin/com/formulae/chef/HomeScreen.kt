@@ -4,8 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.formulae.chef.feature.chat.OverlayChatViewModel
+import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.services.authentication.UserSessionService
 import com.google.firebase.auth.UserInfo
 
@@ -63,30 +71,51 @@ private fun HomeScreenContent(
     onSignOut: () -> Unit,
     signedIn: Boolean
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Button(
-            onClick = onNavigateToChat,
-            enabled = signedIn,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(text = "Go to Chat")
+    val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
+    var showChefOverlay by remember { mutableStateOf(false) }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showChefOverlay = true }) {
+                Icon(Icons.Default.Chat, contentDescription = "Chat with Chef")
+            }
         }
-        Button(
-            onClick = onNavigateToCollection,
-            modifier = Modifier.padding(16.dp)
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "View Collection")
+            Button(
+                onClick = onNavigateToChat,
+                enabled = signedIn,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(text = "Go to Chat")
+            }
+            Button(
+                onClick = onNavigateToCollection,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(text = "View Collection")
+            }
+
+            Button(
+                onClick = onSignOut,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(text = "Sign out")
+            }
         }
 
-        Button(
-            onClick = onSignOut,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(text = "Sign out")
+        if (showChefOverlay) {
+            ChefOverlay(
+                viewModel = overlayViewModel,
+                recipe = null,
+                onDismiss = { showChefOverlay = false }
+            )
         }
     }
 }

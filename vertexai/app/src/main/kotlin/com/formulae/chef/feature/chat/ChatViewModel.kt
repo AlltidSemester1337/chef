@@ -18,6 +18,7 @@ package com.formulae.chef.feature.chat
 
 import android.app.Application
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
@@ -41,9 +42,7 @@ import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.Content
 import com.google.firebase.vertexai.type.GenerateContentResponse
-import android.graphics.Bitmap
 import com.google.firebase.vertexai.type.ImagePart
-import java.io.ByteArrayOutputStream
 import com.google.firebase.vertexai.type.TextPart
 import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
@@ -52,6 +51,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
+import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
