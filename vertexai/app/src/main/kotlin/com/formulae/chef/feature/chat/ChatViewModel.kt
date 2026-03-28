@@ -190,12 +190,15 @@ class ChatViewModel(
     }
 
     private fun updateUiStateMessages(history: List<Content>) {
+        val likedTexts = _cachedLikedMessages.map { (_, msg) -> msg.text }.toSet()
         _uiState.value = ChatUiState(
             history.map { content ->
+                val text = content.parts.first().asTextOrNull() ?: ""
                 ChatMessage(
-                    text = content.parts.first().asTextOrNull() ?: "",
+                    text = text,
                     participant = if (content.role == "user") Participant.USER else Participant.MODEL,
-                    isPending = false
+                    isPending = false,
+                    isLiked = content.role == "model" && text in likedTexts
                 )
             }
         )
