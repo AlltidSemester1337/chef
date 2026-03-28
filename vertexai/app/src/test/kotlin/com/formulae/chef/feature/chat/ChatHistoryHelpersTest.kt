@@ -46,6 +46,43 @@ class ChatHistoryHelpersTest {
         assertTrue(userText.contains("no fish, metric units"))
     }
 
+    @Test
+    fun buildChatHistory_withCollectionTitles_includesTitlesInContextMessage() {
+        val prefs = UserPreferences(summary = "no fish")
+        val titles = listOf("Pasta Carbonara", "Chicken Tikka")
+        val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), prefs, titles)
+        val userText = (result[0].parts.first() as TextPart).text
+        assertTrue(userText.contains("Pasta Carbonara"))
+        assertTrue(userText.contains("Chicken Tikka"))
+    }
+
+    @Test
+    fun buildChatHistory_collectionTitlesOnly_prependsContextWithoutPrefs() {
+        val titles = listOf("Beef Rendang")
+        val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), null, titles)
+        assertEquals(2, result.size)
+        val userText = (result[0].parts.first() as TextPart).text
+        assertTrue(userText.contains("Beef Rendang"))
+    }
+
+    @Test
+    fun buildChatHistory_emptyCollectionTitles_behavesLikeNoTitles() {
+        val history = listOf(makeContent("user", "hello"))
+        val result = ChatViewModel.buildChatHistoryWithPreferences(history, null, emptyList())
+        assertEquals(history, result)
+    }
+
+    @Test
+    fun buildChatHistory_withPrefsAndTitles_containsBoth() {
+        val prefs = UserPreferences(summary = "vegan")
+        val titles = listOf("Lentil Soup", "Falafel")
+        val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), prefs, titles)
+        val userText = (result[0].parts.first() as TextPart).text
+        assertTrue(userText.contains("vegan"))
+        assertTrue(userText.contains("Lentil Soup"))
+        assertTrue(userText.contains("Falafel"))
+    }
+
     // --- selectEntriesToCompact ---
 
     @Test

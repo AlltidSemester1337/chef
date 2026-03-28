@@ -78,4 +78,11 @@ class ChatUiState(
             _messages[index] = msg.copy(starredRecipeIds = newStarredIds)
         }
     }
+
+    fun updateMessageLiked(messageId: String, isLiked: Boolean) {
+        val index = _messages.indexOfFirst { it.id == messageId }
+        if (index != -1) {
+            _messages[index] = _messages[index].copy(isLiked = isLiked)
+        }
+    }
 }

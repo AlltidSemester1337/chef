@@ -237,4 +237,36 @@ class ChatUiStateTest {
 
         assertTrue(state.messages[0].starredRecipeIds.isEmpty())
     }
+
+    @Test
+    fun `updateMessageLiked marks matching message as liked`() {
+        val msg = ChatMessage(id = "m1", participant = Participant.MODEL, isLiked = false)
+        val state = ChatUiState(listOf(msg))
+
+        state.updateMessageLiked("m1", isLiked = true)
+
+        assertTrue(state.messages[0].isLiked)
+    }
+
+    @Test
+    fun `updateMessageLiked does not affect other messages`() {
+        val msg1 = ChatMessage(id = "m1", participant = Participant.MODEL, isLiked = false)
+        val msg2 = ChatMessage(id = "m2", participant = Participant.MODEL, isLiked = false)
+        val state = ChatUiState(listOf(msg1, msg2))
+
+        state.updateMessageLiked("m1", isLiked = true)
+
+        assertTrue(state.messages[0].isLiked)
+        assertFalse(state.messages[1].isLiked)
+    }
+
+    @Test
+    fun `updateMessageLiked does nothing for unknown message id`() {
+        val msg = ChatMessage(id = "m1", participant = Participant.MODEL, isLiked = false)
+        val state = ChatUiState(listOf(msg))
+
+        state.updateMessageLiked("nonexistent", isLiked = true)
+
+        assertFalse(state.messages[0].isLiked)
+    }
 }

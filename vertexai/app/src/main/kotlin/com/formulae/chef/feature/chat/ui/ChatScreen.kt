@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -134,6 +135,7 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                     chatMessages = chatUiState.messages,
                     listState = listState,
                     onStarClicked = chatViewModel::onRecipeStarred,
+                    onLikeClicked = chatViewModel::onMessageLiked,
                     onRecipeClick = chatViewModel::onRecipeSelectedFromChat,
                     onRecipeStarredFromGrid = { messageId, recipe ->
                         chatViewModel.onRecipeStarredFromGrid(messageId, recipe)
@@ -149,6 +151,7 @@ fun ChatList(
     chatMessages: List<ChatMessage>,
     listState: LazyListState,
     onStarClicked: (ChatMessage) -> Unit,
+    onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeStarredFromGrid: (String, Recipe) -> Unit
 ) {
@@ -161,6 +164,7 @@ fun ChatList(
             ChatBubbleItem(
                 chatMessage = message,
                 onStarClicked = onStarClicked,
+                onLikeClicked = onLikeClicked,
                 onRecipeClick = onRecipeClick,
                 onRecipeStarredFromGrid = onRecipeStarredFromGrid
             )
@@ -172,6 +176,7 @@ fun ChatList(
 fun ChatBubbleItem(
     chatMessage: ChatMessage,
     onStarClicked: (ChatMessage) -> Unit,
+    onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeStarredFromGrid: (String, Recipe) -> Unit
 ) {
@@ -241,19 +246,38 @@ fun ChatBubbleItem(
                             shape = bubbleShape,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            IconButton(
-                                onClick = { onStarClicked(chatMessage) },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = if (chatMessage.isStarred) {
-                                        "Remove recipe from collection"
-                                    } else {
-                                        "Save recipe to collection"
-                                    },
-                                    tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
-                                )
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                IconButton(
+                                    onClick = { onLikeClicked(chatMessage) }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ThumbUp,
+                                        contentDescription = if (chatMessage.isLiked) {
+                                            "Liked"
+                                        } else {
+                                            "Like response"
+                                        },
+                                        tint = if (chatMessage.isLiked) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.Gray
+                                        }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = { onStarClicked(chatMessage) }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = if (chatMessage.isStarred) {
+                                            "Remove recipe from collection"
+                                        } else {
+                                            "Save recipe to collection"
+                                        },
+                                        tint = if (chatMessage.isStarred) Color.Yellow else Color.Gray
+                                    )
+                                }
                             }
                         }
                     }
@@ -427,6 +451,7 @@ fun PreviewChatList() {
         ),
         listState = rememberLazyListState(),
         onStarClicked = {},
+        onLikeClicked = {},
         onRecipeClick = {},
         onRecipeStarredFromGrid = { _, _ -> }
     )
@@ -455,6 +480,7 @@ fun PreviewRecipeGrid() {
             starredRecipeIds = setOf("2")
         ),
         onStarClicked = {},
+        onLikeClicked = {},
         onRecipeClick = {},
         onRecipeStarredFromGrid = { _, _ -> }
     )
