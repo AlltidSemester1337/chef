@@ -401,10 +401,13 @@ class ChatViewModel(
     }
 
     private suspend fun createImageForRecipeAsync(recipe: String): String {
+        Log.d("ChatViewModel", "Starting image generation pipeline")
         val gcsUri = generateImageInstrumented(recipe)
+        Log.d("ChatViewModel", "Image generated and uploaded, fetching download URL")
         val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
         val downloadUrl = Firebase.storage("gs://$_projectId.firebasestorage.app/")
             .reference.child(storagePath).downloadUrl.await()
+        Log.d("ChatViewModel", "Download URL obtained successfully")
         return "https://" + downloadUrl.host + downloadUrl.encodedPath + "?alt=media"
     }
 
@@ -488,7 +491,11 @@ class ChatViewModel(
             val imageUrl = try {
                 createImageForRecipeAsync(recipe.toString())
             } catch (e: Exception) {
-                Log.e("ChatViewModel", "Failed to generate image for ${recipe.title}", e)
+                Log.e(
+                    "ChatViewModel",
+                    "Image generation pipeline failed for '${recipe.title}' [${e.javaClass.simpleName}: ${e.message}]",
+                    e
+                )
                 null
             }
             recipe.copyOf(imageUrl = imageUrl)
