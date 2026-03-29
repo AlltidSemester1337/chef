@@ -30,6 +30,7 @@ class RecipeTest {
         assertEquals("", recipe.updatedAt)
         assertFalse(recipe.isFavourite)
         assertNull(recipe.copyId)
+        assertTrue(recipe.tags.isEmpty())
     }
 
     @Test
@@ -60,7 +61,8 @@ class RecipeTest {
             imageUrl = "https://example.com/cake.jpg",
             updatedAt = "2026-01-01T00:00:00Z",
             isFavourite = true,
-            copyId = "copy-1"
+            copyId = "copy-1",
+            tags = listOf("cake", "dessert", "under 1 hour", "european")
         )
 
         assertEquals("recipe-1", recipe.id)
@@ -79,6 +81,7 @@ class RecipeTest {
         assertEquals("2026-01-01T00:00:00Z", recipe.updatedAt)
         assertTrue(recipe.isFavourite)
         assertEquals("copy-1", recipe.copyId)
+        assertEquals(listOf("cake", "dessert", "under 1 hour", "european"), recipe.tags)
     }
 
     @Test
@@ -88,7 +91,8 @@ class RecipeTest {
             uid = "user-1",
             title = "Original",
             summary = "Original summary",
-            isFavourite = false
+            isFavourite = false,
+            tags = listOf("chicken", "korean")
         )
 
         val copy = original.copyOf(
@@ -103,6 +107,16 @@ class RecipeTest {
         assertEquals("Original summary", copy.summary)
         assertTrue(copy.isFavourite)
         assertEquals("https://example.com/new.jpg", copy.imageUrl)
+        assertEquals(listOf("chicken", "korean"), copy.tags)
+    }
+
+    @Test
+    fun `copyOf overrides tags when provided`() {
+        val original = Recipe(id = "1", tags = listOf("chicken", "korean"))
+
+        val copy = original.copyOf(tags = listOf("lamb", "middle eastern", "under 1 hour"))
+
+        assertEquals(listOf("lamb", "middle eastern", "under 1 hour"), copy.tags)
     }
 
     @Test
@@ -117,7 +131,8 @@ class RecipeTest {
             cookingTime = "20 min",
             difficulty = Difficulty.HARD,
             isFavourite = true,
-            updatedAt = "2026-01-01"
+            updatedAt = "2026-01-01",
+            tags = listOf("vegetarian", "italian")
         )
 
         val copy = original.copyOf()
@@ -132,6 +147,7 @@ class RecipeTest {
         assertEquals(original.difficulty, copy.difficulty)
         assertEquals(original.isFavourite, copy.isFavourite)
         assertEquals(original.updatedAt, copy.updatedAt)
+        assertEquals(original.tags, copy.tags)
     }
 
     @Test

@@ -21,7 +21,8 @@ data class Recipe(
     @get:PropertyName("isFavourite")
     @set:PropertyName("isFavourite")
     var isFavourite: Boolean = false,
-    var copyId: String? = null
+    var copyId: String? = null,
+    var tags: List<String> = emptyList()
 ) {
 
     fun copyOf(
@@ -40,7 +41,8 @@ data class Recipe(
         imageUrl: String? = this.imageUrl,
         updatedAt: String = this.updatedAt,
         isFavourite: Boolean = this.isFavourite,
-        copyId: String? = this.copyId
+        copyId: String? = this.copyId,
+        tags: List<String> = this.tags
     ): Recipe {
         return Recipe(
             id,
@@ -58,7 +60,8 @@ data class Recipe(
             imageUrl,
             updatedAt,
             isFavourite,
-            copyId
+            copyId,
+            tags
         )
     }
 }
