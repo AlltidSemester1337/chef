@@ -81,7 +81,7 @@ fun ChefOverlay(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    items(uiState.messages, key = { it.id }) { message ->
+                    items(uiState.messages.reversed(), key = { it.id }) { message ->
                         OverlayChatBubble(message = message)
                     }
                 }
