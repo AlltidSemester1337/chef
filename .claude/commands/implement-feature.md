@@ -46,9 +46,9 @@ Usage: /implement-feature <linear-issue-id>  (e.g. /implement-feature CHE-10)
 
 ```bash
 cd .trees/<branch-name>
-JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew ktlintCheck
-JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:assembleDebug
-JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:testDebugUnitTest
+$JAVA_HOME ./gradlew ktlintCheck
+$JAVA_HOME ./gradlew :vertexai:app:assembleDebug
+$JAVA_HOME ./gradlew :vertexai:app:testDebugUnitTest
 ```
 All three must pass before proceeding.
 

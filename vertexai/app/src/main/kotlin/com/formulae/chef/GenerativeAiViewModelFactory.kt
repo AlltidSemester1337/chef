@@ -63,7 +63,7 @@ private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
   ]
 }
 Use metric units for ingredient quantities. Omit any fields that are not applicable or cannot be determined from the text.
-For the tags field, generate a flat list of descriptive tags covering: main ingredient (e.g. 'chicken', 'lamb', 'vegetarian', 'vegan', 'fish'), cuisine (e.g. 'korean', 'italian', 'indonesian', 'mexican', 'indian'), effort level (e.g. 'under 30 minutes', 'under 1 hour', '1-2 hours', 'slow cook'), and season or occasion where applicable (e.g. 'christmas', 'easter', 'summer', 'weeknight'). Include only tags that genuinely apply."""
+For the tags field, generate a flat list of descriptive tags covering: main ingredient (e.g. 'chicken', 'lamb', 'vegetarian', 'vegan', 'fish'), cuisine (e.g. 'korean', 'italian', 'indonesian', 'mexican', 'indian'), effort level (e.g. 'under 30 minutes', 'under 1 hour', '1-2 hours', 'slow cook'), and season or occasion where applicable (e.g. 'christmas', 'easter', 'summer', 'weeknight'). Include only tags that genuinely apply. All tags must be lowercase."""
 
 val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(
