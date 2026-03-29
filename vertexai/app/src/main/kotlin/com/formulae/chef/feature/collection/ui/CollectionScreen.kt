@@ -36,12 +36,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,7 +71,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.CollectionViewModelFactory
+import com.formulae.chef.OverlayChatViewModelFactory
 import com.formulae.chef.R
+import com.formulae.chef.feature.chat.OverlayChatViewModel
+import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
@@ -122,11 +127,25 @@ internal fun CollectionRoute(
         recipe.title.contains(searchQuery, ignoreCase = true)
     }
 
+    val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
+    var showChefOverlay by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedRecipe) {
+        showChefOverlay = false
+        overlayViewModel.reset()
+    }
+
     BackHandler {
         navController.navigate("home")
     }
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showChefOverlay = true }) {
+                Icon(Icons.Default.Chat, contentDescription = "Chat with Chef")
+            }
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
@@ -165,6 +184,14 @@ internal fun CollectionRoute(
                     onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
                 )
             }
+        }
+
+        if (showChefOverlay) {
+            ChefOverlay(
+                viewModel = overlayViewModel,
+                recipe = selectedRecipe,
+                onDismiss = { showChefOverlay = false }
+            )
         }
     }
 }
