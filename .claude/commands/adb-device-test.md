@@ -72,10 +72,27 @@ Note the physical resolution and density. Calculate the dp-to-px scale factor fo
 
 ### 3. Install the latest debug build
 
+If working in a git worktree, always build from **inside** the worktree directory — not the repo root. Building from the repo root produces an APK from the main tree and will not include assets or code changes from the worktree:
+
+```bash
+# From inside the worktree:
+cd .trees/<branch-name>
+JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:assembleDebug
+```
+
+Then install and launch:
+
 ```bash
 adb install -r vertexai/app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.formulae.chef/.MainActivity
 ```
+
+> If the app crashes immediately on launch with `FileNotFoundException: chat_system_prompt.txt`, the asset is missing from the worktree. Copy it from another worktree or obtain it from the team:
+> ```bash
+> cp .trees/<other-branch>/vertexai/app/src/main/assets/chat_system_prompt.txt \
+>    .trees/<this-branch>/vertexai/app/src/main/assets/
+> ```
+> Then rebuild and reinstall.
 
 Wait 2 seconds, then take a screenshot to confirm the app launched:
 
