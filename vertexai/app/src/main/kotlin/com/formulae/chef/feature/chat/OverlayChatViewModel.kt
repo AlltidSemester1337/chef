@@ -38,7 +38,7 @@ class OverlayChatViewModel(
         )
         _uiState.value.addMessage(
             ChatMessage(
-                text = "I've loaded **${recipe.title}** — what would you like to know?",
+                text = "I've loaded ${recipe.title} — what would you like to know?",
                 participant = Participant.MODEL
             )
         )
@@ -57,7 +57,12 @@ class OverlayChatViewModel(
                     _uiState.value.addMessage(
                         ChatMessage(text = modelResponse, participant = Participant.MODEL)
                     )
-                }
+                } ?: _uiState.value.addMessage(
+                    ChatMessage(
+                        text = "Sorry, I didn't get a response. Please try again.",
+                        participant = Participant.ERROR
+                    )
+                )
             } catch (e: Exception) {
                 _uiState.value.replaceLastPendingMessage()
                 _uiState.value.addMessage(

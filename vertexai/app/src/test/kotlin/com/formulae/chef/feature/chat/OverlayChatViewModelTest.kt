@@ -77,6 +77,13 @@ class OverlayChatViewModelTest {
     }
 
     @Test
+    fun buildRecipeContextText_withNullTips_omitsTipsSection() {
+        val recipe = sampleRecipe.copyOf(tipsAndTricks = null)
+        val result = OverlayChatViewModel.buildRecipeContextText(recipe)
+        assertFalse(result.contains("Tips:"))
+    }
+
+    @Test
     fun buildRecipeContextText_instructionsAreNumbered() {
         val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("1."))

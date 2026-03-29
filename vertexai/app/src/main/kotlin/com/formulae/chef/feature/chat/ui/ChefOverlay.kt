@@ -81,7 +81,7 @@ fun ChefOverlay(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    items(uiState.messages.reversed(), key = { it.id }) { message ->
+                    items(uiState.messages, key = { it.id }) { message ->
                         OverlayChatBubble(message = message)
                     }
                 }
@@ -109,8 +109,13 @@ private fun OverlayChatBubble(message: ChatMessage) {
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .fillMaxWidth()
     ) {
+        val label = when (message.participant) {
+            Participant.USER -> "You"
+            Participant.MODEL -> "Chef"
+            Participant.ERROR -> "Error"
+        }
         Text(
-            text = message.participant.name,
+            text = label,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 4.dp)
         )
