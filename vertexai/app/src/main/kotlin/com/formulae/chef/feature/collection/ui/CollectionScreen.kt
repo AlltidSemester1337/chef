@@ -21,6 +21,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +51,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,9 +125,11 @@ internal fun CollectionRoute(
         getBrowseRecipeSourceList(collectionUiState, currentUser)
     }
 
-    // Filter the list further based on the search query.
+    // Filter the list further based on the search query (title or tags).
     val filteredRecipes = recipesSourceList.filter { recipe ->
-        recipe.title.contains(searchQuery, ignoreCase = true)
+        searchQuery.isEmpty() ||
+            recipe.title.contains(searchQuery, ignoreCase = true) ||
+            recipe.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
     }
 
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
@@ -345,6 +350,7 @@ fun RecipeList(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RecipeItem(
     recipe: Recipe,
@@ -360,42 +366,52 @@ fun RecipeItem(
             .clickable { onRecipeClick(recipe) },
         elevation = CardDefaults.elevatedCardElevation(4.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically // Ensures both items are aligned properly
-        ) {
-            if (recipe.imageUrl?.isNotEmpty() == true) {
-                Image(
-                    painter = painter,
-                    contentDescription = "Recipe Image",
-                    modifier = Modifier
-                        .width(150.dp)
-                        .height(100.dp)
-                        .padding(end = 10.dp)
-                )
-            }
-            Text(
-                text = recipe.title,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .weight(1f)
-                    .align(Alignment.CenterVertically)
-            )
-            if (recipeRemoveEnabled) {
-                IconButton(
-                    onClick = {
-                        onRecipeRemove(recipe)
-                    }, // Callback to handle add to collection
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove recipe from collection",
-                        tint = Color.Red
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (recipe.imageUrl?.isNotEmpty() == true) {
+                    Image(
+                        painter = painter,
+                        contentDescription = "Recipe Image",
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(100.dp)
+                            .padding(end = 10.dp)
                     )
+                }
+                Text(
+                    text = recipe.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .weight(1f)
+                        .align(Alignment.CenterVertically)
+                )
+                if (recipeRemoveEnabled) {
+                    IconButton(
+                        onClick = {
+                            onRecipeRemove(recipe)
+                        },
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Remove recipe from collection",
+                            tint = Color.Red
+                        )
+                    }
+                }
+            }
+            if (recipe.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    recipe.tags.forEach { tag ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(text = tag, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
                 }
             }
         }

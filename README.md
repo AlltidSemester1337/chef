@@ -4,11 +4,26 @@
 
 A personal cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
 suggest recipes for cooking. Built on Google firebase and vertexai platform.
-Requires integration towards vertexai using google-services.json credentials for SA in order to run.
-Also requires firebaseDbUrl, phoenixApiKey (instrumentation) and chefMainChatPromptTemplate
-properties to be set in local.properties when building the app.
 
-Build and run the app from vertexai/app module.
+## Required setup
+
+The following files are **gitignored** and must be obtained from the team before building:
+
+| File | Purpose |
+|------|---------|
+| `local.properties` | Must contain `firebaseDbUrl` and `phoenixApiKey` |
+| `vertexai/app/google-services.json` | Firebase / GCP service account credentials |
+| `vertexai/app/src/main/assets/gcp.json` | Vertex AI (Gemini) credentials |
+| `vertexai/app/src/main/assets/imagen-google-services.json` | Imagen image generation credentials |
+| `vertexai/app/src/main/assets/chat_system_prompt.txt` | Main chat system prompt — **required at runtime; app crashes on launch without it** |
+
+Build and run the app from the `vertexai/app` module. JDK 17 is required — prefix Gradle commands with `JAVA_HOME=/path/to/jdk-17` if your system default differs.
+
+### Building
+
+```bash
+JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:assembleDebug
+```
 
 Features:
 
