@@ -1,0 +1,186 @@
+package com.formulae.chef.feature.chat.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
+import com.formulae.chef.feature.chat.OverlayChatViewModel
+import com.formulae.chef.feature.model.Recipe
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChefOverlay(
+    viewModel: OverlayChatViewModel,
+    recipe: Recipe?,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val uiState by viewModel.uiState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val messageCount = uiState.messages.size
+
+    LaunchedEffect(Unit) {
+        if (recipe != null) {
+            viewModel.initWithRecipeContext(recipe)
+        }
+    }
+
+    LaunchedEffect(messageCount) {
+        if (messageCount > 0) listState.animateScrollToItem(0)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = Modifier.fillMaxHeight(0.75f)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (isLoading && uiState.messages.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                LazyColumn(
+                    reverseLayout = true,
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(uiState.messages.reversed(), key = { it.id }) { message ->
+                        OverlayChatBubble(message = message)
+                    }
+                }
+            }
+
+            OverlayMessageInput(
+                onSendMessage = { text ->
+                    viewModel.sendMessage(text)
+                    coroutineScope.launch { listState.scrollToItem(0) }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverlayChatBubble(message: ChatMessage) {
+    val isModelMessage = message.participant == Participant.MODEL ||
+        message.participant == Participant.ERROR
+    val horizontalAlignment = if (isModelMessage) Alignment.Start else Alignment.End
+
+    Column(
+        horizontalAlignment = horizontalAlignment,
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .fillMaxWidth()
+    ) {
+        val label = when (message.participant) {
+            Participant.USER -> "You"
+            Participant.MODEL -> "Chef"
+            Participant.ERROR -> "Error"
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        val backgroundColor = when (message.participant) {
+            Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
+            Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
+            Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
+        }
+        val bubbleShape = if (isModelMessage) {
+            RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp)
+        } else {
+            RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp)
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (message.isPending) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .padding(all = 8.dp)
+                )
+            }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = backgroundColor),
+                shape = bubbleShape,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = message.text, modifier = Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverlayMessageInput(onSendMessage: (String) -> Unit) {
+    var userMessage by rememberSaveable { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = userMessage,
+            onValueChange = { userMessage = it },
+            label = { Text("Ask Chef…") },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(
+            onClick = {
+                if (userMessage.isNotBlank()) {
+                    onSendMessage(userMessage)
+                    userMessage = ""
+                    keyboardController?.hide()
+                }
+            }
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+        }
+    }
+}
