@@ -1,5 +1,6 @@
 package com.formulae.chef
 
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+=======
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+>>>>>>> 30785eb0 (WIP)
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,18 +29,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+<<<<<<< HEAD
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.services.authentication.UserSessionService
+=======
+import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.components.ChefNavigationBar
+import com.formulae.chef.ui.theme.GenerativeAISample
+>>>>>>> 30785eb0 (WIP)
 import com.google.firebase.auth.UserInfo
 
 @Composable
 fun HomeScreen(
     userSessionService: UserSessionService,
-    onNavigateToChat: () -> Unit = {},
-    onNavigateToCollection: () -> Unit = {},
     onSignOut: () -> Unit = {}
 ) {
     var isLoading by remember { mutableStateOf(true) }
@@ -50,21 +62,19 @@ fun HomeScreen(
     }
 
     if (isLoading) {
-        CircularProgressIndicator() // Show loader while waiting for user state
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
     } else {
         if (!userSessionService.anonymousSession && currentUser == null) {
             onSignOut()
         }
-        HomeScreenContent(
-            onNavigateToChat,
-            onNavigateToCollection,
-            onSignOut,
-            !userSessionService.anonymousSession && currentUser != null
-        )
+        HomeScreenContent()
     }
 }
 
 @Composable
+<<<<<<< HEAD
 private fun HomeScreenContent(
     onNavigateToChat: () -> Unit,
     onNavigateToCollection: () -> Unit,
@@ -117,16 +127,26 @@ private fun HomeScreenContent(
                 onDismiss = { showChefOverlay = false }
             )
         }
+=======
+private fun HomeScreenContent() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = "Home", style = MaterialTheme.typography.headlineLarge)
+>>>>>>> 30785eb0 (WIP)
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewHomeNavigationScreen() {
-    HomeScreenContent(
-        onNavigateToChat = {},
-        onNavigateToCollection = {},
-        onSignOut = {},
-        signedIn = true
-    )
+private fun PreviewHomeScreen() {
+    GenerativeAISample {
+        Scaffold(
+            bottomBar = {
+                ChefNavigationBar(currentRoute = "home", onNavigate = {})
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                HomeScreenContent()
+            }
+        }
+    }
 }

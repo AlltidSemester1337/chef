@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <!-- House filled -->
+    <path
+        android:pathData="M2.5,9.167C2.5,8.924 2.553,8.685 2.655,8.465C2.757,8.245 2.906,8.05 3.091,7.893L8.924,2.894C9.225,2.64 9.606,2.5 10,2.5C10.394,2.5 10.775,2.64 11.076,2.894L16.909,7.893C17.095,8.05 17.243,8.245 17.345,8.465C17.447,8.685 17.5,8.924 17.5,9.167V16.667C17.5,17.109 17.324,17.533 17.012,17.845C16.699,18.158 16.276,18.333 15.833,18.333H4.167C3.725,18.333 3.301,18.158 2.988,17.845C2.676,17.533 2.5,17.109 2.5,16.667V9.167Z"
+        android:fillColor="#C45234"
+        android:strokeWidth="1.66667"
+        android:strokeColor="#C45234"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Door cutout in background color -->
+    <path
+        android:pathData="M12.5,20V11.667C12.5,11.401 12.412,11.147 12.256,10.96C12.1,10.772 11.888,10.667 11.667,10.667H8.333C8.112,10.667 7.9,10.772 7.744,10.96C7.588,11.147 7.5,11.401 7.5,11.667V20"
+        android:fillColor="#FFF7F5" />
+</vector>

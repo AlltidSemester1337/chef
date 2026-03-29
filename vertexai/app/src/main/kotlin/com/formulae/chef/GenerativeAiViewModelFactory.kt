@@ -27,6 +27,7 @@ import com.google.firebase.vertexai.type.ResponseModality
 import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
+<<<<<<< HEAD
 
 private const val EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS =
     """You are a preference detector for a cooking assistant. Given a user message, detect if the user
@@ -42,6 +43,12 @@ private const val COMPACT_HISTORY_SYSTEM_INSTRUCTIONS =
 preference summary, produce a single updated prose summary capturing all stated user preferences,
 dietary restrictions, and recurring cooking context. Be concise but complete. Return only the
 summary text, no JSON wrapping."""
+=======
+import java.io.InputStream
+import java.lang.String
+import java.nio.charset.Charset
+import org.json.JSONObject
+>>>>>>> 30785eb0 (WIP)
 
 private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
     """Extract recipes from the provided text and return them as JSON matching this schema:
@@ -112,6 +119,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
                     )
 
+<<<<<<< HEAD
                     val imageConfig = generationConfig {
                         responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
                     }
@@ -120,6 +128,12 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         modelName = "gemini-2.5-flash-image",
                         generationConfig = imageConfig
                     )
+=======
+                    val settingsStream: InputStream =
+                        application.applicationContext.assets.open("gcp.json")
+                    val configString = settingsStream.bufferedReader(Charset.defaultCharset()).use { it.readText() }
+                    val location = JSONObject(configString).getString("location")
+>>>>>>> 30785eb0 (WIP)
 
                     val preferencesGenerativeModel = Firebase.vertexAI.generativeModel(
                         modelName = "gemini-2.5-flash-lite",

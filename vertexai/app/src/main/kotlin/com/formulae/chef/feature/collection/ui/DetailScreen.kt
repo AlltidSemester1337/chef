@@ -58,8 +58,21 @@ internal fun DetailRoute(
     onBack: () -> Unit,
     onToggleCookingModeClick: () -> Unit = {}
 ) {
+<<<<<<< HEAD
     BackHandler { onBack() }
     CreateDetailScreen(recipe, onToggleCookingModeClick)
+=======
+    val onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
+
+    BackHandler {
+        navController.navigate("collections")
+    }
+
+    CreateDetailScreen(
+        recipe,
+        onToggleCookingModeClick
+    )
+>>>>>>> 30785eb0 (WIP)
 }
 
 @Composable
@@ -227,8 +240,12 @@ fun PreviewCreateDetailScreen() {
             tipsAndTricks = "For milder flavor: reduce/omit cayenne pepper.\n" +
                 "Use zucchini, carrots, or Brussels sprouts instead of listed vegetables.\n" +
                 "Serve with pita, hummus, or tabbouleh for a complete meal.",
+<<<<<<< HEAD
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/" +
                 "recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
+=======
+            imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
+>>>>>>> 30785eb0 (WIP)
         ),
         onToggleCookingModeClick = {}
     )
