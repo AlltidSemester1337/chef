@@ -169,15 +169,18 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     LaunchedEffect(lastNonPendingModelMessage?.id) {
         if (pendingVoiceTts && lastNonPendingModelMessage != null) {
             pendingVoiceTts = false
-            val text = lastNonPendingModelMessage.text
-            val messageId = lastNonPendingModelMessage.id
-            coroutineScope.launch {
+            if (lastNonPendingModelMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
+                val text = lastNonPendingModelMessage.text.sanitizeForTts()
+                val messageId = lastNonPendingModelMessage.id
+                coroutineScope.launch {
                 try {
                     val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
                     audioPlayer.play(audioBytes, messageId)
                 } catch (e: Exception) {
+                    android.util.Log.e("ChatContent", "TTS auto-play failed", e)
                     Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
                 }
+            }
             }
         }
     }
@@ -231,11 +234,12 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                                     audioPlayer.stop()
                                 } else {
                                     val audioBytes = withContext(Dispatchers.IO) {
-                                        ttsService.synthesize(message.text)
+                                        ttsService.synthesize(message.text.sanitizeForTts())
                                     }
                                     audioPlayer.play(audioBytes, message.id)
                                 }
                             } catch (e: Exception) {
+                                android.util.Log.e("ChatContent", "TTS speak-on-demand failed", e)
                                 Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -341,7 +345,7 @@ fun ChatBubbleItem(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 modifier = Modifier.fillMaxWidth(),
-                                text = chatMessage.text
+                                text = chatMessage.text.sanitizeMarkdown()
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -370,7 +374,7 @@ fun ChatBubbleItem(
                                         }
                                     )
                                 }
-                                if (onSpeakClicked != null && chatMessage.text.isNotBlank()) {
+                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() && chatMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
                                     IconButton(
                                         onClick = { onSpeakClicked(chatMessage) }
                                     ) {
@@ -528,13 +532,14 @@ fun MessageInput(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
+            Box(
                 modifier = Modifier
                     .weight(0.12f)
+                    .padding(4.dp)
                     .pointerInput(Unit) {
                         detectTapGestures(onLongPress = { onStartRecording() })
                     },
-                onClick = {}
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -129,14 +130,17 @@ fun ChefOverlay(
     LaunchedEffect(lastNonPendingModelMessage?.id) {
         if (pendingVoiceTts && lastNonPendingModelMessage != null) {
             pendingVoiceTts = false
-            val text = lastNonPendingModelMessage.text
-            val messageId = lastNonPendingModelMessage.id
-            coroutineScope.launch {
-                try {
-                    val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
-                    audioPlayer.play(audioBytes, messageId)
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+            if (lastNonPendingModelMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
+                val text = lastNonPendingModelMessage.text.sanitizeForTts()
+                val messageId = lastNonPendingModelMessage.id
+                coroutineScope.launch {
+                    try {
+                        val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
+                        audioPlayer.play(audioBytes, messageId)
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChefOverlay", "TTS auto-play failed", e)
+                        Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -173,11 +177,12 @@ fun ChefOverlay(
                                             audioPlayer.stop()
                                         } else {
                                             val audioBytes = withContext(Dispatchers.IO) {
-                                                ttsService.synthesize(msg.text)
+                                                ttsService.synthesize(msg.text.sanitizeForTts())
                                             }
                                             audioPlayer.play(audioBytes, msg.id)
                                         }
                                     } catch (e: Exception) {
+                                        android.util.Log.e("ChefOverlay", "TTS speak-on-demand failed", e)
                                         Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
                                     }
                                 }
@@ -253,9 +258,9 @@ private fun OverlayChatBubble(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = message.text, modifier = Modifier.fillMaxWidth())
+                    Text(text = message.text.sanitizeMarkdown(), modifier = Modifier.fillMaxWidth())
                 }
-                if (isModelMessage && onSpeakClicked != null && message.text.isNotBlank()) {
+                if (isModelMessage && onSpeakClicked != null && message.text.isNotBlank() && message.text.length <= TTS_BUTTON_MAX_CHARS) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         IconButton(onClick = { onSpeakClicked(message) }) {
                             Icon(
@@ -295,12 +300,13 @@ private fun OverlayMessageInput(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
+        Box(
             modifier = Modifier
+                .padding(4.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(onLongPress = { onStartRecording() })
                 },
-            onClick = {}
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
