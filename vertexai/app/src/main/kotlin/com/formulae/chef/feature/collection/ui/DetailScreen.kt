@@ -104,7 +104,21 @@ private fun CreateDetailScreen(
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Cooking mode toggle — always visible
+        // Image (shown before the cooking mode toggle)
+        if (hasImage) {
+            Image(
+                painter = rememberAsyncImagePainter(recipe.imageUrl),
+                contentDescription = "Recipe Image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Cooking mode toggle — always below image
         if (!isCookingMode) {
             Button(
                 onClick = onToggleCookingMode,
@@ -123,62 +137,54 @@ private fun CreateDetailScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (hasImage) {
-            Image(
-                painter = rememberAsyncImagePainter(recipe.imageUrl),
-                contentDescription = "Recipe Image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-        }
-
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Tab toggle — shown in both normal and cooking mode
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(
+                onClick = { showIngredients = true },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (showIngredients) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+            ) {
+                Text("Ingredients")
+            }
+
+            Button(
+                onClick = { showIngredients = false },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!showIngredients) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+            ) {
+                Text("Instructions")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (isCookingMode) {
             CookingModeContent(
                 recipe = recipe,
+                showIngredients = showIngredients,
                 checkedSteps = checkedSteps,
                 currentServings = currentServings,
+                scrollState = scrollState,
                 onStepChecked = onStepChecked,
                 onServingsChanged = onServingsChanged
             )
         } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(
-                    onClick = { showIngredients = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (showIngredients) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    )
-                ) {
-                    Text("Ingredients")
-                }
-
-                Button(
-                    onClick = { showIngredients = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (!showIngredients) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    )
-                ) {
-                    Text("Instructions")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (showIngredients) {
                 Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(8.dp))

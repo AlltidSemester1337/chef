@@ -204,6 +204,21 @@ class CollectionViewModelTest {
     }
 
     @Test
+    fun `clearSelectedRecipe clears selectedRecipe without resetting cooking mode`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onStepChecked(1)
+
+        viewModel.clearSelectedRecipe()
+
+        assertNull(viewModel.selectedRecipe.value)
+        assertTrue(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.contains(1))
+    }
+
+    @Test
     fun `onRecipeSelected resets cooking mode state`() = runTest(testDispatcher) {
         val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
         advanceUntilIdle()

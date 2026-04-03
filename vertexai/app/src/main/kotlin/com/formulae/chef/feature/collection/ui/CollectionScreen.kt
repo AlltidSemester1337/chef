@@ -188,7 +188,7 @@ internal fun CollectionRoute(
                 // Recipe Detail
                 DetailRoute(
                     recipe = selectedRecipe!!,
-                    onBack = { navController.navigate("collection") },
+                    onBack = { collectionViewModel.clearSelectedRecipe() },
                     isCookingMode = isCookingMode,
                     checkedSteps = checkedSteps,
                     currentServings = currentServings,

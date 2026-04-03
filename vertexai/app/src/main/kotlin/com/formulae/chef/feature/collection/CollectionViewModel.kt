@@ -82,6 +82,10 @@ class CollectionViewModel(
         _currentServings.value = newServings
     }
 
+    fun clearSelectedRecipe() {
+        _selectedRecipe.value = null
+    }
+
     data class CollectionUiState(
         val recipes: List<Recipe> = emptyList()
     )

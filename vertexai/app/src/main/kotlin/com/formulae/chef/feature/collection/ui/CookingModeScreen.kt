@@ -2,6 +2,7 @@ package com.formulae.chef.feature.collection.ui
 
 import android.app.Activity
 import android.view.WindowManager
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -40,8 +40,10 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun CookingModeContent(
     recipe: Recipe,
+    showIngredients: Boolean,
     checkedSteps: Set<Int>,
     currentServings: Int?,
+    scrollState: ScrollState,
     onStepChecked: (Int) -> Unit,
     onServingsChanged: (Int) -> Unit
 ) {
@@ -53,7 +55,6 @@ internal fun CookingModeContent(
         }
     }
 
-    val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     val stepHeights = remember { mutableStateMapOf<Int, Int>() }
 
@@ -82,54 +83,58 @@ internal fun CookingModeContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Ingredients
-    Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
-    Spacer(modifier = Modifier.height(8.dp))
-    recipe.ingredients.forEach { ingredient ->
-        val scaledQty = scaleQuantity(ingredient.quantity, multiplier)
-        val unit = ingredient.unit?.takeIf { it.isNotBlank() }?.let { "$it " } ?: ""
-        Text(
-            text = "• $scaledQty $unit${ingredient.name}",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(vertical = 2.dp)
-        )
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Instructions
-    Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
-    Spacer(modifier = Modifier.height(8.dp))
-    recipe.instructions.forEachIndexed { index, step ->
-        val isChecked = index in checkedSteps
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { size -> stepHeights[index] = size.height },
-            verticalAlignment = Alignment.Top
-        ) {
-            Checkbox(
-                checked = isChecked,
-                onCheckedChange = { checked ->
-                    if (checked) {
-                        onStepChecked(index)
-                        coroutineScope.launch {
-                            scrollState.animateScrollTo(
-                                scrollState.value + (stepHeights[index] ?: 0)
-                            )
+    if (showIngredients) {
+        // Ingredients with scaled quantities
+        Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        recipe.ingredients.forEach { ingredient ->
+            val scaledQty = scaleQuantity(ingredient.quantity, multiplier)
+            val unit = ingredient.unit?.takeIf { it.isNotBlank() }?.let { "$it " } ?: ""
+            Text(
+                text = "• $scaledQty $unit${ingredient.name}",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+        }
+    } else {
+        // Instructions with checkboxes and auto-scroll
+        Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        recipe.instructions.forEachIndexed { index, step ->
+            val isChecked = index in checkedSteps
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { size -> stepHeights[index] = size.height },
+                verticalAlignment = Alignment.Top
+            ) {
+                Checkbox(
+                    checked = isChecked,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            onStepChecked(index)
+                            coroutineScope.launch {
+                                scrollState.animateScrollTo(
+                                    scrollState.value + (stepHeights[index] ?: 0)
+                                )
+                            }
                         }
                     }
-                }
-            )
-            Column(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
-                Text(
-                    text = "${index + 1}. $step",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
                 )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(top = 12.dp)
+                ) {
+                    Text(
+                        text = "${index + 1}. $step",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(4.dp))
         }
-        Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
@@ -147,7 +152,9 @@ private fun scaleQuantity(quantity: String?, multiplier: Double): String {
 private fun formatScaled(value: Double): String =
     if (value == floor(value)) {
         value.toLong().toString()
-    } else "%.2f".format(value).trimEnd('0').trimEnd('.')
+    } else {
+        "%.2f".format(value).trimEnd('0').trimEnd('.')
+    }
 
 private fun parseServingsCount(servings: String?): Int? =
     servings?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }
@@ -155,27 +162,31 @@ private fun parseServingsCount(servings: String?): Int? =
 @Preview(showBackground = true)
 @Composable
 fun PreviewCookingModeContent() {
-    CookingModeContent(
-        recipe = Recipe(
-            title = "Lebanese Kafta Kebabs",
-            servings = "4 servings",
-            ingredients = listOf(
-                Ingredient(name = "ground lamb", quantity = "500", unit = "g"),
-                Ingredient(name = "large onion", quantity = "1", unit = "each"),
-                Ingredient(name = "fresh parsley", quantity = "1/2", unit = "cup"),
-                Ingredient(name = "ground cumin", quantity = "1", unit = "tbsp")
+    androidx.compose.foundation.layout.Box {
+        CookingModeContent(
+            recipe = Recipe(
+                title = "Lebanese Kafta Kebabs",
+                servings = "4 servings",
+                ingredients = listOf(
+                    Ingredient(name = "ground lamb", quantity = "500", unit = "g"),
+                    Ingredient(name = "large onion", quantity = "1", unit = "each"),
+                    Ingredient(name = "fresh parsley", quantity = "1/2", unit = "cup"),
+                    Ingredient(name = "ground cumin", quantity = "1", unit = "tbsp")
+                ),
+                instructions = listOf(
+                    "Combine ground lamb, onion, garlic, parsley, and spices. Mix until combined.",
+                    "Divide mixture into 4 portions and shape into kebabs.",
+                    "Cook over medium-high heat for 4–5 minutes per side."
+                ),
+                difficulty = Difficulty.EASY,
+                nutrientsPerServing = listOf(Nutrient(name = "Calories", quantity = "550", unit = "kcal"))
             ),
-            instructions = listOf(
-                "Combine ground lamb, onion, garlic, parsley, and spices. Mix until combined.",
-                "Divide mixture into 4 portions and shape into kebabs.",
-                "Cook over medium-high heat for 4–5 minutes per side."
-            ),
-            difficulty = Difficulty.EASY,
-            nutrientsPerServing = listOf(Nutrient(name = "Calories", quantity = "550", unit = "kcal"))
-        ),
-        checkedSteps = setOf(0),
-        currentServings = 4,
-        onStepChecked = {},
-        onServingsChanged = {}
-    )
+            showIngredients = false,
+            checkedSteps = setOf(0),
+            currentServings = 4,
+            scrollState = androidx.compose.foundation.rememberScrollState(),
+            onStepChecked = {},
+            onServingsChanged = {}
+        )
+    }
 }
