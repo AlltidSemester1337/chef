@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:filename")
+
 package com.formulae.chef.feature.chat.ui
 
 import android.Manifest
@@ -27,13 +29,13 @@ data class VoiceControllerState(
     val isRecording: Boolean,
     val speakingMessageId: String?,
     val onStartRecording: () -> Unit,
-    val onSpeakClicked: (ChatMessage) -> Unit,
+    val onSpeakClicked: (ChatMessage) -> Unit
 )
 
 @Composable
 fun rememberVoiceController(
     onSendMessage: (String) -> Unit,
-    lastNonPendingModelMessage: ChatMessage?,
+    lastNonPendingModelMessage: ChatMessage?
 ): VoiceControllerState {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -57,7 +59,7 @@ fun rememberVoiceController(
     var pendingVoiceTts by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
+        ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             speechManager.startListening()
@@ -100,7 +102,9 @@ fun rememberVoiceController(
         isRecording = isRecording,
         speakingMessageId = speakingMessageId,
         onStartRecording = {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+            if (granted) {
                 speechManager.startListening()
             } else {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -120,6 +124,6 @@ fun rememberVoiceController(
                     Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
                 }
             }
-        },
+        }
     )
 }

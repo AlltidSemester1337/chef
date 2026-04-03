@@ -36,11 +36,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +57,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -117,7 +116,7 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
             chatViewModel.sendMessage(text)
             coroutineScope.launch { listState.scrollToItem(0) }
         },
-        lastNonPendingModelMessage = lastNonPendingModelMessage,
+        lastNonPendingModelMessage = lastNonPendingModelMessage
     )
 
     LaunchedEffect(messageCount) {
@@ -208,7 +207,7 @@ fun ChatBubbleItem(
     isSpeakingThisMessage: Boolean = false
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
-            chatMessage.participant == Participant.ERROR
+        chatMessage.participant == Participant.ERROR
 
     val horizontalAlignment = if (isModelMessage) Alignment.Start else Alignment.End
 
@@ -291,7 +290,9 @@ fun ChatBubbleItem(
                                         }
                                     )
                                 }
-                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() && chatMessage.text.length <= TTS_DISPLAY_THRESHOLD) {
+                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() &&
+                                    chatMessage.text.length <= TTS_DISPLAY_THRESHOLD
+                                ) {
                                     IconButton(
                                         onClick = { onSpeakClicked(chatMessage) }
                                     ) {
@@ -506,7 +507,7 @@ fun PreviewChatList() {
             ChatMessage(text = "Can you give me a recipe for coq au vin?"),
             ChatMessage(
                 text = "Beef Rendang (Indonesian Beef Curry)\\n\\n" +
-                        "This recipe delivers a rich and flavorful Indonesian beef curry.",
+                    "This recipe delivers a rich and flavorful Indonesian beef curry.",
                 participant = Participant.MODEL
             )
         ),
