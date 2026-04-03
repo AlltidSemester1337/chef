@@ -16,8 +16,13 @@
 
 package com.formulae.chef.feature.chat.ui
 
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,8 +40,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,13 +61,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -68,12 +79,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.BuildConfig
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
 import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.voice.AudioPlayer
+import com.formulae.chef.services.voice.GcpTextToSpeechService
+import com.formulae.chef.services.voice.SpeechInputManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 internal fun ChatRoute(
@@ -102,6 +119,68 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val messageCount = chatUiState.messages.size
+    val context = LocalContext.current
+
+    val speechManager = remember { SpeechInputManager(context) }
+    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
+    val audioPlayer = remember { AudioPlayer() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            speechManager.destroy()
+            audioPlayer.release()
+        }
+    }
+
+    val isRecording by speechManager.isListening.collectAsState()
+    val transcript by speechManager.transcript.collectAsState()
+    val speechError by speechManager.error.collectAsState()
+    val speakingMessageId by audioPlayer.speakingMessageId.collectAsState()
+
+    var pendingVoiceTts by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            speechManager.startListening()
+        } else {
+            Toast.makeText(context, "Microphone permission is required for voice input", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(transcript) {
+        val text = transcript ?: return@LaunchedEffect
+        chatViewModel.sendMessage(text)
+        pendingVoiceTts = true
+        speechManager.clearTranscript()
+        coroutineScope.launch { listState.scrollToItem(0) }
+    }
+
+    LaunchedEffect(speechError) {
+        val error = speechError ?: return@LaunchedEffect
+        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        speechManager.clearError()
+    }
+
+    val lastNonPendingModelMessage = chatUiState.messages.lastOrNull {
+        it.participant == Participant.MODEL && !it.isPending && it.text.isNotBlank()
+    }
+    LaunchedEffect(lastNonPendingModelMessage?.id) {
+        if (pendingVoiceTts && lastNonPendingModelMessage != null) {
+            pendingVoiceTts = false
+            val text = lastNonPendingModelMessage.text
+            val messageId = lastNonPendingModelMessage.id
+            coroutineScope.launch {
+                try {
+                    val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
+                    audioPlayer.play(audioBytes, messageId)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(messageCount) {
         if (messageCount > 0) {
@@ -117,6 +196,10 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                 },
                 resetScroll = {
                     coroutineScope.launch { listState.scrollToItem(0) }
+                },
+                isRecording = isRecording,
+                onStartRecording = {
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
             )
         }
@@ -139,6 +222,23 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                     onRecipeClick = chatViewModel::onRecipeSelectedFromChat,
                     onRecipeStarredFromGrid = { messageId, recipe ->
                         chatViewModel.onRecipeStarredFromGrid(messageId, recipe)
+                    },
+                    speakingMessageId = speakingMessageId,
+                    onSpeakClicked = { message ->
+                        coroutineScope.launch {
+                            try {
+                                if (speakingMessageId == message.id) {
+                                    audioPlayer.stop()
+                                } else {
+                                    val audioBytes = withContext(Dispatchers.IO) {
+                                        ttsService.synthesize(message.text)
+                                    }
+                                    audioPlayer.play(audioBytes, message.id)
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 )
             }
@@ -153,7 +253,9 @@ fun ChatList(
     onStarClicked: (ChatMessage) -> Unit,
     onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeStarredFromGrid: (String, Recipe) -> Unit
+    onRecipeStarredFromGrid: (String, Recipe) -> Unit,
+    speakingMessageId: String? = null,
+    onSpeakClicked: ((ChatMessage) -> Unit)? = null
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -166,7 +268,9 @@ fun ChatList(
                 onStarClicked = onStarClicked,
                 onLikeClicked = onLikeClicked,
                 onRecipeClick = onRecipeClick,
-                onRecipeStarredFromGrid = onRecipeStarredFromGrid
+                onRecipeStarredFromGrid = onRecipeStarredFromGrid,
+                onSpeakClicked = onSpeakClicked,
+                isSpeakingThisMessage = speakingMessageId == message.id
             )
         }
     }
@@ -178,7 +282,9 @@ fun ChatBubbleItem(
     onStarClicked: (ChatMessage) -> Unit,
     onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeStarredFromGrid: (String, Recipe) -> Unit
+    onRecipeStarredFromGrid: (String, Recipe) -> Unit,
+    onSpeakClicked: ((ChatMessage) -> Unit)? = null,
+    isSpeakingThisMessage: Boolean = false
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
         chatMessage.participant == Participant.ERROR
@@ -263,6 +369,25 @@ fun ChatBubbleItem(
                                             Color.Gray
                                         }
                                     )
+                                }
+                                if (onSpeakClicked != null && chatMessage.text.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { onSpeakClicked(chatMessage) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                            contentDescription = if (isSpeakingThisMessage) {
+                                                "Stop reading"
+                                            } else {
+                                                "Read response aloud"
+                                            },
+                                            tint = if (isSpeakingThisMessage) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                Color.Gray
+                                            }
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.weight(1f))
                                 IconButton(
@@ -386,7 +511,9 @@ private fun RecipeSuggestionCard(
 @Composable
 fun MessageInput(
     onSendMessage: (String) -> Unit,
-    resetScroll: () -> Unit = {}
+    resetScroll: () -> Unit = {},
+    isRecording: Boolean = false,
+    onStartRecording: () -> Unit = {}
 ) {
     var userMessage by rememberSaveable { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -398,8 +525,23 @@ fun MessageInput(
         Row(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                modifier = Modifier
+                    .weight(0.12f)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onLongPress = { onStartRecording() })
+                    },
+                onClick = {}
+            ) {
+                Icon(
+                    imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
+                    contentDescription = if (isRecording) "Recording…" else "Hold to speak",
+                    tint = if (isRecording) MaterialTheme.colorScheme.error else Color.Gray
+                )
+            }
             OutlinedTextField(
                 value = userMessage,
                 label = { Text(stringResource(R.string.chat_label)) },
@@ -409,8 +551,7 @@ fun MessageInput(
                 ),
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
-                    .fillMaxWidth()
-                    .weight(0.85f)
+                    .weight(0.73f)
             )
             IconButton(
                 onClick = {
@@ -424,13 +565,11 @@ fun MessageInput(
                 modifier = Modifier
                     .padding(start = 16.dp)
                     .align(Alignment.CenterVertically)
-                    .fillMaxWidth()
                     .weight(0.15f)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.action_send),
-                    modifier = Modifier
+                    contentDescription = stringResource(R.string.action_send)
                 )
             }
         }
