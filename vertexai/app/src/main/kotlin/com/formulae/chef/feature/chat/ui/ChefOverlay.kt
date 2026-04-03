@@ -1,7 +1,10 @@
 package com.formulae.chef.feature.chat.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -29,11 +34,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -61,6 +69,17 @@ fun ChefOverlay(
         }
     }
 
+    val lastNonPendingModelMessage = uiState.messages.lastOrNull {
+        it.participant == Participant.MODEL && !it.isPending && it.text.isNotBlank()
+    }
+    val voice = rememberVoiceController(
+        onSendMessage = { text ->
+            viewModel.sendMessage(text)
+            coroutineScope.launch { listState.scrollToItem(0) }
+        },
+        lastNonPendingModelMessage = lastNonPendingModelMessage,
+    )
+
     LaunchedEffect(messageCount) {
         if (messageCount > 0) listState.animateScrollToItem(0)
     }
@@ -82,7 +101,11 @@ fun ChefOverlay(
                         .weight(1f)
                 ) {
                     items(uiState.messages.reversed(), key = { it.id }) { message ->
-                        OverlayChatBubble(message = message)
+                        OverlayChatBubble(
+                            message = message,
+                            speakingMessageId = voice.speakingMessageId,
+                            onSpeakClicked = voice.onSpeakClicked,
+                        )
                     }
                 }
             }
@@ -91,14 +114,20 @@ fun ChefOverlay(
                 onSendMessage = { text ->
                     viewModel.sendMessage(text)
                     coroutineScope.launch { listState.scrollToItem(0) }
-                }
+                },
+                isRecording = voice.isRecording,
+                onStartRecording = voice.onStartRecording,
             )
         }
     }
 }
 
 @Composable
-private fun OverlayChatBubble(message: ChatMessage) {
+private fun OverlayChatBubble(
+    message: ChatMessage,
+    speakingMessageId: String? = null,
+    onSpeakClicked: ((ChatMessage) -> Unit)? = null
+) {
     val isModelMessage = message.participant == Participant.MODEL ||
         message.participant == Participant.ERROR
     val horizontalAlignment = if (isModelMessage) Alignment.Start else Alignment.End
@@ -145,7 +174,28 @@ private fun OverlayChatBubble(message: ChatMessage) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = message.text, modifier = Modifier.fillMaxWidth())
+                    Text(text = message.text.sanitizeMarkdown(), modifier = Modifier.fillMaxWidth())
+                }
+                if (isModelMessage && onSpeakClicked != null &&
+                    message.text.isNotBlank() && message.text.length <= TTS_DISPLAY_THRESHOLD
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        IconButton(onClick = { onSpeakClicked(message) }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = if (speakingMessageId == message.id) {
+                                    "Stop reading"
+                                } else {
+                                    "Read response aloud"
+                                },
+                                tint = if (speakingMessageId == message.id) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    Color.Gray
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -153,7 +203,11 @@ private fun OverlayChatBubble(message: ChatMessage) {
 }
 
 @Composable
-private fun OverlayMessageInput(onSendMessage: (String) -> Unit) {
+private fun OverlayMessageInput(
+    onSendMessage: (String) -> Unit,
+    isRecording: Boolean = false,
+    onStartRecording: () -> Unit = {}
+) {
     var userMessage by rememberSaveable { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -164,6 +218,20 @@ private fun OverlayMessageInput(onSendMessage: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .padding(4.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onLongPress = { onStartRecording() })
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
+                contentDescription = if (isRecording) "Recording…" else "Hold to speak",
+                tint = if (isRecording) MaterialTheme.colorScheme.error else Color.Gray
+            )
+        }
         OutlinedTextField(
             value = userMessage,
             onValueChange = { userMessage = it },
