@@ -34,6 +34,7 @@ Recipe {
   ingredients:        Ingredient[]
   instructions:       string[]      // Ordered instruction steps
   nutrientsPerServing: Nutrient[]
+  tags:               string[]      // Optional. Auto-generated at save time. Lowercase descriptive tags. See Tag Categories below.
 }
 ```
 
@@ -125,8 +126,10 @@ ROOT
 │       │   └── [n]: { name: string, quantity: string, unit: string }
 │       ├── instructions:       array
 │       │   └── [n]: string
-│       └── nutrientsPerServing: array
-│           └── [n]: { name: string, quantity: string, unit: string }
+│       ├── nutrientsPerServing: array
+│       │   └── [n]: { name: string, quantity: string, unit: string }
+│       └── tags:               array (optional)
+│           └── [n]: string
 │
 └── users (object)
     └── {uid} (object)
@@ -140,6 +143,19 @@ ROOT
                 ├── text:     string   // model message text the user liked
                 └── likedAt:  string   // ISO 8601 timestamp
 ```
+
+### Tag Categories
+
+Tags are generated automatically by the JSON extraction model at recipe save time. All tags are lowercase. Four categories are used:
+
+| Category | Examples |
+|---|---|
+| Main ingredient | `chicken`, `beef`, `lamb`, `pork`, `fish`, `vegetarian`, `vegan` |
+| Cuisine | `italian`, `indian`, `moroccan`, `middle eastern`, `french`, `korean`, `thai`, `japanese`, `mexican`, `spanish`, `indonesian`, `peruvian`, `south american`, `west african`, `mediterranean`, `greek`, `asian` |
+| Effort / time | `under 30 minutes`, `under 1 hour`, `1-2 hours`, `slow cook` |
+| Season / occasion | `weeknight`, `christmas`, `easter`, `summer`, `spring`, `baking` |
+
+Tags are optional and absent on recipes created before CHE-12 unless retroactively migrated (see `.ai/db-migrations.md`).
 
 ---
 
@@ -157,6 +173,7 @@ ROOT
 | `unit` (ingredient/nutrient) | string | May be empty string                                                           |
 | `role` (chat) | string (enum) | "user" or "model"                                                             |
 | `imageUrl` | string | `https://storage.googleapis.com/{PROJECT_ID}.firebasestorage.app/recipes/...` |
+| `tags` | string[] | Optional; absent on pre-CHE-12 recipes. All values lowercase. |
 
 ---
 
