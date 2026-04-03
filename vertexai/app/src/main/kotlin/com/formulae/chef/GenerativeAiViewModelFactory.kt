@@ -54,7 +54,7 @@ private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
       "prepTime": "string, e.g. '25 minutes'",
       "cookingTime": "string, e.g. '35 minutes'",
       "nutrientsPerServing": [{"name": "string", "quantity": "string", "unit": "string"}],
-      "ingredients": [{"name": "string", "quantity": "string", "unit": "string"}],
+      "ingredients": [{"name": "string", "quantity": "numeric string only, e.g. '500', '2', '0.5', '1/2' — never include the unit here", "unit": "string"}],
       "difficulty": "EASY | MEDIUM | HARD",
       "instructions": ["string, one step per element"],
       "tipsAndTricks": "string",

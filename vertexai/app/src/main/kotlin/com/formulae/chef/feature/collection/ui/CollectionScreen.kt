@@ -101,6 +101,7 @@ internal fun CollectionRoute(
     val listState = rememberLazyListState()
     val selectedRecipe by collectionViewModel.selectedRecipe.collectAsState()
     val isCookingMode by collectionViewModel.isCookingMode.collectAsState()
+    val showIngredients by collectionViewModel.showIngredients.collectAsState()
     val checkedSteps by collectionViewModel.checkedSteps.collectAsState()
     val currentServings by collectionViewModel.currentServings.collectAsState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -190,10 +191,13 @@ internal fun CollectionRoute(
                     recipe = selectedRecipe!!,
                     onBack = { collectionViewModel.clearSelectedRecipe() },
                     isCookingMode = isCookingMode,
+                    showIngredients = showIngredients,
                     checkedSteps = checkedSteps,
                     currentServings = currentServings,
                     onToggleCookingMode = collectionViewModel::onToggleCookingMode,
+                    onTabChanged = collectionViewModel::onTabChanged,
                     onStepChecked = collectionViewModel::onStepChecked,
+                    onStepUnchecked = collectionViewModel::onStepUnchecked,
                     onServingsChanged = collectionViewModel::onServingsChanged
                 )
             }

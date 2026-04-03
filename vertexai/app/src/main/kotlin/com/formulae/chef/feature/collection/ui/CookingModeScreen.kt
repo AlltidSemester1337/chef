@@ -30,10 +30,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.parsedServingsCount
 import kotlin.math.floor
 import kotlinx.coroutines.launch
 
@@ -45,6 +47,7 @@ internal fun CookingModeContent(
     currentServings: Int?,
     scrollState: ScrollState,
     onStepChecked: (Int) -> Unit,
+    onStepUnchecked: (Int) -> Unit,
     onServingsChanged: (Int) -> Unit
 ) {
     val activity = LocalContext.current as? Activity
@@ -58,30 +61,46 @@ internal fun CookingModeContent(
     val coroutineScope = rememberCoroutineScope()
     val stepHeights = remember { mutableStateMapOf<Int, Int>() }
 
-    val originalServings = parseServingsCount(recipe.servings)
+    val originalServings = recipe.parsedServingsCount()
     val displayServings = currentServings ?: originalServings ?: 1
-    val multiplier = displayServings.toDouble() / (originalServings?.toDouble() ?: 1.0)
 
-    // Servings stepper
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        IconButton(onClick = { onServingsChanged((displayServings - 1).coerceAtLeast(1)) }) {
-            Icon(Icons.Default.Remove, contentDescription = "Decrease servings")
-        }
-        Text(
-            text = "$displayServings servings",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-        IconButton(onClick = { onServingsChanged(displayServings + 1) }) {
-            Icon(Icons.Default.Add, contentDescription = "Increase servings")
+    val canScale = remember(recipe.ingredients) {
+        recipe.ingredients.all { ingredient ->
+            ingredient.quantity.isNullOrBlank() ||
+                ingredient.quantity!!.trim().toDoubleOrNull() != null ||
+                Regex("""^\d+/\d+$""").matches(ingredient.quantity!!.trim())
         }
     }
+    val multiplier = if (canScale) {
+        displayServings.toDouble() / (originalServings?.toDouble() ?: 1.0)
+    } else {
+        1.0
+    }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    // Servings stepper — only shown when scaling is supported
+    if (canScale) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            IconButton(onClick = { onServingsChanged(displayServings - 1) }) {
+                Icon(Icons.Default.Remove, contentDescription = "Decrease servings")
+            }
+            Text(
+                text = "$displayServings servings",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            IconButton(
+                onClick = { onServingsChanged(displayServings + 1) },
+                enabled = displayServings < CollectionViewModel.MAX_SERVINGS
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Increase servings")
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
 
     if (showIngredients) {
         // Ingredients with scaled quantities
@@ -118,6 +137,8 @@ internal fun CookingModeContent(
                                     scrollState.value + (stepHeights[index] ?: 0)
                                 )
                             }
+                        } else {
+                            onStepUnchecked(index)
                         }
                     }
                 )
@@ -139,9 +160,9 @@ internal fun CookingModeContent(
 }
 
 private fun scaleQuantity(quantity: String?, multiplier: Double): String {
-    if (quantity.isNullOrBlank()) return quantity ?: ""
+    if (quantity.isNullOrBlank() || multiplier == 1.0) return quantity ?: ""
     quantity.toDoubleOrNull()?.let { return formatScaled(it * multiplier) }
-    Regex("""^(\d+)/(\d+)$""").matchEntire(quantity.trim())?.let { m ->
+    Regex("""^\d+/\d+$""").matchEntire(quantity.trim())?.let { m ->
         val num = m.groupValues[1].toDouble()
         val den = m.groupValues[2].toDouble()
         return formatScaled(num / den * multiplier)
@@ -155,9 +176,6 @@ private fun formatScaled(value: Double): String =
     } else {
         "%.2f".format(value).trimEnd('0').trimEnd('.')
     }
-
-private fun parseServingsCount(servings: String?): Int? =
-    servings?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }
 
 @Preview(showBackground = true)
 @Composable
@@ -186,6 +204,7 @@ fun PreviewCookingModeContent() {
             currentServings = 4,
             scrollState = androidx.compose.foundation.rememberScrollState(),
             onStepChecked = {},
+            onStepUnchecked = {},
             onServingsChanged = {}
         )
     }

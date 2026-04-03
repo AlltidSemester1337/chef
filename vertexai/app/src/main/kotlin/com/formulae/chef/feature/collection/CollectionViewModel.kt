@@ -3,6 +3,7 @@ package com.formulae.chef.feature.collection
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.parsedServingsCount
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,9 @@ class CollectionViewModel(
     private val _currentServings = MutableStateFlow<Int?>(null)
     val currentServings: StateFlow<Int?> = _currentServings.asStateFlow()
 
+    private val _showIngredients = MutableStateFlow(true)
+    val showIngredients: StateFlow<Boolean> = _showIngredients.asStateFlow()
+
     private var recipes: List<Recipe> = emptyList()
     private var cookingRecipeId: String? = null
 
@@ -49,6 +53,7 @@ class CollectionViewModel(
             _isCookingMode.value = false
             _checkedSteps.value = emptySet()
             _currentServings.value = null
+            _showIngredients.value = true
             cookingRecipeId = null
         }
         _selectedRecipe.value = recipe
@@ -71,7 +76,7 @@ class CollectionViewModel(
         _isCookingMode.value = entering
         if (entering) {
             cookingRecipeId = _selectedRecipe.value?.id
-            _currentServings.value = parseServingsCount(_selectedRecipe.value?.servings)
+            _currentServings.value = _selectedRecipe.value?.parsedServingsCount()
             _checkedSteps.value = emptySet()
         } else {
             cookingRecipeId = null
@@ -84,8 +89,16 @@ class CollectionViewModel(
         _checkedSteps.value = _checkedSteps.value + stepIndex
     }
 
+    fun onStepUnchecked(stepIndex: Int) {
+        _checkedSteps.value = _checkedSteps.value - stepIndex
+    }
+
     fun onServingsChanged(newServings: Int) {
-        _currentServings.value = newServings
+        _currentServings.value = newServings.coerceIn(1, MAX_SERVINGS)
+    }
+
+    fun onTabChanged(showIngredients: Boolean) {
+        _showIngredients.value = showIngredients
     }
 
     fun clearSelectedRecipe() {
@@ -95,7 +108,8 @@ class CollectionViewModel(
     data class CollectionUiState(
         val recipes: List<Recipe> = emptyList()
     )
-}
 
-private fun parseServingsCount(servings: String?): Int? =
-    servings?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }
+    companion object {
+        const val MAX_SERVINGS = 30
+    }
+}

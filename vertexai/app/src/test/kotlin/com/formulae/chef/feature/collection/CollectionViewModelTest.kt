@@ -235,6 +235,74 @@ class CollectionViewModelTest {
     }
 
     @Test
+    fun `onStepUnchecked removes step index from checkedSteps`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+
+        viewModel.onStepChecked(2)
+        viewModel.onStepChecked(3)
+        viewModel.onStepUnchecked(2)
+
+        assertFalse(viewModel.checkedSteps.value.contains(2))
+        assertTrue(viewModel.checkedSteps.value.contains(3))
+    }
+
+    @Test
+    fun `onServingsChanged caps at MAX_SERVINGS`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onServingsChanged(CollectionViewModel.MAX_SERVINGS + 10)
+
+        assertEquals(CollectionViewModel.MAX_SERVINGS, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onServingsChanged floors at 1`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onServingsChanged(0)
+
+        assertEquals(1, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onTabChanged updates showIngredients`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onTabChanged(false)
+        assertFalse(viewModel.showIngredients.value)
+
+        viewModel.onTabChanged(true)
+        assertTrue(viewModel.showIngredients.value)
+    }
+
+    @Test
+    fun `showIngredients resets to true when a different recipe is selected`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onTabChanged(false)
+
+        viewModel.onRecipeSelected(sampleRecipes[1])
+
+        assertTrue(viewModel.showIngredients.value)
+    }
+
+    @Test
+    fun `showIngredients persists when re-selecting the same recipe`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onTabChanged(false)
+        viewModel.clearSelectedRecipe()
+
+        viewModel.onRecipeSelected(sampleRecipes[0])
+
+        assertFalse(viewModel.showIngredients.value)
+    }
+
+    @Test
     fun `onRecipeSelected preserves cooking mode state when re-selecting the same recipe`() = runTest(testDispatcher) {
         val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
         advanceUntilIdle()
