@@ -12,11 +12,12 @@ import org.json.JSONObject
 class GcpTextToSpeechService(private val apiKey: String) {
 
     suspend fun synthesize(text: String): ByteArray = withContext(Dispatchers.IO) {
-        val url = URL("https://texttospeech.googleapis.com/v1/text:synthesize?key=$apiKey")
+        val url = URL("https://texttospeech.googleapis.com/v1/text:synthesize")
         val connection = url.openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("X-goog-api-key", apiKey)
             connection.doOutput = true
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000

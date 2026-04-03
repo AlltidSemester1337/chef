@@ -1,9 +1,5 @@
 package com.formulae.chef.feature.chat.ui
 
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,9 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,19 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import com.formulae.chef.BuildConfig
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.model.Recipe
-import com.formulae.chef.services.voice.AudioPlayer
-import com.formulae.chef.services.voice.GcpTextToSpeechService
-import com.formulae.chef.services.voice.SpeechInputManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,35 +62,6 @@ fun ChefOverlay(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val messageCount = uiState.messages.size
-    val context = LocalContext.current
-
-    val speechManager = remember { SpeechInputManager(context) }
-    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
-    val audioPlayer = remember { AudioPlayer() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            speechManager.destroy()
-            audioPlayer.release()
-        }
-    }
-
-    val isRecording by speechManager.isListening.collectAsState()
-    val transcript by speechManager.transcript.collectAsState()
-    val speechError by speechManager.error.collectAsState()
-    val speakingMessageId by audioPlayer.speakingMessageId.collectAsState()
-
-    var pendingVoiceTts by remember { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            speechManager.startListening()
-        } else {
-            Toast.makeText(context, "Microphone permission is required for voice input", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     LaunchedEffect(Unit) {
         if (recipe != null) {
@@ -110,41 +69,16 @@ fun ChefOverlay(
         }
     }
 
-    LaunchedEffect(transcript) {
-        val text = transcript ?: return@LaunchedEffect
-        viewModel.sendMessage(text)
-        pendingVoiceTts = true
-        speechManager.clearTranscript()
-        coroutineScope.launch { listState.scrollToItem(0) }
-    }
-
-    LaunchedEffect(speechError) {
-        val error = speechError ?: return@LaunchedEffect
-        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-        speechManager.clearError()
-    }
-
     val lastNonPendingModelMessage = uiState.messages.lastOrNull {
         it.participant == Participant.MODEL && !it.isPending && it.text.isNotBlank()
     }
-    LaunchedEffect(lastNonPendingModelMessage?.id) {
-        if (pendingVoiceTts && lastNonPendingModelMessage != null) {
-            pendingVoiceTts = false
-            if (lastNonPendingModelMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
-                val text = lastNonPendingModelMessage.text.sanitizeForTts()
-                val messageId = lastNonPendingModelMessage.id
-                coroutineScope.launch {
-                    try {
-                        val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
-                        audioPlayer.play(audioBytes, messageId)
-                    } catch (e: Exception) {
-                        android.util.Log.e("ChefOverlay", "TTS auto-play failed", e)
-                        Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-    }
+    val voice = rememberVoiceController(
+        onSendMessage = { text ->
+            viewModel.sendMessage(text)
+            coroutineScope.launch { listState.scrollToItem(0) }
+        },
+        lastNonPendingModelMessage = lastNonPendingModelMessage,
+    )
 
     LaunchedEffect(messageCount) {
         if (messageCount > 0) listState.animateScrollToItem(0)
@@ -169,24 +103,8 @@ fun ChefOverlay(
                     items(uiState.messages.reversed(), key = { it.id }) { message ->
                         OverlayChatBubble(
                             message = message,
-                            speakingMessageId = speakingMessageId,
-                            onSpeakClicked = { msg ->
-                                coroutineScope.launch {
-                                    try {
-                                        if (speakingMessageId == msg.id) {
-                                            audioPlayer.stop()
-                                        } else {
-                                            val audioBytes = withContext(Dispatchers.IO) {
-                                                ttsService.synthesize(msg.text.sanitizeForTts())
-                                            }
-                                            audioPlayer.play(audioBytes, msg.id)
-                                        }
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("ChefOverlay", "TTS speak-on-demand failed", e)
-                                        Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
+                            speakingMessageId = voice.speakingMessageId,
+                            onSpeakClicked = voice.onSpeakClicked,
                         )
                     }
                 }
@@ -197,10 +115,8 @@ fun ChefOverlay(
                     viewModel.sendMessage(text)
                     coroutineScope.launch { listState.scrollToItem(0) }
                 },
-                isRecording = isRecording,
-                onStartRecording = {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
+                isRecording = voice.isRecording,
+                onStartRecording = voice.onStartRecording,
             )
         }
     }
@@ -260,7 +176,9 @@ private fun OverlayChatBubble(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = message.text.sanitizeMarkdown(), modifier = Modifier.fillMaxWidth())
                 }
-                if (isModelMessage && onSpeakClicked != null && message.text.isNotBlank() && message.text.length <= TTS_BUTTON_MAX_CHARS) {
+                if (isModelMessage && onSpeakClicked != null &&
+                    message.text.isNotBlank() && message.text.length <= TTS_DISPLAY_THRESHOLD
+                ) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         IconButton(onClick = { onSpeakClicked(message) }) {
                             Icon(

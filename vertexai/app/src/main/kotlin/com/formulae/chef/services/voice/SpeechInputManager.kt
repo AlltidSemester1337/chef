@@ -83,6 +83,7 @@ class SpeechInputManager(private val context: Context) {
     }
 
     fun destroy() {
+        recognizer.stopListening()
         recognizer.destroy()
     }
 }

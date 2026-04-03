@@ -1,8 +1,12 @@
 package com.formulae.chef.feature.chat.ui
 
 private val MARKDOWN_CHARS = Regex("[*#`_~]")
-private const val TTS_MAX_CHARS = 4500
-const val TTS_BUTTON_MAX_CHARS = 1500
+
+/** Hard byte-length limit enforced by the GCP TTS API. */
+const val TTS_HARD_LIMIT = 4500
+
+/** Maximum response length for which the speaker button is shown / auto-play fires. */
+const val TTS_DISPLAY_THRESHOLD = 1500
 
 fun String.sanitizeMarkdown(): String =
     replace(MARKDOWN_CHARS, "")
@@ -15,8 +19,8 @@ fun String.sanitizeForTts(): String =
         .filter { it.isNotBlank() }
         .joinToString(" ") { line ->
             val trimmed = line.trim()
-            if (trimmed.last() in ".!?") trimmed else "$trimmed."
+            if (trimmed.endsWith('.') || trimmed.endsWith('!') || trimmed.endsWith('?')) trimmed else "$trimmed."
         }
         .replace(Regex(" {2,}"), " ")
-        .take(TTS_MAX_CHARS)
+        .take(TTS_HARD_LIMIT)
         .trim()

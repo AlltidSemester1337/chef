@@ -16,10 +16,6 @@
 
 package com.formulae.chef.feature.chat.ui
 
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -70,7 +66,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -79,18 +74,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.formulae.chef.BuildConfig
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
 import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.model.Recipe
-import com.formulae.chef.services.voice.AudioPlayer
-import com.formulae.chef.services.voice.GcpTextToSpeechService
-import com.formulae.chef.services.voice.SpeechInputManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 internal fun ChatRoute(
@@ -119,71 +108,17 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val messageCount = chatUiState.messages.size
-    val context = LocalContext.current
-
-    val speechManager = remember { SpeechInputManager(context) }
-    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
-    val audioPlayer = remember { AudioPlayer() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            speechManager.destroy()
-            audioPlayer.release()
-        }
-    }
-
-    val isRecording by speechManager.isListening.collectAsState()
-    val transcript by speechManager.transcript.collectAsState()
-    val speechError by speechManager.error.collectAsState()
-    val speakingMessageId by audioPlayer.speakingMessageId.collectAsState()
-
-    var pendingVoiceTts by remember { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            speechManager.startListening()
-        } else {
-            Toast.makeText(context, "Microphone permission is required for voice input", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(transcript) {
-        val text = transcript ?: return@LaunchedEffect
-        chatViewModel.sendMessage(text)
-        pendingVoiceTts = true
-        speechManager.clearTranscript()
-        coroutineScope.launch { listState.scrollToItem(0) }
-    }
-
-    LaunchedEffect(speechError) {
-        val error = speechError ?: return@LaunchedEffect
-        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-        speechManager.clearError()
-    }
 
     val lastNonPendingModelMessage = chatUiState.messages.lastOrNull {
         it.participant == Participant.MODEL && !it.isPending && it.text.isNotBlank()
     }
-    LaunchedEffect(lastNonPendingModelMessage?.id) {
-        if (pendingVoiceTts && lastNonPendingModelMessage != null) {
-            pendingVoiceTts = false
-            if (lastNonPendingModelMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
-                val text = lastNonPendingModelMessage.text.sanitizeForTts()
-                val messageId = lastNonPendingModelMessage.id
-                coroutineScope.launch {
-                try {
-                    val audioBytes = withContext(Dispatchers.IO) { ttsService.synthesize(text) }
-                    audioPlayer.play(audioBytes, messageId)
-                } catch (e: Exception) {
-                    android.util.Log.e("ChatContent", "TTS auto-play failed", e)
-                    Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-            }
-        }
-    }
+    val voice = rememberVoiceController(
+        onSendMessage = { text ->
+            chatViewModel.sendMessage(text)
+            coroutineScope.launch { listState.scrollToItem(0) }
+        },
+        lastNonPendingModelMessage = lastNonPendingModelMessage,
+    )
 
     LaunchedEffect(messageCount) {
         if (messageCount > 0) {
@@ -200,10 +135,8 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                 resetScroll = {
                     coroutineScope.launch { listState.scrollToItem(0) }
                 },
-                isRecording = isRecording,
-                onStartRecording = {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
+                isRecording = voice.isRecording,
+                onStartRecording = voice.onStartRecording
             )
         }
     ) { paddingValues ->
@@ -226,24 +159,8 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                     onRecipeStarredFromGrid = { messageId, recipe ->
                         chatViewModel.onRecipeStarredFromGrid(messageId, recipe)
                     },
-                    speakingMessageId = speakingMessageId,
-                    onSpeakClicked = { message ->
-                        coroutineScope.launch {
-                            try {
-                                if (speakingMessageId == message.id) {
-                                    audioPlayer.stop()
-                                } else {
-                                    val audioBytes = withContext(Dispatchers.IO) {
-                                        ttsService.synthesize(message.text.sanitizeForTts())
-                                    }
-                                    audioPlayer.play(audioBytes, message.id)
-                                }
-                            } catch (e: Exception) {
-                                android.util.Log.e("ChatContent", "TTS speak-on-demand failed", e)
-                                Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                    speakingMessageId = voice.speakingMessageId,
+                    onSpeakClicked = voice.onSpeakClicked
                 )
             }
         }
@@ -291,7 +208,7 @@ fun ChatBubbleItem(
     isSpeakingThisMessage: Boolean = false
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
-        chatMessage.participant == Participant.ERROR
+            chatMessage.participant == Participant.ERROR
 
     val horizontalAlignment = if (isModelMessage) Alignment.Start else Alignment.End
 
@@ -374,7 +291,7 @@ fun ChatBubbleItem(
                                         }
                                     )
                                 }
-                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() && chatMessage.text.length <= TTS_BUTTON_MAX_CHARS) {
+                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() && chatMessage.text.length <= TTS_DISPLAY_THRESHOLD) {
                                     IconButton(
                                         onClick = { onSpeakClicked(chatMessage) }
                                     ) {
@@ -589,7 +506,7 @@ fun PreviewChatList() {
             ChatMessage(text = "Can you give me a recipe for coq au vin?"),
             ChatMessage(
                 text = "Beef Rendang (Indonesian Beef Curry)\\n\\n" +
-                    "This recipe delivers a rich and flavorful Indonesian beef curry.",
+                        "This recipe delivers a rich and flavorful Indonesian beef curry.",
                 participant = Participant.MODEL
             )
         ),
