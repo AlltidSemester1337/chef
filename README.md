@@ -2,7 +2,7 @@
 
 ![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/logo_round.webp)
 
-A personal cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
+A personalized cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
 suggest recipes for cooking. Built on Google firebase and vertexai platform.
 
 ## Required setup
@@ -38,11 +38,11 @@ Features:
 - 2.0.0 - Users and sessions
 - 3.0.0 - Recipe collection updates and browsing
 - 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
-- 3.2.0 (Current) - Multiple recipe suggestions with card grid and images in chat, also major updates for Claude driven development
-- 4.0.0 - Restructured Recipe data format, added more information. Also complete redesign of the
-  app!
+- 3.2.0 - Multiple recipe suggestions with card grid and images in chat, also major updates for Claude driven development
+- 3.3.0 (Current) - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
+- 4.0.0 - Complete redesign of the app!
 
-Up next: Refer to Linear
+Other features up next: Refer to Linear
 
 ## Demos
 
@@ -55,5 +55,5 @@ Fork or reach out to authors humlekottekonsult@gmail.com
 ## Support, feature request, question etc
 
 This project is currently in closed beta and owned as well as currently operated and maintained
-by [Humlekotte Konsultbolag](https://www.humlekotte.nu). Any questions reach out via email
+by Karl Enberg and Amanda Norell. Any questions reach out via email
 humlekottekonsult@gmail.com
