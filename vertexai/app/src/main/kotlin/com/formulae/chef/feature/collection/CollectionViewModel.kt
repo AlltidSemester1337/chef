@@ -44,10 +44,12 @@ class CollectionViewModel(
     }
 
     fun onRecipeSelected(recipe: Recipe) {
+        if (_selectedRecipe.value?.id != recipe.id) {
+            _isCookingMode.value = false
+            _checkedSteps.value = emptySet()
+            _currentServings.value = null
+        }
         _selectedRecipe.value = recipe
-        _isCookingMode.value = false
-        _checkedSteps.value = emptySet()
-        _currentServings.value = null
     }
 
     fun onRecipeRemove(recipe: Recipe) {
