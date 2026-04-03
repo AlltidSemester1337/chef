@@ -31,6 +31,7 @@ class CollectionViewModel(
     val currentServings: StateFlow<Int?> = _currentServings.asStateFlow()
 
     private var recipes: List<Recipe> = emptyList()
+    private var cookingRecipeId: String? = null
 
     init {
         fetchRecipes()
@@ -44,10 +45,11 @@ class CollectionViewModel(
     }
 
     fun onRecipeSelected(recipe: Recipe) {
-        if (_selectedRecipe.value?.id != recipe.id) {
+        if (recipe.id != cookingRecipeId) {
             _isCookingMode.value = false
             _checkedSteps.value = emptySet()
             _currentServings.value = null
+            cookingRecipeId = null
         }
         _selectedRecipe.value = recipe
     }
@@ -68,9 +70,11 @@ class CollectionViewModel(
         val entering = !_isCookingMode.value
         _isCookingMode.value = entering
         if (entering) {
+            cookingRecipeId = _selectedRecipe.value?.id
             _currentServings.value = parseServingsCount(_selectedRecipe.value?.servings)
             _checkedSteps.value = emptySet()
         } else {
+            cookingRecipeId = null
             _checkedSteps.value = emptySet()
             _currentServings.value = null
         }
