@@ -18,8 +18,17 @@ class CollectionViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _selectedRecipe = MutableStateFlow<Recipe?>(null) // Holds selected recipe
+    private val _selectedRecipe = MutableStateFlow<Recipe?>(null)
     val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
+
+    private val _isCookingMode = MutableStateFlow(false)
+    val isCookingMode: StateFlow<Boolean> = _isCookingMode.asStateFlow()
+
+    private val _checkedSteps = MutableStateFlow<Set<Int>>(emptySet())
+    val checkedSteps: StateFlow<Set<Int>> = _checkedSteps.asStateFlow()
+
+    private val _currentServings = MutableStateFlow<Int?>(null)
+    val currentServings: StateFlow<Int?> = _currentServings.asStateFlow()
 
     private var recipes: List<Recipe> = emptyList()
 
@@ -36,6 +45,9 @@ class CollectionViewModel(
 
     fun onRecipeSelected(recipe: Recipe) {
         _selectedRecipe.value = recipe
+        _isCookingMode.value = false
+        _checkedSteps.value = emptySet()
+        _currentServings.value = null
     }
 
     fun onRecipeRemove(recipe: Recipe) {
@@ -51,12 +63,29 @@ class CollectionViewModel(
     }
 
     fun onToggleCookingMode() {
-        TODO(
-            "stop screen from locking, enlarge text, combined instructions and ingredients (replaces separate sections)"
-        )
+        val entering = !_isCookingMode.value
+        _isCookingMode.value = entering
+        if (entering) {
+            _currentServings.value = parseServingsCount(_selectedRecipe.value?.servings)
+            _checkedSteps.value = emptySet()
+        } else {
+            _checkedSteps.value = emptySet()
+            _currentServings.value = null
+        }
+    }
+
+    fun onStepChecked(stepIndex: Int) {
+        _checkedSteps.value = _checkedSteps.value + stepIndex
+    }
+
+    fun onServingsChanged(newServings: Int) {
+        _currentServings.value = newServings
     }
 
     data class CollectionUiState(
         val recipes: List<Recipe> = emptyList()
     )
 }
+
+private fun parseServingsCount(servings: String?): Int? =
+    servings?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() }

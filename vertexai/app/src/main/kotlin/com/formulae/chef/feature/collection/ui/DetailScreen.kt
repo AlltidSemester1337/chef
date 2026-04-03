@@ -30,8 +30,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -56,17 +61,34 @@ import com.formulae.chef.feature.model.Recipe
 internal fun DetailRoute(
     recipe: Recipe,
     onBack: () -> Unit,
-    onToggleCookingModeClick: () -> Unit = {}
+    isCookingMode: Boolean = false,
+    checkedSteps: Set<Int> = emptySet(),
+    currentServings: Int? = null,
+    onToggleCookingMode: () -> Unit = {},
+    onStepChecked: (Int) -> Unit = {},
+    onServingsChanged: (Int) -> Unit = {}
 ) {
     BackHandler { onBack() }
-    CreateDetailScreen(recipe, onToggleCookingModeClick)
+    CreateDetailScreen(
+        recipe = recipe,
+        isCookingMode = isCookingMode,
+        checkedSteps = checkedSteps,
+        currentServings = currentServings,
+        onToggleCookingMode = onToggleCookingMode,
+        onStepChecked = onStepChecked,
+        onServingsChanged = onServingsChanged
+    )
 }
 
 @Composable
 private fun CreateDetailScreen(
     recipe: Recipe,
-    // TODO: DEV-47
-    onToggleCookingModeClick: () -> Unit
+    isCookingMode: Boolean,
+    checkedSteps: Set<Int>,
+    currentServings: Int?,
+    onToggleCookingMode: () -> Unit,
+    onStepChecked: (Int) -> Unit,
+    onServingsChanged: (Int) -> Unit
 ) {
     var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
@@ -82,7 +104,25 @@ private fun CreateDetailScreen(
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Conditional Display
+        // Cooking mode toggle — always visible
+        if (!isCookingMode) {
+            Button(
+                onClick = onToggleCookingMode,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Let's cook!")
+            }
+        } else {
+            IconButton(
+                onClick = onToggleCookingMode,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Exit cooking mode")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         if (hasImage) {
             Image(
                 painter = rememberAsyncImagePainter(recipe.imageUrl),
@@ -92,61 +132,63 @@ private fun CreateDetailScreen(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            // Button(
-            //    onClick = onToggleCookingModeClick,
-            //    modifier = Modifier
-            //        .fillMaxWidth()
-            // ) {
-            //    Text("Start cooking!")
-            // }
         }
 
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                onClick = { showIngredients = true },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (showIngredients) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    }
-                )
-            ) {
-                Text("Ingredients")
-            }
-
-            Button(
-                onClick = { showIngredients = false },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!showIngredients) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    }
-                )
-            ) {
-                Text("Instructions")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Conditional Display
-        if (showIngredients) {
-            Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.ingredients.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+        if (isCookingMode) {
+            CookingModeContent(
+                recipe = recipe,
+                checkedSteps = checkedSteps,
+                currentServings = currentServings,
+                onStepChecked = onStepChecked,
+                onServingsChanged = onServingsChanged
+            )
         } else {
-            Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { showIngredients = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (showIngredients) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    )
+                ) {
+                    Text("Ingredients")
+                }
+
+                Button(
+                    onClick = { showIngredients = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (!showIngredients) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    )
+                ) {
+                    Text("Instructions")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (showIngredients) {
+                Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = recipe.ingredients.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+            }
         }
 
         // Centered Share Button
@@ -176,7 +218,7 @@ private fun CreateDetailScreen(
 @Composable
 fun PreviewCreateDetailScreen() {
     CreateDetailScreen(
-        Recipe(
+        recipe = Recipe(
             title = "West African Peanut Stew (Peanut Butter Stew)",
             summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, " +
                 "served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n" +
@@ -230,6 +272,11 @@ fun PreviewCreateDetailScreen() {
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/" +
                 "recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
-        onToggleCookingModeClick = {}
+        isCookingMode = false,
+        checkedSteps = emptySet(),
+        currentServings = null,
+        onToggleCookingMode = {},
+        onStepChecked = {},
+        onServingsChanged = {}
     )
 }
