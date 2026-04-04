@@ -162,7 +162,7 @@ internal fun CookingModeContent(
 private fun scaleQuantity(quantity: String?, multiplier: Double): String {
     if (quantity.isNullOrBlank() || multiplier == 1.0) return quantity ?: ""
     quantity.toDoubleOrNull()?.let { return formatScaled(it * multiplier) }
-    Regex("""^\d+/\d+$""").matchEntire(quantity.trim())?.let { m ->
+    Regex("""^(\d+)/(\d+)$""").matchEntire(quantity.trim())?.let { m ->
         val num = m.groupValues[1].toDouble()
         val den = m.groupValues[2].toDouble()
         return formatScaled(num / den * multiplier)
