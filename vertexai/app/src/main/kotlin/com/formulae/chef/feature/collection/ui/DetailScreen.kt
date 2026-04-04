@@ -30,15 +30,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -56,19 +57,44 @@ import com.formulae.chef.feature.model.Recipe
 internal fun DetailRoute(
     recipe: Recipe,
     onBack: () -> Unit,
-    onToggleCookingModeClick: () -> Unit = {}
+    isCookingMode: Boolean = false,
+    showIngredients: Boolean = true,
+    checkedSteps: Set<Int> = emptySet(),
+    currentServings: Int? = null,
+    onToggleCookingMode: () -> Unit = {},
+    onTabChanged: (Boolean) -> Unit = {},
+    onStepChecked: (Int) -> Unit = {},
+    onStepUnchecked: (Int) -> Unit = {},
+    onServingsChanged: (Int) -> Unit = {}
 ) {
     BackHandler { onBack() }
-    CreateDetailScreen(recipe, onToggleCookingModeClick)
+    CreateDetailScreen(
+        recipe = recipe,
+        isCookingMode = isCookingMode,
+        showIngredients = showIngredients,
+        checkedSteps = checkedSteps,
+        currentServings = currentServings,
+        onToggleCookingMode = onToggleCookingMode,
+        onTabChanged = onTabChanged,
+        onStepChecked = onStepChecked,
+        onStepUnchecked = onStepUnchecked,
+        onServingsChanged = onServingsChanged
+    )
 }
 
 @Composable
 private fun CreateDetailScreen(
     recipe: Recipe,
-    // TODO: DEV-47
-    onToggleCookingModeClick: () -> Unit
+    isCookingMode: Boolean,
+    showIngredients: Boolean,
+    checkedSteps: Set<Int>,
+    currentServings: Int?,
+    onToggleCookingMode: () -> Unit,
+    onTabChanged: (Boolean) -> Unit,
+    onStepChecked: (Int) -> Unit,
+    onStepUnchecked: (Int) -> Unit,
+    onServingsChanged: (Int) -> Unit
 ) {
-    var showIngredients by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
     val hasImage = recipe.imageUrl?.isNotEmpty() ?: false
     val clipboardManager = LocalClipboardManager.current
@@ -82,7 +108,6 @@ private fun CreateDetailScreen(
         Text(text = recipe.title, style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Conditional Display
         if (hasImage) {
             Image(
                 painter = rememberAsyncImagePainter(recipe.imageUrl),
@@ -92,24 +117,39 @@ private fun CreateDetailScreen(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-            // Button(
-            //    onClick = onToggleCookingModeClick,
-            //    modifier = Modifier
-            //        .fillMaxWidth()
-            // ) {
-            //    Text("Start cooking!")
-            // }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Cooking mode toggle — always below image
+        if (!isCookingMode) {
+            Button(
+                onClick = onToggleCookingMode,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Let's cook!")
+            }
+        } else {
+            IconButton(
+                onClick = onToggleCookingMode,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Exit cooking mode")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(text = recipe.summary.replace("\\n", "\n"), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Tab toggle — shown in both normal and cooking mode
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(
-                onClick = { showIngredients = true },
+                onClick = { onTabChanged(true) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (showIngredients) {
                         MaterialTheme.colorScheme.primary
@@ -122,7 +162,7 @@ private fun CreateDetailScreen(
             }
 
             Button(
-                onClick = { showIngredients = false },
+                onClick = { onTabChanged(false) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (!showIngredients) {
                         MaterialTheme.colorScheme.primary
@@ -137,19 +177,31 @@ private fun CreateDetailScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Conditional Display
-        if (showIngredients) {
-            Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.ingredients.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+        if (isCookingMode) {
+            CookingModeContent(
+                recipe = recipe,
+                showIngredients = showIngredients,
+                checkedSteps = checkedSteps,
+                currentServings = currentServings,
+                scrollState = scrollState,
+                onStepChecked = onStepChecked,
+                onStepUnchecked = onStepUnchecked,
+                onServingsChanged = onServingsChanged
+            )
         } else {
-            Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+            if (showIngredients) {
+                Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = recipe.ingredients.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
+            }
         }
 
-        // Centered Share Button
+        // Share Button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,7 +228,7 @@ private fun CreateDetailScreen(
 @Composable
 fun PreviewCreateDetailScreen() {
     CreateDetailScreen(
-        Recipe(
+        recipe = Recipe(
             title = "West African Peanut Stew (Peanut Butter Stew)",
             summary = "This recipe features flavorful Lebanese-style kafta kebabs, cooked to juicy perfection, " +
                 "served with a vibrant harissa yogurt sauce and a medley of roasted vegetables.\\n\\n" +
@@ -195,21 +247,21 @@ fun PreviewCreateDetailScreen() {
                 Ingredient(name = "ground lamb or a mix of ground lamb and beef", quantity = "500", unit = "g"),
                 Ingredient(name = "large onion", quantity = "1", unit = "each"),
                 Ingredient(name = "garlic", quantity = "2", unit = "cloves"),
-                Ingredient(name = "fresh parsley", quantity = "1/2 cup", unit = "(20g)"),
-                Ingredient(name = "fresh mint", quantity = "1/4 cup", unit = "(10g)"),
-                Ingredient(name = "ground cumin", quantity = "1 tbsp", unit = "(15g)"),
-                Ingredient(name = "ground coriander", quantity = "1 tsp", unit = "(5g)"),
-                Ingredient(name = "allspice", quantity = "1/2 tsp", unit = "(2.5g)"),
-                Ingredient(name = "cayenne pepper", quantity = "1/4 tsp", unit = "(optional)"),
-                Ingredient(name = "Greek yogurt", quantity = "250g", unit = "plain"),
-                Ingredient(name = "harissa paste", quantity = "1 tbsp", unit = "(15g)"),
-                Ingredient(name = "lemon juice", quantity = "1 tbsp", unit = "(15ml)"),
-                Ingredient(name = "salt", quantity = "1/4 tsp", unit = null),
-                Ingredient(name = "sweet potato", quantity = "1 large", unit = null),
+                Ingredient(name = "fresh parsley", quantity = "0.5", unit = "cup"),
+                Ingredient(name = "fresh mint", quantity = "0.25", unit = "cup"),
+                Ingredient(name = "ground cumin", quantity = "1", unit = "tbsp"),
+                Ingredient(name = "ground coriander", quantity = "1", unit = "tsp"),
+                Ingredient(name = "allspice", quantity = "0.5", unit = "tsp"),
+                Ingredient(name = "cayenne pepper", quantity = "0.25", unit = "tsp"),
+                Ingredient(name = "Greek yogurt", quantity = "250", unit = "g"),
+                Ingredient(name = "harissa paste", quantity = "1", unit = "tbsp"),
+                Ingredient(name = "lemon juice", quantity = "1", unit = "tbsp"),
+                Ingredient(name = "salt", quantity = "0.25", unit = "tsp"),
+                Ingredient(name = "sweet potato", quantity = "1", unit = "large"),
                 Ingredient(name = "red bell pepper", quantity = "1", unit = "each"),
-                Ingredient(name = "broccoli florets", quantity = "1/2 cup", unit = null),
-                Ingredient(name = "olive oil", quantity = "1 tbsp", unit = "(15ml)"),
-                Ingredient(name = "black pepper", quantity = "1/4 tsp", unit = null)
+                Ingredient(name = "broccoli florets", quantity = "0.5", unit = "cup"),
+                Ingredient(name = "olive oil", quantity = "1", unit = "tbsp"),
+                Ingredient(name = "black pepper", quantity = "0.25", unit = "tsp")
             ),
             difficulty = Difficulty.EASY,
             instructions = listOf(
@@ -230,6 +282,14 @@ fun PreviewCreateDetailScreen() {
             imageUrl = "https://storage.googleapis.com/idyllic-bloom-425307-r6.firebasestorage.app/" +
                 "recipes/71204b99-36e5-419d-8fed-8fba949bd3d4"
         ),
-        onToggleCookingModeClick = {}
+        isCookingMode = false,
+        showIngredients = true,
+        checkedSteps = emptySet(),
+        currentServings = null,
+        onToggleCookingMode = {},
+        onTabChanged = {},
+        onStepChecked = {},
+        onStepUnchecked = {},
+        onServingsChanged = {}
     )
 }
