@@ -1,16 +1,16 @@
 package com.formulae.chef.services.voice
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.datasource.ByteArrayDataSource
-import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ConcatenatingMediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,14 +21,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Plays TTS audio via ExoPlayer with gapless sentence-chunked streaming.
- * [playChunked] accepts a [Flow] of synthesized audio chunks and feeds them to a
- * [ConcatenatingMediaSource] as they arrive, so playback of the first sentence begins
- * immediately while subsequent sentences are still being synthesized.
+ * [playChunked] accepts a [Flow] of synthesized MP3 chunks. Each chunk is written to a
+ * temp file and appended to the player's playlist as it arrives, so playback of the first
+ * sentence begins immediately while subsequent sentences are still being synthesized.
+ * Temp files are deleted once playback finishes or is stopped.
  */
-@Suppress("DEPRECATION") // ConcatenatingMediaSource deprecated in favour of player playlist API; migration deferred
 class AudioPlayer(private val context: Context) {
 
     private val _isSpeaking = MutableStateFlow(false)
@@ -40,38 +41,49 @@ class AudioPlayer(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var playbackJob: Job? = null
     private var player: ExoPlayer? = null
+    private val tmpFiles = mutableListOf<File>()
+
+    private val ttsAudioAttributes = AudioAttributes.Builder()
+        .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+        .setUsage(C.USAGE_MEDIA)
+        .build()
 
     /**
-     * Starts gapless chunked playback. Each [ByteArray] emitted by [audioFlow] is appended
-     * to the player's playlist as it arrives. Cancels any in-progress playback first.
+     * Starts chunked playback. Each [ByteArray] emitted by [audioFlow] is written to a
+     * temp file and added to the player's playlist. Cancels any in-progress playback first.
      */
     fun playChunked(audioFlow: Flow<ByteArray>, messageId: String) {
         stop()
 
         playbackJob = scope.launch {
-            val concatenatingSource = ConcatenatingMediaSource()
             val newPlayer = ExoPlayer.Builder(context).build()
+            newPlayer.setAudioAttributes(ttsAudioAttributes, true)
             player = newPlayer
             _isSpeaking.value = true
             _speakingMessageId.value = messageId
-
-            newPlayer.setMediaSource(concatenatingSource)
             newPlayer.playWhenReady = true
 
             var flowDone = false
 
             newPlayer.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    Log.d("AudioPlayer", "State → ${playerStateName(state)}, flowDone=$flowDone")
                     if (state == Player.STATE_ENDED && flowDone) {
+                        deleteTmpFiles()
                         _isSpeaking.value = false
                         _speakingMessageId.value = null
                     }
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
-                    Log.e("AudioPlayer", "ExoPlayer error", error)
+                    Log.e("AudioPlayer", "ExoPlayer error: ${error.errorCodeName}", error)
+                    deleteTmpFiles()
                     _isSpeaking.value = false
                     _speakingMessageId.value = null
+                }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    Log.d("AudioPlayer", "isPlaying=$isPlaying")
                 }
             })
 
@@ -79,28 +91,43 @@ class AudioPlayer(private val context: Context) {
                 var chunkIndex = 0
                 audioFlow.collect { bytes ->
                     val idx = chunkIndex
-                    concatenatingSource.addMediaSource(createMediaSource(bytes))
+                    val tmpFile = withContext(Dispatchers.IO) {
+                        File.createTempFile("tts_chunk_$idx", ".mp3", context.cacheDir)
+                            .also { it.writeBytes(bytes) }
+                    }
+                    tmpFiles.add(tmpFile)
+                    Log.d("AudioPlayer", "Chunk $idx: ${bytes.size} bytes → ${tmpFile.name}")
+
+                    newPlayer.addMediaItem(MediaItem.fromUri(tmpFile.toUri()))
                     chunkIndex++
 
-                    when {
-                        idx == 0 -> newPlayer.prepare()
-                        newPlayer.playbackState == Player.STATE_ENDED -> {
-                            // Race: player exhausted all sources before this chunk arrived.
-                            // Seek to the new item to resume gapless playback.
-                            newPlayer.seekTo(idx, 0L)
+                    when (newPlayer.playbackState) {
+                        Player.STATE_IDLE -> {
+                            Log.d("AudioPlayer", "First chunk — calling prepare()")
+                            newPlayer.prepare()
                         }
+                        Player.STATE_ENDED -> {
+                            // Race: player exhausted earlier items before this chunk arrived.
+                            Log.d("AudioPlayer", "Resuming from STATE_ENDED at item $idx")
+                            newPlayer.seekTo(newPlayer.mediaItemCount - 1, 0L)
+                        }
+                        else -> Unit
                     }
                 }
                 flowDone = true
+                val state = playerStateName(newPlayer.playbackState)
+                Log.d("AudioPlayer", "Flow complete, ${newPlayer.mediaItemCount} items, state=$state")
 
-                // If the player already finished all sources by the time the flow completed,
-                // the STATE_ENDED listener won't fire again — clean up here.
                 if (newPlayer.playbackState == Player.STATE_ENDED) {
+                    deleteTmpFiles()
                     _isSpeaking.value = false
                     _speakingMessageId.value = null
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("AudioPlayer", "Chunked playback error", e)
+                deleteTmpFiles()
                 _isSpeaking.value = false
                 _speakingMessageId.value = null
             }
@@ -119,6 +146,7 @@ class AudioPlayer(private val context: Context) {
             }
         }
         player = null
+        deleteTmpFiles()
         _isSpeaking.value = false
         _speakingMessageId.value = null
     }
@@ -128,7 +156,16 @@ class AudioPlayer(private val context: Context) {
         scope.cancel()
     }
 
-    private fun createMediaSource(bytes: ByteArray): ProgressiveMediaSource =
-        ProgressiveMediaSource.Factory(DataSource.Factory { ByteArrayDataSource(bytes) })
-            .createMediaSource(MediaItem.fromUri(Uri.EMPTY))
+    private fun deleteTmpFiles() {
+        tmpFiles.forEach { it.delete() }
+        tmpFiles.clear()
+    }
+
+    private fun playerStateName(state: Int) = when (state) {
+        Player.STATE_IDLE -> "IDLE"
+        Player.STATE_BUFFERING -> "BUFFERING"
+        Player.STATE_READY -> "READY"
+        Player.STATE_ENDED -> "ENDED"
+        else -> "UNKNOWN($state)"
+    }
 }

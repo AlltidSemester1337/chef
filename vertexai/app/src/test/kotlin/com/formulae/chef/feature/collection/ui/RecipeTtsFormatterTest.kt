@@ -42,7 +42,10 @@ class RecipeTtsFormatterTest {
     fun `buildIngredientSentences each sentence ends with punctuation`() {
         val result = buildIngredientSentences(recipe)
         result.forEach { sentence ->
-            assertTrue("Expected punctuation at end of: $sentence", sentence.endsWith('.') || sentence.endsWith('!') || sentence.endsWith('?'))
+            assertTrue(
+                "Expected punctuation at end of: $sentence",
+                sentence.endsWith('.') || sentence.endsWith('!') || sentence.endsWith('?')
+            )
         }
     }
 

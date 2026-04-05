@@ -62,6 +62,7 @@ import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
 
 @Composable
@@ -209,6 +210,8 @@ private fun CreateDetailScreen(
                                 for (sentence in sentences) {
                                     try {
                                         emit(ttsService.synthesize(sentence))
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         Log.e("DetailScreen", "TTS failed", e)
                                         Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
@@ -222,6 +225,8 @@ private fun CreateDetailScreen(
                                 if (stepText.isNotBlank()) {
                                     try {
                                         emit(ttsService.synthesize(stepText))
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         Log.e("DetailScreen", "TTS failed", e)
                                         Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()

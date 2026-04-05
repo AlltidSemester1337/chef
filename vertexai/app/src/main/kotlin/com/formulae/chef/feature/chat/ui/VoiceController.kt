@@ -23,6 +23,7 @@ import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.SpeechInputManager
 import com.formulae.chef.services.voice.splitIntoSentences
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
 
 data class VoiceControllerState(
@@ -91,6 +92,8 @@ fun rememberVoiceController(
                     for (sentence in sentences) {
                         try {
                             emit(ttsService.synthesize(sentence))
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e("VoiceController", "TTS auto-play failed for sentence", e)
                             Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
@@ -124,6 +127,8 @@ fun rememberVoiceController(
                     for (sentence in sentences) {
                         try {
                             emit(ttsService.synthesize(sentence))
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e("VoiceController", "TTS speak-on-demand failed for sentence", e)
                             Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
