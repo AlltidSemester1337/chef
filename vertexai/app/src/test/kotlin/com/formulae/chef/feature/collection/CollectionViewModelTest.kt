@@ -350,16 +350,16 @@ class CollectionViewModelTest {
     }
 
     @Test
-    fun `onCreateList calls repository and refreshes lists`() = runTest(testDispatcher) {
+    fun `onCreateList adds list to state immediately (optimistic)`() = runTest(testDispatcher) {
         val listRepo = FakeRecipeListRepository()
         val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes), listRepo)
         viewModel.setCurrentUser("user-1")
         advanceUntilIdle()
 
         viewModel.onCreateList("Festive occasions")
-        advanceUntilIdle()
 
         assertTrue(listRepo.createdLists.any { it.second == "Festive occasions" })
+        assertTrue(viewModel.lists.value.any { it.name == "Festive occasions" })
     }
 
     @Test
@@ -498,8 +498,9 @@ private class FakeRecipeListRepository(
 
     override suspend fun loadUserLists(uid: String): List<RecipeList> = lists
 
-    override fun createList(uid: String, name: String) {
+    override fun createList(uid: String, name: String): RecipeList {
         createdLists.add(Pair(uid, name))
+        return RecipeList(id = "fake-${name.hashCode()}", name = name)
     }
 
     override fun deleteList(uid: String, listId: String) {

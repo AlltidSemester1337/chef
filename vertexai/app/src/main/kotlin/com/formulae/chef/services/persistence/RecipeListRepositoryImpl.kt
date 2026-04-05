@@ -19,13 +19,14 @@ class RecipeListRepositoryImpl(
         }
     }
 
-    override fun createList(uid: String, name: String) {
+    override fun createList(uid: String, name: String): RecipeList {
         val ref = listsRef(uid)
         val newRef = ref.push()
         val list = RecipeList(id = newRef.key, name = name)
         newRef.setValue(list)
             .addOnSuccessListener { Log.d("RecipeListRepo", "List '${list.name}' created") }
             .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to create list", e) }
+        return list
     }
 
     override fun deleteList(uid: String, listId: String) {

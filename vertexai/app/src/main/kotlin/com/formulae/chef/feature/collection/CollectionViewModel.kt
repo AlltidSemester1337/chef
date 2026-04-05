@@ -76,10 +76,8 @@ class CollectionViewModel(
 
     fun onCreateList(name: String) {
         val uid = currentUid ?: return
-        listRepository.createList(uid, name)
-        viewModelScope.launch {
-            _lists.value = listRepository.loadUserLists(uid)
-        }
+        val newList = listRepository.createList(uid, name)
+        _lists.value = _lists.value + newList
     }
 
     fun onDeleteList(listId: String) {

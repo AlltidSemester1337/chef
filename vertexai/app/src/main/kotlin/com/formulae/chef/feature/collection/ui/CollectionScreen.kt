@@ -474,8 +474,8 @@ private fun MyListsView(
                     ListHeader(
                         list = list,
                         isExpanded = isExpanded,
-                        recipeCount = list.recipeIds.size,
-                        onExpand = { onExpandList(list.id) },
+                        recipeCount = recipesInList.size,
+                        onExpand = { list.id?.let { onExpandList(it) } },
                         onDelete = { listToDelete = list }
                     )
 
@@ -486,14 +486,11 @@ private fun MyListsView(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                             ) {
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = {
-                                        Text(
-                                            list.name,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
+                                Text(
+                                    text = list.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
