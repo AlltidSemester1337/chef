@@ -69,6 +69,7 @@ Each user is keyed by their Firebase Auth UID.
 User {
   chat_history:    { [pushId]: ChatMessage }    // Map of chat messages keyed by Firebase push ID
   liked_messages:  { [pushId]: LikedMessage }   // Map of liked AI responses keyed by Firebase push ID
+  lists:           { [pushId]: RecipeList }     // Map of user-created recipe lists keyed by Firebase push ID
 }
 ```
 
@@ -99,6 +100,19 @@ MessagePart {
 LikedMessage {
   text:     string    // The model message text that was liked
   likedAt:  string    // ISO 8601 timestamp
+}
+```
+
+### `RecipeList`
+
+**Path:** `users/{uid}/lists/{pushId}`
+User-created named lists for organizing recipes (CHE-13).
+
+```
+RecipeList {
+  id:        string      // Firebase push ID (same as node key)
+  name:      string      // User-provided list name, e.g. "Work week planning"
+  recipeIds: string[]    // Ordered list of recipe IDs belonging to this list
 }
 ```
 
@@ -138,10 +152,16 @@ ROOT
         │       ├── role:  "user" | "model"
         │       └── parts: array
         │           └── [n]: { text: string }
-        └── liked_messages (object)
+        ├── liked_messages (object)
+        │   └── {pushId} (object)
+        │       ├── text:     string   // model message text the user liked
+        │       └── likedAt:  string   // ISO 8601 timestamp
+        └── lists (object)
             └── {pushId} (object)
-                ├── text:     string   // model message text the user liked
-                └── likedAt:  string   // ISO 8601 timestamp
+                ├── id:        string   // same as pushId
+                ├── name:      string   // user-provided list name
+                └── recipeIds: array
+                    └── [n]: string    // recipe push ID
 ```
 
 ### Tag Categories

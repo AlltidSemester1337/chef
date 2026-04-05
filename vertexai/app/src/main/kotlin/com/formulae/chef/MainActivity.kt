@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
+import com.formulae.chef.services.persistence.RecipeListRepositoryImpl
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.ui.theme.GenerativeAISample
 import com.google.firebase.Firebase
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val recipeRepository = RecipeRepositoryImpl()
+        val recipeListRepository = RecipeListRepositoryImpl()
 
         this.actionBar?.hide()
 
@@ -87,7 +89,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(recipeRepository, userSessionService)
+                    AppNavigation(recipeRepository, recipeListRepository, userSessionService)
                 }
             }
         }

@@ -3,7 +3,9 @@ package com.formulae.chef.feature.collection
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeList
 import com.formulae.chef.feature.model.parsedServingsCount
+import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class CollectionViewModel(
-    private val repository: RecipeRepository
+    private val repository: RecipeRepository,
+    private val listRepository: RecipeListRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CollectionUiState())
     val uiState: StateFlow<CollectionUiState> = _uiState.asStateFlow()
@@ -34,8 +37,15 @@ class CollectionViewModel(
     private val _showIngredients = MutableStateFlow(true)
     val showIngredients: StateFlow<Boolean> = _showIngredients.asStateFlow()
 
+    private val _lists = MutableStateFlow<List<RecipeList>>(emptyList())
+    val lists: StateFlow<List<RecipeList>> = _lists.asStateFlow()
+
+    private val _expandedListId = MutableStateFlow<String?>(null)
+    val expandedListId: StateFlow<String?> = _expandedListId.asStateFlow()
+
     private var recipes: List<Recipe> = emptyList()
     private var cookingRecipeId: String? = null
+    private var currentUid: String? = null
 
     init {
         fetchRecipes()
@@ -46,6 +56,65 @@ class CollectionViewModel(
             recipes = repository.loadAllRecipes()
             _uiState.value = CollectionUiState(recipes = recipes)
         }
+    }
+
+    fun setCurrentUser(uid: String?) {
+        currentUid = uid
+        if (uid != null) {
+            fetchLists()
+        } else {
+            _lists.value = emptyList()
+        }
+    }
+
+    private fun fetchLists() {
+        val uid = currentUid ?: return
+        viewModelScope.launch {
+            _lists.value = listRepository.loadUserLists(uid)
+        }
+    }
+
+    fun onCreateList(name: String) {
+        val uid = currentUid ?: return
+        val newList = listRepository.createList(uid, name)
+        _lists.value = _lists.value + newList
+    }
+
+    fun onDeleteList(listId: String) {
+        val uid = currentUid ?: return
+        listRepository.deleteList(uid, listId)
+        _lists.value = _lists.value.filter { it.id != listId }
+        if (_expandedListId.value == listId) {
+            _expandedListId.value = null
+        }
+    }
+
+    fun onAddRecipeToList(recipeId: String, listId: String) {
+        val uid = currentUid ?: return
+        listRepository.addRecipeToList(uid, listId, recipeId)
+        _lists.value = _lists.value.map { list ->
+            if (list.id == listId && !list.recipeIds.contains(recipeId)) {
+                list.copy(recipeIds = list.recipeIds + recipeId)
+            } else {
+                list
+            }
+        }
+    }
+
+    fun onRemoveRecipeFromList(recipeId: String, listId: String) {
+        val uid = currentUid ?: return
+        listRepository.removeRecipeFromList(uid, listId, recipeId)
+        _lists.value = _lists.value.map { list ->
+            if (list.id == listId) {
+                list.copy(recipeIds = list.recipeIds.filter { it != recipeId })
+            } else {
+                list
+            }
+        }
+    }
+
+    fun onExpandList(listId: String?) {
+        _expandedListId.value = if (_expandedListId.value == listId) null else listId
     }
 
     fun onRecipeSelected(recipe: Recipe) {
