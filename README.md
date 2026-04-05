@@ -39,7 +39,8 @@ Features:
 - 3.0.0 - Recipe collection updates and browsing
 - 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
 - 3.2.0 - Multiple recipe suggestions with card grid and images in chat, also major updates for Claude driven development
-- 3.3.0 (Current) - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
+- 3.3.0 - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
+- 3.4.0 (Current) - Voice latency improvements and add lists in collections view
 - 4.0.0 - Complete redesign of the app!
 
 Other features up next: Refer to Linear
