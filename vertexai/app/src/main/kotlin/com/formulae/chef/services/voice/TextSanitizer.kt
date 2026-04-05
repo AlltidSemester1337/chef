@@ -40,5 +40,13 @@ fun String.splitIntoSentences(): List<String> =
         }
         .map { sentence ->
             val cleaned = sentence.replace(Regex(" {2,}"), " ")
-            if (cleaned.endsWith('.') || cleaned.endsWith('!') || cleaned.endsWith('?')) cleaned else "$cleaned."
+            val hasPunctuation = cleaned.endsWith('.') || cleaned.endsWith('!') || cleaned.endsWith('?')
+            val punctuated = if (hasPunctuation) cleaned else "$cleaned."
+            punctuated.truncateAtWordBoundary(TTS_HARD_LIMIT)
         }
+
+private fun String.truncateAtWordBoundary(limit: Int): String {
+    if (length <= limit) return this
+    val cut = lastIndexOf(' ', limit)
+    return if (cut > 0) substring(0, cut).trimEnd() + "." else take(limit)
+}

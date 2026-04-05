@@ -4,7 +4,6 @@ package com.formulae.chef.feature.chat.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,9 +21,8 @@ import com.formulae.chef.BuildConfig
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.SpeechInputManager
+import com.formulae.chef.services.voice.buildTtsFlow
 import com.formulae.chef.services.voice.splitIntoSentences
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.flow
 
 data class VoiceControllerState(
     val isRecording: Boolean,
@@ -88,20 +86,7 @@ fun rememberVoiceController(
             val messageId = lastNonPendingModelMessage.id
             if (text.isNotBlank()) {
                 val sentences = text.splitIntoSentences()
-                val audioFlow = flow {
-                    for (sentence in sentences) {
-                        try {
-                            emit(ttsService.synthesize(sentence))
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.e("VoiceController", "TTS auto-play failed for sentence", e)
-                            Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                            return@flow
-                        }
-                    }
-                }
-                audioPlayer.playChunked(audioFlow, messageId)
+                audioPlayer.playChunked(buildTtsFlow(sentences, ttsService, context, "VoiceController"), messageId)
             }
         }
     }
@@ -123,20 +108,7 @@ fun rememberVoiceController(
                 audioPlayer.stop()
             } else {
                 val sentences = msg.text.splitIntoSentences()
-                val audioFlow = flow {
-                    for (sentence in sentences) {
-                        try {
-                            emit(ttsService.synthesize(sentence))
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.e("VoiceController", "TTS speak-on-demand failed for sentence", e)
-                            Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                            return@flow
-                        }
-                    }
-                }
-                audioPlayer.playChunked(audioFlow, msg.id)
+                audioPlayer.playChunked(buildTtsFlow(sentences, ttsService, context, "VoiceController"), msg.id)
             }
         }
     )

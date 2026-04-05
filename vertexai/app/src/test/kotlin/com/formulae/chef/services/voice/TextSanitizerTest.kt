@@ -151,6 +151,15 @@ class TextSanitizerTest {
         assertEquals(emptyList<String>(), result)
     }
 
+    @Test
+    fun splitIntoSentences_longSentenceTruncatedToHardLimit() {
+        val longSentence = "word ".repeat(TTS_HARD_LIMIT)
+        val result = longSentence.splitIntoSentences()
+        result.forEach { chunk ->
+            assertTrue("Chunk exceeds TTS_HARD_LIMIT: ${chunk.length}", chunk.length <= TTS_HARD_LIMIT)
+        }
+    }
+
     // helpers for readability
 
     private fun sanitizeMarkdown(s: String) = s.sanitizeMarkdown()
