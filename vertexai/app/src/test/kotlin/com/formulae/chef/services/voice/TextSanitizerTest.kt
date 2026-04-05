@@ -1,4 +1,4 @@
-package com.formulae.chef.feature.chat.ui
+package com.formulae.chef.services.voice
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

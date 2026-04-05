@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.collection.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -31,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,19 +41,29 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.BuildConfig
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.voice.AudioPlayer
+import com.formulae.chef.services.voice.GcpTextToSpeechService
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun DetailRoute(
@@ -99,6 +111,14 @@ private fun CreateDetailScreen(
     val hasImage = recipe.imageUrl?.isNotEmpty() ?: false
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+
+    val coroutineScope = rememberCoroutineScope()
+    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
+    val audioPlayer = remember { AudioPlayer() }
+    DisposableEffect(Unit) {
+        onDispose { audioPlayer.release() }
+    }
+    val isSpeaking by audioPlayer.isSpeaking.collectAsState()
 
     Column(
         modifier = Modifier
@@ -172,6 +192,38 @@ private fun CreateDetailScreen(
                 )
             ) {
                 Text("Instructions")
+            }
+        }
+
+        // Voice playback button — just below tab toggle, aligned right
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(
+                onClick = {
+                    coroutineScope.launch {
+                        if (isSpeaking) {
+                            audioPlayer.stop()
+                        } else {
+                            try {
+                                val text = buildRecipeTtsText(recipe, showIngredients, checkedSteps)
+                                if (text.isBlank()) return@launch
+                                val audioBytes = ttsService.synthesize(text)
+                                audioPlayer.play(audioBytes, "recipe-${recipe.id}")
+                            } catch (e: Exception) {
+                                Log.e("DetailScreen", "TTS failed", e)
+                                Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = if (isSpeaking) "Stop reading" else "Read aloud",
+                    tint = if (isSpeaking) MaterialTheme.colorScheme.primary else Color.Gray
+                )
             }
         }
 
