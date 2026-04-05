@@ -100,6 +100,10 @@ internal fun CollectionRoute(
     val isLoading by collectionViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val selectedRecipe by collectionViewModel.selectedRecipe.collectAsState()
+    val isCookingMode by collectionViewModel.isCookingMode.collectAsState()
+    val showIngredients by collectionViewModel.showIngredients.collectAsState()
+    val checkedSteps by collectionViewModel.checkedSteps.collectAsState()
+    val currentServings by collectionViewModel.currentServings.collectAsState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val currentUser by produceState<UserInfo?>(initialValue = null) {
         if (!userSessionService.anonymousSession) {
@@ -185,8 +189,16 @@ internal fun CollectionRoute(
                 // Recipe Detail
                 DetailRoute(
                     recipe = selectedRecipe!!,
-                    onBack = { navController.navigate("collection") },
-                    onToggleCookingModeClick = collectionViewModel::onToggleCookingMode
+                    onBack = { collectionViewModel.clearSelectedRecipe() },
+                    isCookingMode = isCookingMode,
+                    showIngredients = showIngredients,
+                    checkedSteps = checkedSteps,
+                    currentServings = currentServings,
+                    onToggleCookingMode = collectionViewModel::onToggleCookingMode,
+                    onTabChanged = collectionViewModel::onTabChanged,
+                    onStepChecked = collectionViewModel::onStepChecked,
+                    onStepUnchecked = collectionViewModel::onStepUnchecked,
+                    onServingsChanged = collectionViewModel::onServingsChanged
                 )
             }
         }

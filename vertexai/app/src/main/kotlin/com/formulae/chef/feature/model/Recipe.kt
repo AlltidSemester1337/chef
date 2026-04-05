@@ -81,3 +81,6 @@ data class Nutrient(
 enum class Difficulty {
     EASY, MEDIUM, HARD
 }
+
+fun Recipe.parsedServingsCount(): Int? =
+    Regex("""\d+""").find(servings ?: "")?.value?.toIntOrNull()

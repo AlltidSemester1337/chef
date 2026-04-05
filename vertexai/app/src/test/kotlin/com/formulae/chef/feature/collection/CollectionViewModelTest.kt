@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -121,6 +122,200 @@ class CollectionViewModelTest {
 
         viewModel.onRecipeRemove(sampleRecipes[0])
         assertNull(viewModel.selectedRecipe.value)
+    }
+
+    @Test
+    fun `isCookingMode is initially false`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        assertFalse(viewModel.isCookingMode.value)
+    }
+
+    @Test
+    fun `onToggleCookingMode enables cooking mode`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+
+        viewModel.onToggleCookingMode()
+
+        assertTrue(viewModel.isCookingMode.value)
+    }
+
+    @Test
+    fun `onToggleCookingMode disables cooking mode and clears state`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode() // enable
+        viewModel.onStepChecked(0)
+        viewModel.onServingsChanged(8)
+
+        viewModel.onToggleCookingMode() // disable
+
+        assertFalse(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.isEmpty())
+        assertNull(viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onToggleCookingMode initializes currentServings from recipe servings string`() = runTest(testDispatcher) {
+        val recipeWithServings = Recipe(id = "4", uid = "user-1", title = "Soup", servings = "4 servings")
+        val viewModel = CollectionViewModel(FakeRecipeRepository(listOf(recipeWithServings)))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(recipeWithServings)
+
+        viewModel.onToggleCookingMode()
+
+        assertEquals(4, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onToggleCookingMode clears checkedSteps on activation`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode() // enable
+        viewModel.onStepChecked(1)
+        viewModel.onToggleCookingMode() // disable
+        viewModel.onToggleCookingMode() // re-enable
+
+        assertTrue(viewModel.checkedSteps.value.isEmpty())
+    }
+
+    @Test
+    fun `onStepChecked adds step index to checkedSteps`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+
+        viewModel.onStepChecked(2)
+        viewModel.onStepChecked(4)
+
+        assertTrue(viewModel.checkedSteps.value.containsAll(setOf(2, 4)))
+    }
+
+    @Test
+    fun `onServingsChanged updates currentServings`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+
+        viewModel.onServingsChanged(6)
+
+        assertEquals(6, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `clearSelectedRecipe clears selectedRecipe without resetting cooking mode`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onStepChecked(1)
+
+        viewModel.clearSelectedRecipe()
+
+        assertNull(viewModel.selectedRecipe.value)
+        assertTrue(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.contains(1))
+    }
+
+    @Test
+    fun `onRecipeSelected resets cooking mode state when selecting a different recipe`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onStepChecked(0)
+        viewModel.onServingsChanged(8)
+
+        viewModel.onRecipeSelected(sampleRecipes[1])
+
+        assertFalse(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.isEmpty())
+        assertNull(viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onStepUnchecked removes step index from checkedSteps`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+
+        viewModel.onStepChecked(2)
+        viewModel.onStepChecked(3)
+        viewModel.onStepUnchecked(2)
+
+        assertFalse(viewModel.checkedSteps.value.contains(2))
+        assertTrue(viewModel.checkedSteps.value.contains(3))
+    }
+
+    @Test
+    fun `onServingsChanged caps at MAX_SERVINGS`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onServingsChanged(CollectionViewModel.MAX_SERVINGS + 10)
+
+        assertEquals(CollectionViewModel.MAX_SERVINGS, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onServingsChanged floors at 1`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onServingsChanged(0)
+
+        assertEquals(1, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `onTabChanged updates showIngredients`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+
+        viewModel.onTabChanged(false)
+        assertFalse(viewModel.showIngredients.value)
+
+        viewModel.onTabChanged(true)
+        assertTrue(viewModel.showIngredients.value)
+    }
+
+    @Test
+    fun `showIngredients resets to true when a different recipe is selected`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onTabChanged(false)
+
+        viewModel.onRecipeSelected(sampleRecipes[1])
+
+        assertTrue(viewModel.showIngredients.value)
+    }
+
+    @Test
+    fun `showIngredients persists when re-selecting the same recipe`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onTabChanged(false)
+        viewModel.clearSelectedRecipe()
+
+        viewModel.onRecipeSelected(sampleRecipes[0])
+
+        assertFalse(viewModel.showIngredients.value)
+    }
+
+    @Test
+    fun `onRecipeSelected preserves cooking mode state when re-selecting the same recipe`() = runTest(testDispatcher) {
+        val viewModel = CollectionViewModel(FakeRecipeRepository(sampleRecipes))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onToggleCookingMode()
+        viewModel.onStepChecked(0)
+        viewModel.onServingsChanged(8)
+
+        viewModel.onRecipeSelected(sampleRecipes[0])
+
+        assertTrue(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.contains(0))
+        assertEquals(8, viewModel.currentServings.value)
     }
 }
 
