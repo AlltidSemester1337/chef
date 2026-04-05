@@ -4,7 +4,6 @@ package com.formulae.chef.feature.chat.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -23,9 +21,8 @@ import com.formulae.chef.BuildConfig
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.SpeechInputManager
-import com.formulae.chef.services.voice.TTS_DISPLAY_THRESHOLD
-import com.formulae.chef.services.voice.sanitizeForTts
-import kotlinx.coroutines.launch
+import com.formulae.chef.services.voice.buildTtsFlow
+import com.formulae.chef.services.voice.splitIntoSentences
 
 data class VoiceControllerState(
     val isRecording: Boolean,
@@ -40,11 +37,10 @@ fun rememberVoiceController(
     lastNonPendingModelMessage: ChatMessage?
 ): VoiceControllerState {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
     val speechManager = remember { SpeechInputManager(context) }
     val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
-    val audioPlayer = remember { AudioPlayer() }
+    val audioPlayer = remember { AudioPlayer(context) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -86,16 +82,11 @@ fun rememberVoiceController(
     LaunchedEffect(lastNonPendingModelMessage?.id) {
         if (pendingVoiceTts && lastNonPendingModelMessage != null) {
             pendingVoiceTts = false
-            if (lastNonPendingModelMessage.text.length <= TTS_DISPLAY_THRESHOLD) {
-                val text = lastNonPendingModelMessage.text.sanitizeForTts()
-                val messageId = lastNonPendingModelMessage.id
-                try {
-                    val audioBytes = ttsService.synthesize(text)
-                    audioPlayer.play(audioBytes, messageId)
-                } catch (e: Exception) {
-                    Log.e("VoiceController", "TTS auto-play failed", e)
-                    Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                }
+            val text = lastNonPendingModelMessage.text
+            val messageId = lastNonPendingModelMessage.id
+            if (text.isNotBlank()) {
+                val sentences = text.splitIntoSentences()
+                audioPlayer.playChunked(buildTtsFlow(sentences, ttsService, context, "VoiceController"), messageId)
             }
         }
     }
@@ -113,18 +104,11 @@ fun rememberVoiceController(
             }
         },
         onSpeakClicked = { msg ->
-            coroutineScope.launch {
-                try {
-                    if (speakingMessageId == msg.id) {
-                        audioPlayer.stop()
-                    } else {
-                        val audioBytes = ttsService.synthesize(msg.text.sanitizeForTts())
-                        audioPlayer.play(audioBytes, msg.id)
-                    }
-                } catch (e: Exception) {
-                    Log.e("VoiceController", "TTS speak-on-demand failed", e)
-                    Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
-                }
+            if (speakingMessageId == msg.id) {
+                audioPlayer.stop()
+            } else {
+                val sentences = msg.text.splitIntoSentences()
+                audioPlayer.playChunked(buildTtsFlow(sentences, ttsService, context, "VoiceController"), msg.id)
             }
         }
     )
