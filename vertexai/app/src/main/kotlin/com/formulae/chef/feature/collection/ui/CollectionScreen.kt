@@ -131,7 +131,7 @@ internal fun CollectionRoute(
 
     val signedIn = !userSessionService.anonymousSession && currentUser != null
 
-    var recipesSource by remember { mutableStateOf(RecipeSource.ALL_RECIPES) }
+    var recipesSource by rememberSaveable { mutableStateOf(RecipeSource.ALL_RECIPES) }
 
     LaunchedEffect(signedIn) {
         recipesSource = if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
