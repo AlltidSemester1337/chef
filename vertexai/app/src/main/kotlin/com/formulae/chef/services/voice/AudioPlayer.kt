@@ -1,13 +1,35 @@
 package com.formulae.chef.services.voice
 
-import android.media.MediaDataSource
-import android.media.MediaPlayer
+import android.content.Context
+import android.net.Uri
 import android.util.Log
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.datasource.ByteArrayDataSource
+import androidx.media3.datasource.DataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ConcatenatingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class AudioPlayer {
+/**
+ * Plays TTS audio via ExoPlayer with gapless sentence-chunked streaming.
+ * [playChunked] accepts a [Flow] of synthesized audio chunks and feeds them to a
+ * [ConcatenatingMediaSource] as they arrive, so playback of the first sentence begins
+ * immediately while subsequent sentences are still being synthesized.
+ */
+@Suppress("DEPRECATION") // ConcatenatingMediaSource deprecated in favour of player playlist API; migration deferred
+class AudioPlayer(private val context: Context) {
 
     private val _isSpeaking = MutableStateFlow(false)
     val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
@@ -15,43 +37,82 @@ class AudioPlayer {
     private val _speakingMessageId = MutableStateFlow<String?>(null)
     val speakingMessageId: StateFlow<String?> = _speakingMessageId.asStateFlow()
 
-    private var player: MediaPlayer? = null
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var playbackJob: Job? = null
+    private var player: ExoPlayer? = null
 
-    fun play(audioBytes: ByteArray, messageId: String) {
+    /**
+     * Starts gapless chunked playback. Each [ByteArray] emitted by [audioFlow] is appended
+     * to the player's playlist as it arrives. Cancels any in-progress playback first.
+     */
+    fun playChunked(audioFlow: Flow<ByteArray>, messageId: String) {
         stop()
-        try {
-            player = MediaPlayer().apply {
-                setDataSource(ByteArrayMediaDataSource(audioBytes))
-                setOnPreparedListener {
-                    _isSpeaking.value = true
-                    _speakingMessageId.value = messageId
-                    start()
+
+        playbackJob = scope.launch {
+            val concatenatingSource = ConcatenatingMediaSource()
+            val newPlayer = ExoPlayer.Builder(context).build()
+            player = newPlayer
+            _isSpeaking.value = true
+            _speakingMessageId.value = messageId
+
+            newPlayer.setMediaSource(concatenatingSource)
+            newPlayer.playWhenReady = true
+
+            var flowDone = false
+
+            newPlayer.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED && flowDone) {
+                        _isSpeaking.value = false
+                        _speakingMessageId.value = null
+                    }
                 }
-                setOnCompletionListener {
+
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.e("AudioPlayer", "ExoPlayer error", error)
                     _isSpeaking.value = false
                     _speakingMessageId.value = null
-                    it.release()
-                    if (player == it) player = null
                 }
-                setOnErrorListener { _, what, extra ->
-                    Log.e("AudioPlayer", "MediaPlayer error: what=$what extra=$extra")
+            })
+
+            try {
+                var chunkIndex = 0
+                audioFlow.collect { bytes ->
+                    val idx = chunkIndex
+                    concatenatingSource.addMediaSource(createMediaSource(bytes))
+                    chunkIndex++
+
+                    when {
+                        idx == 0 -> newPlayer.prepare()
+                        newPlayer.playbackState == Player.STATE_ENDED -> {
+                            // Race: player exhausted all sources before this chunk arrived.
+                            // Seek to the new item to resume gapless playback.
+                            newPlayer.seekTo(idx, 0L)
+                        }
+                    }
+                }
+                flowDone = true
+
+                // If the player already finished all sources by the time the flow completed,
+                // the STATE_ENDED listener won't fire again — clean up here.
+                if (newPlayer.playbackState == Player.STATE_ENDED) {
                     _isSpeaking.value = false
                     _speakingMessageId.value = null
-                    false
                 }
-                prepareAsync()
+            } catch (e: Exception) {
+                Log.e("AudioPlayer", "Chunked playback error", e)
+                _isSpeaking.value = false
+                _speakingMessageId.value = null
             }
-        } catch (e: Exception) {
-            Log.e("AudioPlayer", "Failed to play audio", e)
-            _isSpeaking.value = false
-            _speakingMessageId.value = null
         }
     }
 
     fun stop() {
+        playbackJob?.cancel()
+        playbackJob = null
         player?.let {
             try {
-                if (it.isPlaying) it.stop()
+                it.stop()
                 it.release()
             } catch (e: Exception) {
                 Log.w("AudioPlayer", "Error stopping player", e)
@@ -64,19 +125,10 @@ class AudioPlayer {
 
     fun release() {
         stop()
+        scope.cancel()
     }
 
-    private class ByteArrayMediaDataSource(private val data: ByteArray) : MediaDataSource() {
-        override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
-            if (position >= data.size) return -1
-            val available = data.size - position.toInt()
-            val bytesToRead = minOf(size, available)
-            System.arraycopy(data, position.toInt(), buffer, offset, bytesToRead)
-            return bytesToRead
-        }
-
-        override fun getSize(): Long = data.size.toLong()
-
-        override fun close() {}
-    }
+    private fun createMediaSource(bytes: ByteArray): ProgressiveMediaSource =
+        ProgressiveMediaSource.Factory(DataSource.Factory { ByteArrayDataSource(bytes) })
+            .createMediaSource(MediaItem.fromUri(Uri.EMPTY))
 }

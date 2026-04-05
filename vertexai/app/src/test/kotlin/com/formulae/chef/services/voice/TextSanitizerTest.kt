@@ -89,11 +89,66 @@ class TextSanitizerTest {
         assertTrue(result.isNotBlank())
     }
 
-    // TTS_DISPLAY_THRESHOLD constant
+    // splitIntoSentences
 
     @Test
-    fun ttsDisplayThreshold_isLessThanHardLimit() {
-        assertTrue(TTS_DISPLAY_THRESHOLD < TTS_HARD_LIMIT)
+    fun splitIntoSentences_singleSentence() {
+        val result = "Hello world.".splitIntoSentences()
+        assertEquals(listOf("Hello world."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_multipleSentencesOnOneLine() {
+        val result = "Mix well. Add flour. Stir again.".splitIntoSentences()
+        assertEquals(listOf("Mix well.", "Add flour.", "Stir again."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_splitsOnExclamationAndQuestion() {
+        val result = "Stir quickly! Is it done? Yes it is.".splitIntoSentences()
+        assertEquals(listOf("Stir quickly!", "Is it done?", "Yes it is."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_splitsOnNewlines() {
+        val result = "First sentence.\nSecond sentence.".splitIntoSentences()
+        assertEquals(listOf("First sentence.", "Second sentence."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_appendsPeriodWhenMissing() {
+        val result = "This has no punctuation".splitIntoSentences()
+        assertEquals(listOf("This has no punctuation."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_stripsMarkdown() {
+        val result = "**Bold sentence.**".splitIntoSentences()
+        assertEquals(listOf("Bold sentence."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_filtersBlankLines() {
+        val result = "First.\n\n\nSecond.".splitIntoSentences()
+        assertEquals(listOf("First.", "Second."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_doesNotSplitDecimalNumbers() {
+        val result = "Add 3.5 cups of flour.".splitIntoSentences()
+        assertEquals(listOf("Add 3.5 cups of flour."), result)
+    }
+
+    @Test
+    fun splitIntoSentences_emptyStringReturnsEmptyList() {
+        val result = "".splitIntoSentences()
+        assertEquals(emptyList<String>(), result)
+    }
+
+    @Test
+    fun splitIntoSentences_blankStringReturnsEmptyList() {
+        val result = "   ".splitIntoSentences()
+        assertEquals(emptyList<String>(), result)
     }
 
     // helpers for readability

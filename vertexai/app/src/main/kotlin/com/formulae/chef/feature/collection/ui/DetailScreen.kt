@@ -45,7 +45,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +62,7 @@ import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flow
 
 @Composable
 internal fun DetailRoute(
@@ -112,9 +111,8 @@ private fun CreateDetailScreen(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    val coroutineScope = rememberCoroutineScope()
     val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
-    val audioPlayer = remember { AudioPlayer() }
+    val audioPlayer = remember { AudioPlayer(context) }
     DisposableEffect(Unit) {
         onDispose { audioPlayer.release() }
     }
@@ -202,20 +200,36 @@ private fun CreateDetailScreen(
         ) {
             IconButton(
                 onClick = {
-                    coroutineScope.launch {
-                        if (isSpeaking) {
-                            audioPlayer.stop()
+                    if (isSpeaking) {
+                        audioPlayer.stop()
+                    } else {
+                        val audioFlow = if (showIngredients) {
+                            val sentences = buildIngredientSentences(recipe)
+                            flow {
+                                for (sentence in sentences) {
+                                    try {
+                                        emit(ttsService.synthesize(sentence))
+                                    } catch (e: Exception) {
+                                        Log.e("DetailScreen", "TTS failed", e)
+                                        Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                                        return@flow
+                                    }
+                                }
+                            }
                         } else {
-                            try {
-                                val text = buildRecipeTtsText(recipe, showIngredients, checkedSteps)
-                                if (text.isBlank()) return@launch
-                                val audioBytes = ttsService.synthesize(text)
-                                audioPlayer.play(audioBytes, "recipe-${recipe.id}")
-                            } catch (e: Exception) {
-                                Log.e("DetailScreen", "TTS failed", e)
-                                Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                            val stepText = buildInstructionStepText(recipe, checkedSteps)
+                            flow {
+                                if (stepText.isNotBlank()) {
+                                    try {
+                                        emit(ttsService.synthesize(stepText))
+                                    } catch (e: Exception) {
+                                        Log.e("DetailScreen", "TTS failed", e)
+                                        Toast.makeText(context, "Voice playback failed", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
                         }
+                        audioPlayer.playChunked(audioFlow, "recipe-${recipe.id}")
                     }
                 }
             ) {

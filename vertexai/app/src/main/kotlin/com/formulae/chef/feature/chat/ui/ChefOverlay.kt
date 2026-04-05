@@ -34,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,7 +46,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.model.Recipe
-import com.formulae.chef.services.voice.TTS_DISPLAY_THRESHOLD
 import com.formulae.chef.services.voice.sanitizeMarkdown
 import kotlinx.coroutines.launch
 
@@ -79,7 +77,7 @@ fun ChefOverlay(
             viewModel.sendMessage(text)
             coroutineScope.launch { listState.scrollToItem(0) }
         },
-        lastNonPendingModelMessage = lastNonPendingModelMessage,
+        lastNonPendingModelMessage = lastNonPendingModelMessage
     )
 
     LaunchedEffect(messageCount) {
@@ -106,7 +104,7 @@ fun ChefOverlay(
                         OverlayChatBubble(
                             message = message,
                             speakingMessageId = voice.speakingMessageId,
-                            onSpeakClicked = voice.onSpeakClicked,
+                            onSpeakClicked = voice.onSpeakClicked
                         )
                     }
                 }
@@ -118,7 +116,7 @@ fun ChefOverlay(
                     coroutineScope.launch { listState.scrollToItem(0) }
                 },
                 isRecording = voice.isRecording,
-                onStartRecording = voice.onStartRecording,
+                onStartRecording = voice.onStartRecording
             )
         }
     }
@@ -178,9 +176,7 @@ private fun OverlayChatBubble(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = message.text.sanitizeMarkdown(), modifier = Modifier.fillMaxWidth())
                 }
-                if (isModelMessage && onSpeakClicked != null &&
-                    message.text.isNotBlank() && message.text.length <= TTS_DISPLAY_THRESHOLD
-                ) {
+                if (isModelMessage && onSpeakClicked != null && message.text.isNotBlank()) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         IconButton(onClick = { onSpeakClicked(message) }) {
                             Icon(
