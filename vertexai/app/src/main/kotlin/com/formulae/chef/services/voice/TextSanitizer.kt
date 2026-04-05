@@ -1,4 +1,4 @@
-package com.formulae.chef.feature.chat.ui
+package com.formulae.chef.services.voice
 
 private val MARKDOWN_CHARS = Regex("[*#`_~]")
 

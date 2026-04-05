@@ -1,6 +1,6 @@
 package com.formulae.chef.feature.collection.ui
 
-import com.formulae.chef.feature.chat.ui.sanitizeForTts
+import com.formulae.chef.services.voice.sanitizeForTts
 import com.formulae.chef.feature.model.Recipe
 
 internal fun buildRecipeTtsText(

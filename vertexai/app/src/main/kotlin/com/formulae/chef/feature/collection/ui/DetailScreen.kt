@@ -208,6 +208,7 @@ private fun CreateDetailScreen(
                         } else {
                             try {
                                 val text = buildRecipeTtsText(recipe, showIngredients, checkedSteps)
+                                if (text.isBlank()) return@launch
                                 val audioBytes = ttsService.synthesize(text)
                                 audioPlayer.play(audioBytes, "recipe-${recipe.id}")
                             } catch (e: Exception) {
