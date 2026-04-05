@@ -32,6 +32,7 @@ if (localPropertiesFile.exists()) {
 
 val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
 val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
+val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
 
 android {
     namespace = "com.formulae.chef"
@@ -48,6 +49,12 @@ android {
             "String",
             "phoenixApiKey",
             phoenixApiKey
+        )
+
+        buildConfigField(
+            "String",
+            "gcpTtsApiKey",
+            "\"${gcpTtsApiKey}\""
         )
 
         applicationId = "com.formulae.chef"

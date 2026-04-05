@@ -18,6 +18,7 @@ package com.formulae.chef.feature.chat.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Card
@@ -59,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -103,6 +108,17 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val messageCount = chatUiState.messages.size
 
+    val lastNonPendingModelMessage = chatUiState.messages.lastOrNull {
+        it.participant == Participant.MODEL && !it.isPending && it.text.isNotBlank()
+    }
+    val voice = rememberVoiceController(
+        onSendMessage = { text ->
+            chatViewModel.sendMessage(text)
+            coroutineScope.launch { listState.scrollToItem(0) }
+        },
+        lastNonPendingModelMessage = lastNonPendingModelMessage
+    )
+
     LaunchedEffect(messageCount) {
         if (messageCount > 0) {
             listState.animateScrollToItem(0)
@@ -117,7 +133,9 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                 },
                 resetScroll = {
                     coroutineScope.launch { listState.scrollToItem(0) }
-                }
+                },
+                isRecording = voice.isRecording,
+                onStartRecording = voice.onStartRecording
             )
         }
     ) { paddingValues ->
@@ -139,7 +157,9 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                     onRecipeClick = chatViewModel::onRecipeSelectedFromChat,
                     onRecipeStarredFromGrid = { messageId, recipe ->
                         chatViewModel.onRecipeStarredFromGrid(messageId, recipe)
-                    }
+                    },
+                    speakingMessageId = voice.speakingMessageId,
+                    onSpeakClicked = voice.onSpeakClicked
                 )
             }
         }
@@ -153,7 +173,9 @@ fun ChatList(
     onStarClicked: (ChatMessage) -> Unit,
     onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeStarredFromGrid: (String, Recipe) -> Unit
+    onRecipeStarredFromGrid: (String, Recipe) -> Unit,
+    speakingMessageId: String? = null,
+    onSpeakClicked: ((ChatMessage) -> Unit)? = null
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -166,7 +188,9 @@ fun ChatList(
                 onStarClicked = onStarClicked,
                 onLikeClicked = onLikeClicked,
                 onRecipeClick = onRecipeClick,
-                onRecipeStarredFromGrid = onRecipeStarredFromGrid
+                onRecipeStarredFromGrid = onRecipeStarredFromGrid,
+                onSpeakClicked = onSpeakClicked,
+                isSpeakingThisMessage = speakingMessageId == message.id
             )
         }
     }
@@ -178,7 +202,9 @@ fun ChatBubbleItem(
     onStarClicked: (ChatMessage) -> Unit,
     onLikeClicked: (ChatMessage) -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeStarredFromGrid: (String, Recipe) -> Unit
+    onRecipeStarredFromGrid: (String, Recipe) -> Unit,
+    onSpeakClicked: ((ChatMessage) -> Unit)? = null,
+    isSpeakingThisMessage: Boolean = false
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
         chatMessage.participant == Participant.ERROR
@@ -235,7 +261,7 @@ fun ChatBubbleItem(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 modifier = Modifier.fillMaxWidth(),
-                                text = chatMessage.text
+                                text = chatMessage.text.sanitizeMarkdown()
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -263,6 +289,27 @@ fun ChatBubbleItem(
                                             Color.Gray
                                         }
                                     )
+                                }
+                                if (onSpeakClicked != null && chatMessage.text.isNotBlank() &&
+                                    chatMessage.text.length <= TTS_DISPLAY_THRESHOLD
+                                ) {
+                                    IconButton(
+                                        onClick = { onSpeakClicked(chatMessage) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                            contentDescription = if (isSpeakingThisMessage) {
+                                                "Stop reading"
+                                            } else {
+                                                "Read response aloud"
+                                            },
+                                            tint = if (isSpeakingThisMessage) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                Color.Gray
+                                            }
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.weight(1f))
                                 IconButton(
@@ -386,7 +433,9 @@ private fun RecipeSuggestionCard(
 @Composable
 fun MessageInput(
     onSendMessage: (String) -> Unit,
-    resetScroll: () -> Unit = {}
+    resetScroll: () -> Unit = {},
+    isRecording: Boolean = false,
+    onStartRecording: () -> Unit = {}
 ) {
     var userMessage by rememberSaveable { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -398,8 +447,24 @@ fun MessageInput(
         Row(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .weight(0.12f)
+                    .padding(4.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onLongPress = { onStartRecording() })
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
+                    contentDescription = if (isRecording) "Recording…" else "Hold to speak",
+                    tint = if (isRecording) MaterialTheme.colorScheme.error else Color.Gray
+                )
+            }
             OutlinedTextField(
                 value = userMessage,
                 label = { Text(stringResource(R.string.chat_label)) },
@@ -409,8 +474,7 @@ fun MessageInput(
                 ),
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
-                    .fillMaxWidth()
-                    .weight(0.85f)
+                    .weight(0.73f)
             )
             IconButton(
                 onClick = {
@@ -424,13 +488,11 @@ fun MessageInput(
                 modifier = Modifier
                     .padding(start = 16.dp)
                     .align(Alignment.CenterVertically)
-                    .fillMaxWidth()
                     .weight(0.15f)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.action_send),
-                    modifier = Modifier
+                    contentDescription = stringResource(R.string.action_send)
                 )
             }
         }

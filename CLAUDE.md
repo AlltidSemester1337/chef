@@ -12,7 +12,7 @@ Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that g
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. Two properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`. A valid `google-services.json` is also required. The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
+The project requires JDK 17 and Android SDK with platform 36. Three properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey`. A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
 
 ```bash
 # Build the main Chef app
@@ -78,6 +78,7 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 **Services layer:**
 - `services/authentication/` — `UserSessionService` interface with `UserSessionServiceFirebaseImpl` (Firebase Auth with `callbackFlow` for auth state).
 - `services/persistence/` — `RecipeRepository` interface with `RecipeRepositoryImpl` (Firebase Realtime Database). `ChatHistoryRepository` interface with `ChatHistoryRepositoryImpl` (persists chat to Firebase under `users/{uid}/chat_history`). `FirebaseInstance` singleton for DB access.
+- `services/voice/` — `SpeechInputManager` (wraps Android `SpeechRecognizer`), `GcpTextToSpeechService` (GCP Cloud TTS REST, Chirp 3 HD), `AudioPlayer` (in-memory MP3 via `MediaPlayer`). All three are instantiated at the composable layer via `rememberVoiceController()` in `feature/chat/ui/VoiceController.kt`.
 
 **ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. The `GenerativeAiViewModelFactory` reads `gcp.json` and `imagen-google-services.json` from assets to configure the Vertex AI Prediction client.
 
@@ -86,6 +87,7 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 - `Recipe.copyOf()` is a custom copy method (not the data class `copy()`) because Firebase deserialization requires mutable `var` fields with `@PropertyName` annotations that don't work correctly with Kotlin's generated `copy()`.
 - Chat history persistence uses a custom `Content`/`Part` data class pair in `ChatHistoryRepositoryImpl` as an intermediary for Firebase serialization, then maps to `com.google.firebase.vertexai.type.Content`.
 - OpenTelemetry spans wrap all generative AI calls (`generateChatModelResponse`, `generateJsonModelResponse`, `generateImage`) with LLM-specific attributes for Phoenix Arize eval.
+- Voice I/O (mic input, TTS playback) is wired at the composable layer, not the ViewModel layer — `OverlayChatViewModel` has no Application context, and audio I/O is transient UI state. The shared `rememberVoiceController()` composable in `VoiceController.kt` encapsulates all voice lifecycle management for both chat interfaces.
 
 ## ADB Device Interaction
 
@@ -155,6 +157,12 @@ Default emulator ports: `9000` (Realtime Database), `9099` (Authentication).
 # Requires a connected Android device or running Android emulator
 ./gradlew :vertexai:app:connectedAndroidTest
 ```
+
+### External REST API Integration Tests
+
+For features that call external REST APIs (e.g. GCP Cloud TTS), add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `GcpTextToSpeechServiceTest` for the pattern.
+
+These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
 
 ### AI Model API Calls
 
