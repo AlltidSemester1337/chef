@@ -1,7 +1,7 @@
 package com.formulae.chef.feature.collection.ui
 
-import com.formulae.chef.services.voice.sanitizeForTts
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.voice.sanitizeForTts
 
 internal fun buildRecipeTtsText(
     recipe: Recipe,

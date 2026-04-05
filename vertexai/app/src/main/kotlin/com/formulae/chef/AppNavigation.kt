@@ -8,10 +8,15 @@ import com.formulae.chef.feature.chat.ui.ChatRoute
 import com.formulae.chef.feature.collection.ui.CollectionRoute
 import com.formulae.chef.feature.useraccount.ui.SignInRoute
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 
 @Composable
-fun AppNavigation(recipeRepository: RecipeRepository, userSessionService: UserSessionService) {
+fun AppNavigation(
+    recipeRepository: RecipeRepository,
+    recipeListRepository: RecipeListRepository,
+    userSessionService: UserSessionService
+) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {
@@ -33,6 +38,7 @@ fun AppNavigation(recipeRepository: RecipeRepository, userSessionService: UserSe
         composable("collection") {
             CollectionRoute(
                 repository = recipeRepository,
+                listRepository = recipeListRepository,
                 navController = navController,
                 userSessionService = userSessionService
             )

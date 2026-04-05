@@ -34,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -79,7 +78,7 @@ fun ChefOverlay(
             viewModel.sendMessage(text)
             coroutineScope.launch { listState.scrollToItem(0) }
         },
-        lastNonPendingModelMessage = lastNonPendingModelMessage,
+        lastNonPendingModelMessage = lastNonPendingModelMessage
     )
 
     LaunchedEffect(messageCount) {
@@ -106,7 +105,7 @@ fun ChefOverlay(
                         OverlayChatBubble(
                             message = message,
                             speakingMessageId = voice.speakingMessageId,
-                            onSpeakClicked = voice.onSpeakClicked,
+                            onSpeakClicked = voice.onSpeakClicked
                         )
                     }
                 }
@@ -118,7 +117,7 @@ fun ChefOverlay(
                     coroutineScope.launch { listState.scrollToItem(0) }
                 },
                 isRecording = voice.isRecording,
-                onStartRecording = voice.onStartRecording,
+                onStartRecording = voice.onStartRecording
             )
         }
     }

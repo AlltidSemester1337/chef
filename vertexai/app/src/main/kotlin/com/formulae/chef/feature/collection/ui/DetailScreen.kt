@@ -73,6 +73,7 @@ internal fun DetailRoute(
     showIngredients: Boolean = true,
     checkedSteps: Set<Int> = emptySet(),
     currentServings: Int? = null,
+    listNames: List<String> = emptyList(),
     onToggleCookingMode: () -> Unit = {},
     onTabChanged: (Boolean) -> Unit = {},
     onStepChecked: (Int) -> Unit = {},
@@ -86,6 +87,7 @@ internal fun DetailRoute(
         showIngredients = showIngredients,
         checkedSteps = checkedSteps,
         currentServings = currentServings,
+        listNames = listNames,
         onToggleCookingMode = onToggleCookingMode,
         onTabChanged = onTabChanged,
         onStepChecked = onStepChecked,
@@ -101,6 +103,7 @@ private fun CreateDetailScreen(
     showIngredients: Boolean,
     checkedSteps: Set<Int>,
     currentServings: Int?,
+    listNames: List<String> = emptyList(),
     onToggleCookingMode: () -> Unit,
     onTabChanged: (Boolean) -> Unit,
     onStepChecked: (Int) -> Unit,
@@ -251,6 +254,15 @@ private fun CreateDetailScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = recipe.instructions.joinToString("\n"), style = MaterialTheme.typography.bodyMedium)
             }
+        }
+
+        if (listNames.isNotEmpty()) {
+            Text(
+                text = "Lists: ${listNames.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         }
 
         // Share Button

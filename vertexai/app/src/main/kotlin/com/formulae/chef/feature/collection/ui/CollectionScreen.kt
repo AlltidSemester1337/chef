@@ -40,10 +40,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,6 +58,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -80,11 +86,14 @@ import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeList
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 import com.google.firebase.auth.UserInfo
 
 enum class RecipeSource {
+    MY_LISTS,
     USER_FAVOURITES,
     ALL_RECIPES
 }
@@ -92,7 +101,10 @@ enum class RecipeSource {
 @Composable
 internal fun CollectionRoute(
     repository: RecipeRepository,
-    collectionViewModel: CollectionViewModel = viewModel(factory = CollectionViewModelFactory(repository)),
+    listRepository: RecipeListRepository,
+    collectionViewModel: CollectionViewModel = viewModel(
+        factory = CollectionViewModelFactory(repository, listRepository)
+    ),
     navController: NavController,
     userSessionService: UserSessionService
 ) {
@@ -104,6 +116,8 @@ internal fun CollectionRoute(
     val showIngredients by collectionViewModel.showIngredients.collectAsState()
     val checkedSteps by collectionViewModel.checkedSteps.collectAsState()
     val currentServings by collectionViewModel.currentServings.collectAsState()
+    val lists by collectionViewModel.lists.collectAsState()
+    val expandedListId by collectionViewModel.expandedListId.collectAsState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val currentUser by produceState<UserInfo?>(initialValue = null) {
         if (!userSessionService.anonymousSession) {
@@ -117,10 +131,14 @@ internal fun CollectionRoute(
 
     val signedIn = !userSessionService.anonymousSession && currentUser != null
 
-    var recipesSource by remember { mutableStateOf(RecipeSource.ALL_RECIPES) } // Start as null
+    var recipesSource by remember { mutableStateOf(RecipeSource.ALL_RECIPES) }
 
     LaunchedEffect(signedIn) {
         recipesSource = if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
+    }
+
+    LaunchedEffect(currentUser) {
+        collectionViewModel.setCurrentUser(currentUser?.uid)
     }
 
     val recipesSourceList = if (recipesSource == RecipeSource.USER_FAVOURITES && currentUser != null) {
@@ -129,11 +147,15 @@ internal fun CollectionRoute(
         getBrowseRecipeSourceList(collectionUiState, currentUser)
     }
 
-    // Filter the list further based on the search query (title or tags).
     val filteredRecipes = recipesSourceList.filter { recipe ->
         searchQuery.isEmpty() ||
             recipe.title.contains(searchQuery, ignoreCase = true) ||
             recipe.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
+    }
+
+    fun listNamesForRecipe(recipe: Recipe): List<String> {
+        val id = recipe.id ?: return emptyList()
+        return lists.filter { it.recipeIds.contains(id) }.map { it.name }
     }
 
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
@@ -173,20 +195,27 @@ internal fun CollectionRoute(
                     searchQuery = searchQuery,
                     filteredRecipes = filteredRecipes,
                     listState = listState,
+                    lists = lists,
+                    expandedListId = expandedListId,
+                    allRecipes = collectionUiState.recipes,
                     onSearchQueryChanged = { query -> searchQuery = query },
+                    onClickMyLists = { recipesSource = RecipeSource.MY_LISTS },
                     onClickUserFavourites = { recipesSource = RecipeSource.USER_FAVOURITES },
-                    onClickAllRecipes = {
-                        recipesSource = RecipeSource.ALL_RECIPES
-                    },
+                    onClickAllRecipes = { recipesSource = RecipeSource.ALL_RECIPES },
                     onRecipeClick = { recipe: Recipe ->
                         collectionViewModel.onRecipeSelected(recipe)
                     },
                     onRecipeRemoveClick = { recipe: Recipe ->
                         collectionViewModel.onRecipeRemove(recipe)
-                    }
+                    },
+                    onCreateList = collectionViewModel::onCreateList,
+                    onDeleteList = collectionViewModel::onDeleteList,
+                    onExpandList = collectionViewModel::onExpandList,
+                    onAddRecipeToList = collectionViewModel::onAddRecipeToList,
+                    onRemoveRecipeFromList = collectionViewModel::onRemoveRecipeFromList,
+                    listNamesForRecipe = ::listNamesForRecipe
                 )
             } else {
-                // Recipe Detail
                 DetailRoute(
                     recipe = selectedRecipe!!,
                     onBack = { collectionViewModel.clearSelectedRecipe() },
@@ -194,6 +223,7 @@ internal fun CollectionRoute(
                     showIngredients = showIngredients,
                     checkedSteps = checkedSteps,
                     currentServings = currentServings,
+                    listNames = listNamesForRecipe(selectedRecipe!!),
                     onToggleCookingMode = collectionViewModel::onToggleCookingMode,
                     onTabChanged = collectionViewModel::onTabChanged,
                     onStepChecked = collectionViewModel::onStepChecked,
@@ -242,31 +272,82 @@ private fun RecipeListRoute(
     searchQuery: String,
     filteredRecipes: List<Recipe>,
     listState: LazyListState,
+    lists: List<RecipeList>,
+    expandedListId: String?,
+    allRecipes: List<Recipe>,
     onSearchQueryChanged: (String) -> Unit,
+    onClickMyLists: () -> Unit,
     onClickUserFavourites: () -> Unit,
     onClickAllRecipes: () -> Unit,
     onRecipeClick: (Recipe) -> Unit,
-    onRecipeRemoveClick: (Recipe) -> Unit
+    onRecipeRemoveClick: (Recipe) -> Unit,
+    onCreateList: (String) -> Unit,
+    onDeleteList: (String) -> Unit,
+    onExpandList: (String?) -> Unit,
+    onAddRecipeToList: (String, String) -> Unit,
+    onRemoveRecipeFromList: (String, String) -> Unit,
+    listNamesForRecipe: (Recipe) -> List<String>
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        ToggleButtonRow(signedIn, recipesSource, onClickUserFavourites, onClickAllRecipes)
+        ToggleButtonRow(
+            signedIn = signedIn,
+            recipesSource = recipesSource,
+            onClickMyLists = onClickMyLists,
+            onClickUserFavourites = onClickUserFavourites,
+            onClickAllRecipes = onClickAllRecipes
+        )
 
         SearchBar(
             searchQuery = searchQuery,
             onSearchQueryChanged = onSearchQueryChanged
         )
-        RecipeList(
-            recipes = filteredRecipes,
-            onRecipeClick = onRecipeClick,
-            onRecipeRemove = onRecipeRemoveClick,
-            listState = listState,
-            recipeRemoveEnabled = recipesSource == RecipeSource.USER_FAVOURITES
-        )
+
+        if (recipesSource == RecipeSource.MY_LISTS) {
+            MyListsView(
+                lists = lists,
+                expandedListId = expandedListId,
+                allRecipes = allRecipes,
+                searchQuery = searchQuery,
+                onRecipeClick = onRecipeClick,
+                onCreateList = onCreateList,
+                onDeleteList = onDeleteList,
+                onExpandList = onExpandList,
+                onRemoveRecipeFromList = onRemoveRecipeFromList
+            )
+        } else {
+            val showRemove = recipesSource == RecipeSource.USER_FAVOURITES
+            var recipeForListDialog by remember { mutableStateOf<Recipe?>(null) }
+
+            RecipeList(
+                recipes = filteredRecipes,
+                onRecipeClick = onRecipeClick,
+                onRecipeRemove = onRecipeRemoveClick,
+                listState = listState,
+                recipeRemoveEnabled = showRemove,
+                listNamesForRecipe = if (showRemove) listNamesForRecipe else { _ -> emptyList() },
+                onAddToListClick = if (showRemove) {
+                    { recipe -> recipeForListDialog = recipe }
+                } else {
+                    null
+                }
+            )
+
+            recipeForListDialog?.let { recipe ->
+                AddToListDialog(
+                    recipe = recipe,
+                    lists = lists,
+                    onAddToList = { listId ->
+                        recipe.id?.let { onAddRecipeToList(it, listId) }
+                    },
+                    onRemoveFromList = { listId ->
+                        recipe.id?.let { onRemoveRecipeFromList(it, listId) }
+                    },
+                    onDismiss = { recipeForListDialog = null }
+                )
+            }
+        }
     }
 }
 
@@ -274,6 +355,7 @@ private fun RecipeListRoute(
 private fun ToggleButtonRow(
     signedIn: Boolean,
     recipesSource: RecipeSource,
+    onClickMyLists: () -> Unit,
     onClickUserFavourites: () -> Unit,
     onClickAllRecipes: () -> Unit
 ) {
@@ -281,6 +363,20 @@ private fun ToggleButtonRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        Button(
+            onClick = onClickMyLists,
+            enabled = signedIn,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (recipesSource == RecipeSource.MY_LISTS) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                }
+            )
+        ) {
+            Text("My lists")
+        }
+
         Button(
             onClick = onClickUserFavourites,
             enabled = signedIn,
@@ -305,7 +401,7 @@ private fun ToggleButtonRow(
                 }
             )
         ) {
-            Text("Browse all recipes")
+            Text("Browse all")
         }
     }
 }
@@ -329,12 +425,290 @@ fun SearchBar(
 }
 
 @Composable
+private fun MyListsView(
+    lists: List<RecipeList>,
+    expandedListId: String?,
+    allRecipes: List<Recipe>,
+    searchQuery: String,
+    onRecipeClick: (Recipe) -> Unit,
+    onCreateList: (String) -> Unit,
+    onDeleteList: (String) -> Unit,
+    onExpandList: (String?) -> Unit,
+    onRemoveRecipeFromList: (String, String) -> Unit
+) {
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var listToDelete by remember { mutableStateOf<RecipeList?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(onClick = { showCreateDialog = true }) {
+                Text("+ New List")
+            }
+        }
+
+        if (lists.isEmpty()) {
+            Text(
+                text = "No lists yet. Create your first list!",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize(Alignment.Center),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(lists, key = { it.id ?: it.name }) { list ->
+                    val isExpanded = list.id == expandedListId
+                    val recipesInList = allRecipes.filter { recipe ->
+                        list.recipeIds.contains(recipe.id)
+                    }.filter { recipe ->
+                        searchQuery.isEmpty() ||
+                            recipe.title.contains(searchQuery, ignoreCase = true) ||
+                            recipe.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
+                    }
+
+                    ListHeader(
+                        list = list,
+                        isExpanded = isExpanded,
+                        recipeCount = list.recipeIds.size,
+                        onExpand = { onExpandList(list.id) },
+                        onDelete = { listToDelete = list }
+                    )
+
+                    if (isExpanded) {
+                        if (searchQuery.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            ) {
+                                SuggestionChip(
+                                    onClick = {},
+                                    label = {
+                                        Text(
+                                            list.name,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        if (recipesInList.isEmpty()) {
+                            val emptyText = if (searchQuery.isEmpty()) {
+                                "No recipes in this list yet."
+                            } else {
+                                "No matching recipes."
+                            }
+                            Text(
+                                text = emptyText,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            recipesInList.forEach { recipe ->
+                                RecipeItem(
+                                    recipe = recipe,
+                                    onRecipeClick = onRecipeClick,
+                                    onRecipeRemove = {
+                                        val listId = list.id ?: return@RecipeItem
+                                        val recipeId = recipe.id ?: return@RecipeItem
+                                        onRemoveRecipeFromList(recipeId, listId)
+                                    },
+                                    recipeRemoveEnabled = true,
+                                    painter = rememberAsyncImagePainter(recipe.imageUrl),
+                                    recipeLists = emptyList(),
+                                    onAddToListClick = null
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        CreateListDialog(
+            onConfirm = { name ->
+                onCreateList(name)
+                showCreateDialog = false
+            },
+            onDismiss = { showCreateDialog = false }
+        )
+    }
+
+    listToDelete?.let { list ->
+        ConfirmDeleteListDialog(
+            listName = list.name,
+            onConfirm = {
+                list.id?.let { onDeleteList(it) }
+                listToDelete = null
+            },
+            onDismiss = { listToDelete = null }
+        )
+    }
+}
+
+@Composable
+private fun ListHeader(
+    list: RecipeList,
+    isExpanded: Boolean,
+    recipeCount: Int,
+    onExpand: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clickable { onExpand() },
+        elevation = CardDefaults.elevatedCardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = list.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "$recipeCount recipe${if (recipeCount != 1) "s" else ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete list",
+                    tint = Color.Red
+                )
+            }
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (isExpanded) "Collapse" else "Expand"
+            )
+        }
+    }
+}
+
+@Composable
+private fun CreateListDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New List") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("List name") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun ConfirmDeleteListDialog(
+    listName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete list?") },
+        text = { Text("Delete \"$listName\"? This will not remove the recipes themselves.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Delete", color = Color.Red) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun AddToListDialog(
+    recipe: Recipe,
+    lists: List<RecipeList>,
+    onAddToList: (String) -> Unit,
+    onRemoveFromList: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add to list") },
+        text = {
+            if (lists.isEmpty()) {
+                Text("No lists yet — create one in the My lists tab.")
+            } else {
+                Column {
+                    lists.forEach { list ->
+                        val inList = list.recipeIds.contains(recipe.id)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val listId = list.id ?: return@clickable
+                                    if (inList) onRemoveFromList(listId) else onAddToList(listId)
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = inList,
+                                onCheckedChange = { checked ->
+                                    val listId = list.id ?: return@Checkbox
+                                    if (checked) onAddToList(listId) else onRemoveFromList(listId)
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(list.name, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
+}
+
+@Composable
 fun RecipeList(
     recipes: List<Recipe>,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeRemove: (Recipe) -> Unit,
     listState: LazyListState,
-    recipeRemoveEnabled: Boolean
+    recipeRemoveEnabled: Boolean,
+    listNamesForRecipe: (Recipe) -> List<String> = { emptyList() },
+    onAddToListClick: ((Recipe) -> Unit)? = null
 ) {
     if (recipes.isEmpty()) {
         Text(
@@ -355,7 +729,9 @@ fun RecipeList(
                     onRecipeClick = onRecipeClick,
                     onRecipeRemove = onRecipeRemove,
                     recipeRemoveEnabled = recipeRemoveEnabled,
-                    painter = rememberAsyncImagePainter(recipe.imageUrl)
+                    painter = rememberAsyncImagePainter(recipe.imageUrl),
+                    recipeLists = listNamesForRecipe(recipe),
+                    onAddToListClick = onAddToListClick?.let { callback -> { callback(recipe) } }
                 )
             }
         }
@@ -369,7 +745,9 @@ fun RecipeItem(
     onRecipeClick: (Recipe) -> Unit,
     onRecipeRemove: (Recipe) -> Unit,
     recipeRemoveEnabled: Boolean,
-    painter: Painter
+    painter: Painter,
+    recipeLists: List<String> = emptyList(),
+    onAddToListClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -400,11 +778,20 @@ fun RecipeItem(
                         .weight(1f)
                         .align(Alignment.CenterVertically)
                 )
+                if (onAddToListClick != null) {
+                    IconButton(
+                        onClick = onAddToListClick,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlaylistAdd,
+                            contentDescription = "Add to list"
+                        )
+                    }
+                }
                 if (recipeRemoveEnabled) {
                     IconButton(
-                        onClick = {
-                            onRecipeRemove(recipe)
-                        },
+                        onClick = { onRecipeRemove(recipe) },
                         modifier = Modifier.align(Alignment.CenterVertically)
                     ) {
                         Icon(
@@ -415,13 +802,25 @@ fun RecipeItem(
                     }
                 }
             }
-            if (recipe.tags.isNotEmpty()) {
+            if (recipe.tags.isNotEmpty() || recipeLists.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     recipe.tags.forEach { tag ->
                         SuggestionChip(
                             onClick = {},
                             label = { Text(text = tag, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                    recipeLists.forEach { listName ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = listName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         )
                     }
                 }
@@ -436,14 +835,24 @@ fun PreviewRecipeListRoute() {
     RecipeListRoute(
         signedIn = true,
         recipesSource = RecipeSource.USER_FAVOURITES,
+        onClickMyLists = {},
         onClickUserFavourites = { },
-        onClickAllRecipes = { },
+        onClickAllRecipes = {},
         searchQuery = "Search Query",
         onSearchQueryChanged = { },
         listState = rememberLazyListState(),
         filteredRecipes = listOf(Recipe(title = "West African Peanut stew"), Recipe(title = "Pasta Carbonara")),
         onRecipeClick = {},
-        onRecipeRemoveClick = {}
+        onRecipeRemoveClick = {},
+        lists = emptyList(),
+        expandedListId = null,
+        allRecipes = emptyList(),
+        onCreateList = {},
+        onDeleteList = {},
+        onExpandList = {},
+        onAddRecipeToList = { _, _ -> },
+        onRemoveRecipeFromList = { _, _ -> },
+        listNamesForRecipe = { emptyList() }
     )
 }
 
@@ -455,6 +864,8 @@ fun PreviewRecipeItemWithImage() {
         onRecipeRemove = {},
         recipe = Recipe(title = "Pasta Carbonara", imageUrl = "whatever"),
         recipeRemoveEnabled = true,
-        painter = painterResource(id = R.drawable.test)
+        painter = painterResource(id = R.drawable.test),
+        recipeLists = listOf("Work week"),
+        onAddToListClick = {}
     )
 }
