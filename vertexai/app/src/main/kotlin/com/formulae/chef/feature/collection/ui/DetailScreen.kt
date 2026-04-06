@@ -297,6 +297,10 @@ private fun CreateDetailScreen(
             )
         }
 
+        recipe.tipsAndTricks?.takeIf { it.isNotBlank() }?.let { tips ->
+            TipsSection(tipsAndTricks = tips)
+        }
+
         // Share Button
         Row(
             modifier = Modifier
@@ -388,4 +392,41 @@ fun PreviewCreateDetailScreen() {
         onStepUnchecked = {},
         onServingsChanged = {}
     )
+}
+
+internal fun parseTips(tipsAndTricks: String): List<String> {
+    val lines = tipsAndTricks.lines()
+    val tips = mutableListOf<String>()
+    val current = StringBuilder()
+    for (line in lines) {
+        when {
+            line.startsWith("- ") -> {
+                if (current.isNotEmpty()) tips.add(current.toString().trim())
+                current.clear()
+                current.append(line.removePrefix("- ").trim())
+            }
+            line.isNotBlank() -> {
+                if (current.isNotEmpty()) current.append(" ")
+                current.append(line.trim())
+            }
+        }
+    }
+    if (current.isNotEmpty()) tips.add(current.toString().trim())
+    if (tips.isEmpty() && tipsAndTricks.isNotBlank()) tips.add(tipsAndTricks.trim())
+    return tips
+}
+
+@Composable
+private fun TipsSection(tipsAndTricks: String) {
+    val tips = parseTips(tipsAndTricks)
+    Text(text = "Tips", style = MaterialTheme.typography.headlineSmall)
+    Spacer(modifier = Modifier.height(8.dp))
+    tips.forEach { tip ->
+        Text(
+            text = "• $tip",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
 }

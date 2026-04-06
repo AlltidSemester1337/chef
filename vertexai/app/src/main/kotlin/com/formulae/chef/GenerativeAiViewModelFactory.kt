@@ -57,7 +57,7 @@ private const val DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS =
       "ingredients": [{"name": "string", "quantity": "numeric string only, e.g. '500', '2', '0.5', '1/2' — never include the unit here", "unit": "string"}],
       "difficulty": "EASY | MEDIUM | HARD",
       "instructions": ["string, one step per element"],
-      "tipsAndTricks": "string",
+      "tipsAndTricks": "string, formatted as '- ' prefixed bullet lines, one tip per line starting with '- '",
       "tags": ["string"]
     }
   ]
