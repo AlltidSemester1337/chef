@@ -91,10 +91,14 @@ internal fun ChatRoute(
         onDispose { chatViewModel.onNavigateAway() }
     }
 
+    var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
+
     if (selectedRecipe != null) {
         DetailRoute(
             recipe = selectedRecipe!!,
-            onBack = { chatViewModel.clearSelectedRecipe() }
+            onBack = { chatViewModel.clearSelectedRecipe() },
+            showIngredients = showIngredients,
+            onTabChanged = { showIngredients = it }
         )
     } else {
         ChatContent(chatViewModel)
