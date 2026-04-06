@@ -16,6 +16,7 @@
 
 package com.formulae.chef.feature.collection.ui
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -63,6 +64,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -72,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,8 +82,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.AskChefVariantViewModelFactory
 import com.formulae.chef.OverlayChatViewModelFactory
 import com.formulae.chef.R
+import com.formulae.chef.feature.chat.AskChefVariantViewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.CollectionViewModel
@@ -162,9 +167,36 @@ internal fun CollectionRoute(
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
     var showChefOverlay by remember { mutableStateOf(false) }
 
+    val askChefVariantViewModel: AskChefVariantViewModel = viewModel(factory = AskChefVariantViewModelFactory)
+    val askChefState by askChefVariantViewModel.state.collectAsState()
+    var editBaseRecipe by remember { mutableStateOf<Recipe?>(null) }
+    val context = LocalContext.current
+
     LaunchedEffect(selectedRecipe) {
         showChefOverlay = false
         overlayViewModel.reset()
+    }
+
+    LaunchedEffect(isEditingVariant) {
+        if (isEditingVariant) editBaseRecipe = null
+    }
+
+    LaunchedEffect(askChefState) {
+        when (val s = askChefState) {
+            is AskChefVariantViewModel.State.Success -> {
+                editBaseRecipe = s.recipe
+                askChefVariantViewModel.reset()
+            }
+            is AskChefVariantViewModel.State.Error -> {
+                Toast.makeText(
+                    context,
+                    "Sorry, Chef couldn't adjust that. Try editing manually.",
+                    Toast.LENGTH_LONG
+                ).show()
+                askChefVariantViewModel.reset()
+            }
+            else -> {}
+        }
     }
 
     BackHandler {
@@ -217,11 +249,21 @@ internal fun CollectionRoute(
                     listNamesForRecipe = ::listNamesForRecipe
                 )
             } else if (isEditingVariant && displayedRecipe != null) {
-                EditVariantScreen(
-                    baseRecipe = displayedRecipe!!,
-                    onSave = collectionViewModel::onSaveVariant,
-                    onCancel = collectionViewModel::onCancelEditVariant
-                )
+                val baseForEdit = editBaseRecipe ?: displayedRecipe!!
+                key(editBaseRecipe) {
+                    EditVariantScreen(
+                        baseRecipe = baseForEdit,
+                        isAiLoading = askChefState is AskChefVariantViewModel.State.Loading,
+                        onAskChef = { prompt ->
+                            askChefVariantViewModel.adjustRecipe(baseForEdit, prompt)
+                        },
+                        onSave = collectionViewModel::onSaveVariant,
+                        onCancel = {
+                            collectionViewModel.onCancelEditVariant()
+                            askChefVariantViewModel.reset()
+                        }
+                    )
+                }
             } else {
                 DetailRoute(
                     recipe = displayedRecipe ?: selectedRecipe!!,

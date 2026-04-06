@@ -1,6 +1,11 @@
 package com.formulae.chef.feature.collection.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,37 +19,52 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.voice.SpeechInputManager
 
 @Composable
 internal fun EditVariantScreen(
     baseRecipe: Recipe,
+    isAiLoading: Boolean = false,
+    onAskChef: ((String) -> Unit)? = null,
     onSave: (label: String, recipe: Recipe) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -75,6 +95,8 @@ internal fun EditVariantScreen(
         )
     }
 
+    var showAskChefDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -92,6 +114,26 @@ internal fun EditVariantScreen(
             keyboardOptions = KeyboardOptions.Default.copy(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (onAskChef != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            if (isAiLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Chef is adjusting the recipe…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                OutlinedButton(
+                    onClick = { showAskChefDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Ask Chef to adjust")
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Text("Recipe Details", style = MaterialTheme.typography.titleMedium)
@@ -330,6 +372,107 @@ internal fun EditVariantScreen(
 
         Spacer(modifier = Modifier.height(30.dp))
     }
+
+    if (showAskChefDialog && onAskChef != null) {
+        AskChefDialog(
+            onSubmit = { prompt ->
+                showAskChefDialog = false
+                onAskChef(prompt)
+            },
+            onDismiss = { showAskChefDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun AskChefDialog(
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var prompt by remember { mutableStateOf("") }
+
+    val speechManager = remember { SpeechInputManager(context) }
+    DisposableEffect(Unit) { onDispose { speechManager.destroy() } }
+
+    val isRecording by speechManager.isListening.collectAsState()
+    val transcript by speechManager.transcript.collectAsState()
+    val speechError by speechManager.error.collectAsState()
+
+    LaunchedEffect(transcript) {
+        val text = transcript ?: return@LaunchedEffect
+        prompt = text
+        speechManager.clearTranscript()
+    }
+
+    LaunchedEffect(speechError) {
+        val error = speechError ?: return@LaunchedEffect
+        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        speechManager.clearError()
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            speechManager.startListening()
+        } else Toast.makeText(context, "Microphone permission required for voice input", Toast.LENGTH_SHORT).show()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ask Chef to adjust") },
+        text = {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = prompt,
+                        onValueChange = { prompt = it },
+                        label = { Text("How should Chef adjust this recipe?") },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = {
+                            val granted = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                speechManager.startListening()
+                            } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    ) {
+                        if (isRecording) {
+                            CircularProgressIndicator(modifier = Modifier.padding(8.dp))
+                        } else {
+                            Icon(
+                                imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
+                                contentDescription = if (isRecording) "Recording…" else "Hold to speak",
+                                tint = if (isRecording) MaterialTheme.colorScheme.error else Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (prompt.isNotBlank()) onSubmit(prompt.trim()) },
+                enabled = prompt.isNotBlank()
+            ) {
+                Text("Ask Chef")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
