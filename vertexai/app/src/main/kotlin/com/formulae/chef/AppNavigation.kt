@@ -11,15 +11,15 @@ import com.formulae.chef.feature.useraccount.ui.SignInRoute
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
-import com.formulae.chef.services.persistence.RecipeVariantRepositoryImpl
+import com.formulae.chef.services.persistence.RecipeVariantRepository
 
 @Composable
 fun AppNavigation(
     recipeRepository: RecipeRepository,
     recipeListRepository: RecipeListRepository,
+    recipeVariantRepository: RecipeVariantRepository,
     userSessionService: UserSessionService
 ) {
-    val recipeVariantRepository = RecipeVariantRepositoryImpl()
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {

@@ -4,7 +4,7 @@ import com.formulae.chef.feature.model.RecipeVariant
 
 interface RecipeVariantRepository {
     suspend fun loadVariantsForRecipe(recipeId: String): List<RecipeVariant>
-    fun saveVariant(recipeId: String, variant: RecipeVariant)
+    suspend fun saveVariant(recipeId: String, variant: RecipeVariant): String
     fun updateVariantIsPinned(recipeId: String, variantId: String, isPinned: Boolean)
     fun deleteVariant(recipeId: String, variantId: String)
 }

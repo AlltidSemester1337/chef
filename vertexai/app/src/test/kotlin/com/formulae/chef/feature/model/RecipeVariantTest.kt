@@ -3,6 +3,7 @@ package com.formulae.chef.feature.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RecipeVariantTest {
@@ -29,7 +30,7 @@ class RecipeVariantTest {
     @Test
     fun `isPinned can be set to true`() {
         val variant = RecipeVariant(isPinned = true)
-        assert(variant.isPinned)
+        assertTrue(variant.isPinned)
     }
 
     @Test

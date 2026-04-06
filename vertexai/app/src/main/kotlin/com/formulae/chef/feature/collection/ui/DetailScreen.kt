@@ -161,17 +161,19 @@ private fun CreateDetailScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        if (isOwner || variants.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-        VariantPickerRow(
-            variants = variants,
-            selectedVariantId = selectedVariantId,
-            isOwner = isOwner,
-            onVariantSelected = onVariantSelected,
-            onPinVariant = onPinVariant,
-            onDeleteVariant = onDeleteVariant,
-            onCreateVariant = onStartCreateVariant
-        )
+            VariantPickerRow(
+                variants = variants,
+                selectedVariantId = selectedVariantId,
+                isOwner = isOwner,
+                onVariantSelected = onVariantSelected,
+                onPinVariant = onPinVariant,
+                onDeleteVariant = onDeleteVariant,
+                onCreateVariant = onStartCreateVariant
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

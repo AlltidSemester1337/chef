@@ -295,17 +295,11 @@ class CollectionViewModel(
             instructions = recipe.instructions,
             tipsAndTricks = recipe.tipsAndTricks
         )
-        variantRepository.saveVariant(recipeId, variant)
-        _isEditingVariant.value = false
-
-        // Reload to get Firebase-assigned id
         viewModelScope.launch {
-            val reloaded = variantRepository.loadVariantsForRecipe(recipeId)
-            _variants.value = reloaded
-            val newVariant = reloaded
-                .filter { it.label == label }
-                .maxByOrNull { it.createdAt }
-            _selectedVariantId.value = newVariant?.id
+            val newId = variantRepository.saveVariant(recipeId, variant)
+            _variants.value = _variants.value + variant.copy(id = newId)
+            _selectedVariantId.value = newId
+            _isEditingVariant.value = false
         }
     }
 

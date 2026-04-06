@@ -23,17 +23,13 @@ class RecipeVariantRepositoryImpl(
             }
     }
 
-    override fun saveVariant(recipeId: String, variant: RecipeVariant) {
+    override suspend fun saveVariant(recipeId: String, variant: RecipeVariant): String {
         val ref = database.getReference(RECIPE_VARIANTS_KEY).child(recipeId)
         val newRef = ref.push()
-        val variantWithId = variant.copy(id = newRef.key)
-        newRef.setValue(variantWithId).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d("FirebaseDB", "Variant ${newRef.key} saved successfully")
-            } else {
-                Log.e("FirebaseDB", "Failed to save variant", task.exception)
-            }
-        }
+        val id = newRef.key ?: ""
+        newRef.setValue(variant.copy(id = id)).await()
+        Log.d("FirebaseDB", "Variant $id saved successfully")
+        return id
     }
 
     override fun updateVariantIsPinned(recipeId: String, variantId: String, isPinned: Boolean) {

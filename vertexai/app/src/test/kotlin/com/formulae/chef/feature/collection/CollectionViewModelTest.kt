@@ -701,9 +701,11 @@ private class FakeRecipeVariantRepository(
     override suspend fun loadVariantsForRecipe(recipeId: String): List<RecipeVariant> =
         data[recipeId]?.toList() ?: emptyList()
 
-    override fun saveVariant(recipeId: String, variant: RecipeVariant) {
-        val stored = if (autoAssignIds) variant.copy(id = "generated-${idCounter++}") else variant
+    override suspend fun saveVariant(recipeId: String, variant: RecipeVariant): String {
+        val id = if (autoAssignIds) "generated-${idCounter++}" else variant.id ?: ""
+        val stored = variant.copy(id = id)
         data.getOrPut(recipeId) { mutableListOf() }.add(stored)
+        return id
     }
 
     override fun updateVariantIsPinned(recipeId: String, variantId: String, isPinned: Boolean) {
