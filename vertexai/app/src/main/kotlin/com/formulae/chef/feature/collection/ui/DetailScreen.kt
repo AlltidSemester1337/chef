@@ -55,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.BuildConfig
+import com.formulae.chef.feature.collection.parseTips
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
@@ -297,6 +298,10 @@ private fun CreateDetailScreen(
             )
         }
 
+        recipe.tipsAndTricks?.takeIf { it.isNotBlank() }?.let { tips ->
+            TipsSection(tipsAndTricks = tips)
+        }
+
         // Share Button
         Row(
             modifier = Modifier
@@ -388,4 +393,19 @@ fun PreviewCreateDetailScreen() {
         onStepUnchecked = {},
         onServingsChanged = {}
     )
+}
+
+@Composable
+private fun TipsSection(tipsAndTricks: String) {
+    val tips = parseTips(tipsAndTricks)
+    Text(text = "Tips", style = MaterialTheme.typography.headlineSmall)
+    Spacer(modifier = Modifier.height(8.dp))
+    tips.forEach { tip ->
+        Text(
+            text = "• $tip",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
 }
