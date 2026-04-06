@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -452,9 +451,9 @@ private fun AskChefDialog(
                             CircularProgressIndicator(modifier = Modifier.padding(8.dp))
                         } else {
                             Icon(
-                                imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
-                                contentDescription = if (isRecording) "Recording…" else "Hold to speak",
-                                tint = if (isRecording) MaterialTheme.colorScheme.error else Color.Gray
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Hold to speak",
+                                tint = Color.Gray
                             )
                         }
                     }

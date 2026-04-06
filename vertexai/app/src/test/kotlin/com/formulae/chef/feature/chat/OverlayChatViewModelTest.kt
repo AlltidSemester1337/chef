@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.chat
 
+import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Recipe
 import org.junit.Assert.assertFalse
@@ -25,67 +26,67 @@ class OverlayChatViewModelTest {
 
     @Test
     fun buildRecipeContextText_includesTitle() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("Pasta Carbonara"))
     }
 
     @Test
     fun buildRecipeContextText_includesSummary() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("Classic Italian pasta dish."))
     }
 
     @Test
     fun buildRecipeContextText_includesIngredients() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("spaghetti"))
         assertTrue(result.contains("guanciale"))
     }
 
     @Test
     fun buildRecipeContextText_includesInstructions() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("Boil pasta"))
         assertTrue(result.contains("Fry guanciale"))
     }
 
     @Test
     fun buildRecipeContextText_includesTips() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("pasta water"))
     }
 
     @Test
     fun buildRecipeContextText_withNoIngredients_omitsIngredientSection() {
         val recipe = sampleRecipe.copyOf(ingredients = emptyList())
-        val result = OverlayChatViewModel.buildRecipeContextText(recipe)
+        val result = buildRecipeContextText(recipe)
         assertFalse(result.contains("Ingredients:"))
     }
 
     @Test
     fun buildRecipeContextText_withNoInstructions_omitsInstructionSection() {
         val recipe = sampleRecipe.copyOf(instructions = emptyList())
-        val result = OverlayChatViewModel.buildRecipeContextText(recipe)
+        val result = buildRecipeContextText(recipe)
         assertFalse(result.contains("Instructions:"))
     }
 
     @Test
     fun buildRecipeContextText_withBlankTips_omitsTipsSection() {
         val recipe = sampleRecipe.copyOf(tipsAndTricks = "")
-        val result = OverlayChatViewModel.buildRecipeContextText(recipe)
+        val result = buildRecipeContextText(recipe)
         assertFalse(result.contains("Tips:"))
     }
 
     @Test
     fun buildRecipeContextText_withNullTips_omitsTipsSection() {
         val recipe = sampleRecipe.copyOf(tipsAndTricks = null)
-        val result = OverlayChatViewModel.buildRecipeContextText(recipe)
+        val result = buildRecipeContextText(recipe)
         assertFalse(result.contains("Tips:"))
     }
 
     @Test
     fun buildRecipeContextText_instructionsAreNumbered() {
-        val result = OverlayChatViewModel.buildRecipeContextText(sampleRecipe)
+        val result = buildRecipeContextText(sampleRecipe)
         assertTrue(result.contains("1."))
         assertTrue(result.contains("2."))
         assertTrue(result.contains("3."))
