@@ -55,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.BuildConfig
+import com.formulae.chef.feature.collection.parseTips
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
@@ -392,28 +393,6 @@ fun PreviewCreateDetailScreen() {
         onStepUnchecked = {},
         onServingsChanged = {}
     )
-}
-
-internal fun parseTips(tipsAndTricks: String): List<String> {
-    val lines = tipsAndTricks.lines()
-    val tips = mutableListOf<String>()
-    val current = StringBuilder()
-    for (line in lines) {
-        when {
-            line.startsWith("- ") -> {
-                if (current.isNotEmpty()) tips.add(current.toString().trim())
-                current.clear()
-                current.append(line.removePrefix("- ").trim())
-            }
-            line.isNotBlank() -> {
-                if (current.isNotEmpty()) current.append(" ")
-                current.append(line.trim())
-            }
-        }
-    }
-    if (current.isNotEmpty()) tips.add(current.toString().trim())
-    if (tips.isEmpty() && tipsAndTricks.isNotBlank()) tips.add(tipsAndTricks.trim())
-    return tips
 }
 
 @Composable

@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.collection.ui
 
+import com.formulae.chef.feature.collection.parseTips
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,5 +74,16 @@ class ParseTipsTest {
         assertEquals("First tip", result[0])
         assertEquals("Second tip", result[1])
         assertEquals("Third tip", result[2])
+    }
+
+    @Test
+    fun `dash without space does not start a new bullet`() {
+        val input = "-tip without space\n-another without space"
+
+        val result = parseTips(input)
+
+        // Both lines accumulate as one entry (no '- ' prefix to split on)
+        assertEquals(1, result.size)
+        assertEquals("-tip without space -another without space", result[0])
     }
 }
