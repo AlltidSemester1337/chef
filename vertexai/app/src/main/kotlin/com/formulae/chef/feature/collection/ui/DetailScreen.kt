@@ -83,6 +83,7 @@ internal fun DetailRoute(
     onServingsChanged: (Int) -> Unit = {},
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
+    onDeleteVariant: (String) -> Unit = {},
     onStartCreateVariant: () -> Unit = {}
 ) {
     BackHandler { onBack() }
@@ -103,6 +104,7 @@ internal fun DetailRoute(
         onServingsChanged = onServingsChanged,
         onVariantSelected = onVariantSelected,
         onPinVariant = onPinVariant,
+        onDeleteVariant = onDeleteVariant,
         onStartCreateVariant = onStartCreateVariant
     )
 }
@@ -125,6 +127,7 @@ private fun CreateDetailScreen(
     onServingsChanged: (Int) -> Unit,
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
+    onDeleteVariant: (String) -> Unit = {},
     onStartCreateVariant: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -166,6 +169,7 @@ private fun CreateDetailScreen(
             isOwner = isOwner,
             onVariantSelected = onVariantSelected,
             onPinVariant = onPinVariant,
+            onDeleteVariant = onDeleteVariant,
             onCreateVariant = onStartCreateVariant
         )
 

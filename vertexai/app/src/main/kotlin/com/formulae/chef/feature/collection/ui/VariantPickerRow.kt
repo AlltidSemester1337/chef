@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +36,7 @@ internal fun VariantPickerRow(
     isOwner: Boolean,
     onVariantSelected: (String?) -> Unit,
     onPinVariant: (String?) -> Unit,
+    onDeleteVariant: (String) -> Unit,
     onCreateVariant: () -> Unit
 ) {
     val sortedVariants = variants.sortedBy { it.label }
@@ -109,27 +111,39 @@ internal fun VariantPickerRow(
                         },
                         trailingIcon = if (isOwner) {
                             {
-                                IconButton(onClick = {
-                                    if (variant.isPinned) {
-                                        onPinVariant(null)
-                                    } else {
-                                        variant.id?.let { onPinVariant(it) }
-                                    }
-                                    expanded = false
-                                }) {
-                                    Icon(
-                                        imageVector = if (variant.isPinned) {
-                                            Icons.Filled.Star
+                                Row {
+                                    IconButton(onClick = {
+                                        if (variant.isPinned) {
+                                            onPinVariant(null)
                                         } else {
-                                            Icons.Outlined.StarOutline
-                                        },
-                                        contentDescription = if (variant.isPinned) "Pinned" else "Pin this variant",
-                                        tint = if (variant.isPinned) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                            variant.id?.let { onPinVariant(it) }
                                         }
-                                    )
+                                        expanded = false
+                                    }) {
+                                        Icon(
+                                            imageVector = if (variant.isPinned) {
+                                                Icons.Filled.Star
+                                            } else {
+                                                Icons.Outlined.StarOutline
+                                            },
+                                            contentDescription = if (variant.isPinned) "Pinned" else "Pin this variant",
+                                            tint = if (variant.isPinned) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        variant.id?.let { onDeleteVariant(it) }
+                                        expanded = false
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete variant",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         } else {

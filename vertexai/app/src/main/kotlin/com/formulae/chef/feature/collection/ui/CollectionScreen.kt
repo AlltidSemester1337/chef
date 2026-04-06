@@ -241,6 +241,7 @@ internal fun CollectionRoute(
                     onServingsChanged = collectionViewModel::onServingsChanged,
                     onVariantSelected = collectionViewModel::onVariantSelected,
                     onPinVariant = collectionViewModel::onPinVariant,
+                    onDeleteVariant = collectionViewModel::onDeleteVariant,
                     onStartCreateVariant = collectionViewModel::onStartCreateVariant
                 )
             }
