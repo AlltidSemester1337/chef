@@ -79,7 +79,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.formulae.chef.CollectionViewModelFactory
 import com.formulae.chef.OverlayChatViewModelFactory
 import com.formulae.chef.R
 import com.formulae.chef.feature.chat.OverlayChatViewModel
@@ -102,9 +101,7 @@ enum class RecipeSource {
 internal fun CollectionRoute(
     repository: RecipeRepository,
     listRepository: RecipeListRepository,
-    collectionViewModel: CollectionViewModel = viewModel(
-        factory = CollectionViewModelFactory(repository, listRepository)
-    ),
+    collectionViewModel: CollectionViewModel,
     navController: NavController,
     userSessionService: UserSessionService
 ) {
@@ -112,12 +109,16 @@ internal fun CollectionRoute(
     val isLoading by collectionViewModel.isLoading.collectAsState()
     val listState = rememberLazyListState()
     val selectedRecipe by collectionViewModel.selectedRecipe.collectAsState()
+    val displayedRecipe by collectionViewModel.displayedRecipe.collectAsState()
     val isCookingMode by collectionViewModel.isCookingMode.collectAsState()
     val showIngredients by collectionViewModel.showIngredients.collectAsState()
     val checkedSteps by collectionViewModel.checkedSteps.collectAsState()
     val currentServings by collectionViewModel.currentServings.collectAsState()
     val lists by collectionViewModel.lists.collectAsState()
     val expandedListId by collectionViewModel.expandedListId.collectAsState()
+    val variants by collectionViewModel.variants.collectAsState()
+    val selectedVariantId by collectionViewModel.selectedVariantId.collectAsState()
+    val isEditingVariant by collectionViewModel.isEditingVariant.collectAsState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val currentUser by produceState<UserInfo?>(initialValue = null) {
         if (!userSessionService.anonymousSession) {
@@ -215,20 +216,33 @@ internal fun CollectionRoute(
                     onRemoveRecipeFromList = collectionViewModel::onRemoveRecipeFromList,
                     listNamesForRecipe = ::listNamesForRecipe
                 )
+            } else if (isEditingVariant && displayedRecipe != null) {
+                EditVariantScreen(
+                    baseRecipe = displayedRecipe!!,
+                    onSave = collectionViewModel::onSaveVariant,
+                    onCancel = collectionViewModel::onCancelEditVariant
+                )
             } else {
                 DetailRoute(
-                    recipe = selectedRecipe!!,
+                    recipe = displayedRecipe ?: selectedRecipe!!,
                     onBack = { collectionViewModel.clearSelectedRecipe() },
                     isCookingMode = isCookingMode,
                     showIngredients = showIngredients,
                     checkedSteps = checkedSteps,
                     currentServings = currentServings,
                     listNames = listNamesForRecipe(selectedRecipe!!),
+                    variants = variants,
+                    selectedVariantId = selectedVariantId,
+                    isOwner = collectionViewModel.isRecipeOwner,
                     onToggleCookingMode = collectionViewModel::onToggleCookingMode,
                     onTabChanged = collectionViewModel::onTabChanged,
                     onStepChecked = collectionViewModel::onStepChecked,
                     onStepUnchecked = collectionViewModel::onStepUnchecked,
-                    onServingsChanged = collectionViewModel::onServingsChanged
+                    onServingsChanged = collectionViewModel::onServingsChanged,
+                    onVariantSelected = collectionViewModel::onVariantSelected,
+                    onPinVariant = collectionViewModel::onPinVariant,
+                    onDeleteVariant = collectionViewModel::onDeleteVariant,
+                    onStartCreateVariant = collectionViewModel::onStartCreateVariant
                 )
             }
         }

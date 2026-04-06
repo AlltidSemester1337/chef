@@ -59,6 +59,7 @@ import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeVariant
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.buildTtsFlow
@@ -72,11 +73,18 @@ internal fun DetailRoute(
     checkedSteps: Set<Int> = emptySet(),
     currentServings: Int? = null,
     listNames: List<String> = emptyList(),
+    variants: List<RecipeVariant> = emptyList(),
+    selectedVariantId: String? = null,
+    isOwner: Boolean = false,
     onToggleCookingMode: () -> Unit = {},
     onTabChanged: (Boolean) -> Unit = {},
     onStepChecked: (Int) -> Unit = {},
     onStepUnchecked: (Int) -> Unit = {},
-    onServingsChanged: (Int) -> Unit = {}
+    onServingsChanged: (Int) -> Unit = {},
+    onVariantSelected: (String?) -> Unit = {},
+    onPinVariant: (String?) -> Unit = {},
+    onDeleteVariant: (String) -> Unit = {},
+    onStartCreateVariant: () -> Unit = {}
 ) {
     BackHandler { onBack() }
     CreateDetailScreen(
@@ -86,11 +94,18 @@ internal fun DetailRoute(
         checkedSteps = checkedSteps,
         currentServings = currentServings,
         listNames = listNames,
+        variants = variants,
+        selectedVariantId = selectedVariantId,
+        isOwner = isOwner,
         onToggleCookingMode = onToggleCookingMode,
         onTabChanged = onTabChanged,
         onStepChecked = onStepChecked,
         onStepUnchecked = onStepUnchecked,
-        onServingsChanged = onServingsChanged
+        onServingsChanged = onServingsChanged,
+        onVariantSelected = onVariantSelected,
+        onPinVariant = onPinVariant,
+        onDeleteVariant = onDeleteVariant,
+        onStartCreateVariant = onStartCreateVariant
     )
 }
 
@@ -102,11 +117,18 @@ private fun CreateDetailScreen(
     checkedSteps: Set<Int>,
     currentServings: Int?,
     listNames: List<String> = emptyList(),
+    variants: List<RecipeVariant> = emptyList(),
+    selectedVariantId: String? = null,
+    isOwner: Boolean = false,
     onToggleCookingMode: () -> Unit,
     onTabChanged: (Boolean) -> Unit,
     onStepChecked: (Int) -> Unit,
     onStepUnchecked: (Int) -> Unit,
-    onServingsChanged: (Int) -> Unit
+    onServingsChanged: (Int) -> Unit,
+    onVariantSelected: (String?) -> Unit = {},
+    onPinVariant: (String?) -> Unit = {},
+    onDeleteVariant: (String) -> Unit = {},
+    onStartCreateVariant: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val hasImage = recipe.imageUrl?.isNotEmpty() ?: false
@@ -136,6 +158,20 @@ private fun CreateDetailScreen(
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
+            )
+        }
+
+        if (isOwner || variants.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            VariantPickerRow(
+                variants = variants,
+                selectedVariantId = selectedVariantId,
+                isOwner = isOwner,
+                onVariantSelected = onVariantSelected,
+                onPinVariant = onPinVariant,
+                onDeleteVariant = onDeleteVariant,
+                onCreateVariant = onStartCreateVariant
             )
         }
 
