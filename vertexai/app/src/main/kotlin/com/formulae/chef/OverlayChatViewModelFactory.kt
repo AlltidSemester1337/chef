@@ -27,13 +27,13 @@ val OverlayChatViewModelFactory = object : ViewModelProvider.Factory {
         }
 
         val defaultModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = ModelConfig.CHAT_MODEL,
             generationConfig = chatConfig,
             systemInstruction = content { text(OVERLAY_DEFAULT_SYSTEM_INSTRUCTIONS) }
         )
 
         val recipeContextModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = ModelConfig.CHAT_MODEL,
             generationConfig = chatConfig,
             systemInstruction = content { text(OVERLAY_RECIPE_CONTEXT_SYSTEM_INSTRUCTIONS) }
         )

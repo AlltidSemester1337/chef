@@ -77,15 +77,14 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         return with(viewModelClass) {
             when {
                 isAssignableFrom(ChatViewModel::class.java) -> {
-                    // Initialize a GenerativeModel with the `gemini-2.5-flash` AI model for chat
                     val chatGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash",
+                        modelName = ModelConfig.CHAT_MODEL,
                         generationConfig = chatConfig,
                         systemInstruction = content { text(systemPrompt) }
                     )
 
                     val jsonGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
+                        modelName = ModelConfig.LITE_MODEL,
                         generationConfig = jsonConfig,
                         systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
                     )
@@ -95,18 +94,18 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                     }
 
                     val imageGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-image",
+                        modelName = ModelConfig.IMAGE_MODEL,
                         generationConfig = imageConfig
                     )
 
                     val preferencesGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
+                        modelName = ModelConfig.LITE_MODEL,
                         generationConfig = jsonConfig,
                         systemInstruction = content { text(EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS) }
                     )
 
                     val compactionGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
+                        modelName = ModelConfig.LITE_MODEL,
                         generationConfig = textConfig,
                         systemInstruction = content { text(COMPACT_HISTORY_SYSTEM_INSTRUCTIONS) }
                     )

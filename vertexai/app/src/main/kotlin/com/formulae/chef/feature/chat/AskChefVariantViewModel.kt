@@ -3,6 +3,7 @@ package com.formulae.chef.feature.chat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.ModelConfig
 import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
@@ -39,14 +40,14 @@ class AskChefVariantViewModel(
                 val prompt = buildAdjustPrompt(recipe, userRequest)
                 val adjustedText = generateInstrumented(
                     spanName = "adjustRecipe",
-                    modelName = "gemini-2.5-flash",
+                    modelName = ModelConfig.CHAT_MODEL,
                     prompt = prompt
                 ) { recipeAdjustModel.generateContent(content { text(it) }).text }
                     ?: throw Exception("Empty response from adjust model")
 
                 val jsonText = generateInstrumented(
                     spanName = "extractRecipeJson",
-                    modelName = "gemini-2.5-flash-lite",
+                    modelName = ModelConfig.LITE_MODEL,
                     prompt = adjustedText
                 ) { jsonGenerativeModel.generateContent(content { text(it) }).text }
                     ?: throw Exception("Empty response from JSON model")

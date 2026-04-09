@@ -24,7 +24,7 @@ Be precise about quantities and keep the style consistent with the original."""
 val AskChefVariantViewModelFactory = object : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         val recipeAdjustModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = ModelConfig.CHAT_MODEL,
             generationConfig = generationConfig {
                 temperature = 0.7f
                 maxOutputTokens = 4096
@@ -34,7 +34,7 @@ val AskChefVariantViewModelFactory = object : ViewModelProvider.Factory {
         )
 
         val jsonGenerativeModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash-lite",
+            modelName = ModelConfig.LITE_MODEL,
             generationConfig = generationConfig {
                 temperature = 0.2f
                 maxOutputTokens = 8192

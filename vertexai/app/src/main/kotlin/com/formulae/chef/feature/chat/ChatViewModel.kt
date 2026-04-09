@@ -23,6 +23,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.ModelConfig
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.LikedMessage
@@ -510,7 +511,7 @@ class ChatViewModel(
         val tracer: Tracer = getTracer()
         val span: Span = tracer.spanBuilder(spanName)
             .setAttribute("operation.name", "generateChatModelResponse")
-            .setAttribute("llm.model_name", "gemini-2.5-flash")
+            .setAttribute("llm.model_name", ModelConfig.CHAT_MODEL)
             .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
@@ -540,7 +541,7 @@ class ChatViewModel(
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
             .setAttribute("operation.name", "generateImage")
-            .setAttribute("llm.model_name", "vertexai/gemini-flash-image")
+            .setAttribute("llm.model_name", "vertexai/${ModelConfig.IMAGE_MODEL}")
             .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
@@ -550,7 +551,7 @@ class ChatViewModel(
             val imagePart = response.candidates?.firstOrNull()?.content?.parts
                 ?.filterIsInstance<ImagePart>()
                 ?.firstOrNull()
-                ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
+                ?: throw IllegalStateException("No image data in response from ${ModelConfig.IMAGE_MODEL}")
 
             val outputStream = ByteArrayOutputStream()
             imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
