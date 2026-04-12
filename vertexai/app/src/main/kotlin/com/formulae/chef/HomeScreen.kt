@@ -64,8 +64,10 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(currentUser) {
-        viewModel.setCurrentUser(currentUser?.uid)
+    LaunchedEffect(isLoading, currentUser?.uid) {
+        if (!isLoading) {
+            viewModel.setCurrentUser(currentUser?.uid)
+        }
     }
 
     val selectedRecipe by viewModel.selectedRecipe.collectAsState()
@@ -82,7 +84,8 @@ fun HomeScreen(
                 recipe = selectedRecipe!!,
                 onBack = { viewModel.clearSelectedRecipe() },
                 showIngredients = showIngredients,
-                onTabChanged = { showIngredients = it }
+                onTabChanged = { showIngredients = it },
+                isOwner = currentUser?.uid == selectedRecipe?.uid
             )
         } else {
             HomeScreenContent(

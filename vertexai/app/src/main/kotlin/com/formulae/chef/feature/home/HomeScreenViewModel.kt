@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
@@ -25,10 +26,7 @@ class HomeScreenViewModel(
     private val _selectedRecipe = MutableStateFlow<Recipe?>(null)
     val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
 
-    private var currentUid: String? = null
-
     fun setCurrentUser(uid: String?) {
-        currentUid = uid
         viewModelScope.launch { fetchRecipes(uid) }
     }
 
@@ -42,17 +40,26 @@ class HomeScreenViewModel(
 
     private suspend fun fetchRecipes(uid: String?) {
         _isLoading.value = true
-        val all = repository.loadAllRecipes()
-        _userRecipes.value = all.filter { it.uid == uid }.shuffled().take(USER_RECIPE_COUNT)
-        _communityRecipes.value = all
-            .filter { it.isFavourite && it.copyId == null && it.uid != uid }
-            .shuffled()
-            .take(COMMUNITY_RECIPE_COUNT)
-        _isLoading.value = false
+        try {
+            val all = repository.loadAllRecipes()
+            _userRecipes.value = all
+                .filter { it.uid == uid && it.isFavourite }
+                .shuffled()
+                .take(USER_RECIPE_COUNT)
+            _communityRecipes.value = all
+                .filter { it.isFavourite && it.copyId == null && it.uid != uid }
+                .shuffled()
+                .take(COMMUNITY_RECIPE_COUNT)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load recipes for dashboard", e)
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     companion object {
         const val USER_RECIPE_COUNT = 2
         const val COMMUNITY_RECIPE_COUNT = 6
+        private const val TAG = "HomeScreenViewModel"
     }
 }
