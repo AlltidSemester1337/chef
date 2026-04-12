@@ -108,7 +108,8 @@ internal fun CollectionRoute(
     listRepository: RecipeListRepository,
     collectionViewModel: CollectionViewModel,
     navController: NavController,
-    userSessionService: UserSessionService
+    userSessionService: UserSessionService,
+    initialRecipeSource: RecipeSource = RecipeSource.USER_FAVOURITES
 ) {
     val collectionUiState by collectionViewModel.uiState.collectAsState()
     val isLoading by collectionViewModel.isLoading.collectAsState()
@@ -137,10 +138,12 @@ internal fun CollectionRoute(
 
     val signedIn = !userSessionService.anonymousSession && currentUser != null
 
-    var recipesSource by rememberSaveable { mutableStateOf(RecipeSource.ALL_RECIPES) }
+    var recipesSource by rememberSaveable { mutableStateOf(initialRecipeSource) }
 
     LaunchedEffect(signedIn) {
-        recipesSource = if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
+        if (initialRecipeSource == RecipeSource.USER_FAVOURITES) {
+            recipesSource = if (signedIn) RecipeSource.USER_FAVOURITES else RecipeSource.ALL_RECIPES
+        }
     }
 
     LaunchedEffect(currentUser) {
