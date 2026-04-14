@@ -1,6 +1,9 @@
 package com.formulae.chef
 
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -9,8 +12,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.formulae.chef.feature.chat.ui.ChatRoute
 import com.formulae.chef.feature.collection.ui.CollectionRoute
+import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.collection.ui.RecipeSource
 import com.formulae.chef.feature.home.HomeScreenViewModel
+import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.useraccount.ui.SignInRoute
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
@@ -34,11 +39,13 @@ fun AppNavigation(
             HomeScreen(
                 viewModel = homeViewModel,
                 userSessionService = userSessionService,
+                recipeRepository = recipeRepository,
                 onNavigateToChat = { navController.navigate("chat") },
                 onNavigateToCollection = { navController.navigate("collection") },
                 onNavigateToCommunity = {
                     navController.navigate("collection?tab=${RecipeSource.ALL_RECIPES.name}")
                 },
+                onNavigateToRecipe = { recipeId -> navController.navigate("recipeDetail/$recipeId") },
                 onSignOut = {
                     userSessionService.signOut()
                     navController.navigate("signIn") {
@@ -76,6 +83,21 @@ fun AppNavigation(
                 userSessionService = userSessionService,
                 initialRecipeSource = tab
             )
+        }
+        composable("recipeDetail/{recipeId}") { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val recipe by produceState<Recipe?>(initialValue = null, key1 = recipeId) {
+                value = recipeRepository.getRecipeById(recipeId)
+            }
+            val loadedRecipe = recipe
+            if (loadedRecipe == null) {
+                CircularProgressIndicator()
+            } else {
+                DetailRoute(
+                    recipe = loadedRecipe,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
         composable("signIn") {
             SignInRoute(userSessionService, navController)
