@@ -79,7 +79,6 @@ class RecipeRepositoryImpl(
 
     override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? {
         return database.getReference(RECIPE_OF_THE_MONTH_KEY)
-            .orderByChild("createdAt")
             .limitToLast(1)
             .get()
             .await()
