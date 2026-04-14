@@ -6,8 +6,10 @@ Derived from `vertexai/app/src/main/assets/idyllic-bloom-425307-r6-default-rtdb-
 
 ```
 ROOT
-├── recipes    — all recipe objects, keyed by Firebase push ID
-└── users      — user profiles keyed by Firebase Auth UID
+├── recipes                  — all recipe objects, keyed by Firebase push ID
+├── recipe_of_the_month      — monthly featured recipe entries, keyed by Firebase push ID
+├── video_generation_history — permanent set of recipe IDs that have been featured; never deleted
+└── users                    — user profiles keyed by Firebase Auth UID
 ```
 
 ---
@@ -28,6 +30,7 @@ Recipe {
   prepTime:           string        // e.g. "20 minutes", or "" if unset
   servings:           string        // e.g. "4 servings", "2 portions"
   imageUrl:           string        // Firebase Storage HTTPS URL
+  videoUrl:           string?       // Firebase Storage HTTPS URL to Recipe of the Month video; absent or null if not selected
   isFavourite:        boolean
   tipsAndTricks:      string        // Free-text tips (may be empty "")
   updatedAt:          string        // ISO 8601 timestamp, e.g. "2025-02-12T13:58:18.650875+00:00"
@@ -179,6 +182,32 @@ Tags are optional and absent on recipes created before CHE-12 unless retroactive
 
 ---
 
+## `recipe_of_the_month` Node
+
+**Path:** `recipe_of_the_month/{pushId}`
+Written by the `rotw-job` Cloud Run job on the first Sunday of each month (CHE-29).
+
+```
+RecipeOfTheMonth {
+  recipeId:    string    // push ID of the selected recipe in `recipes`
+  recipeTitle: string    // recipe title (denormalised for fast home screen render)
+  videoUrl:    string    // Firebase Storage HTTPS URL, e.g. videos/rotw/2026-04.mp4
+  monthOf:     string    // "YYYY-MM", e.g. "2026-04"
+  createdAt:   string    // ISO 8601 timestamp
+}
+```
+
+---
+
+## `video_generation_history` Node
+
+**Path:** `video_generation_history/{recipeId}: true`
+Permanent record of every recipe ID that has been selected for a Recipe of the Month video.
+Written by `rotw-job` at generation time. **Never deleted** — ensures the same recipe is never
+featured twice, even if `recipe_of_the_month` entries are cleaned up.
+
+---
+
 ## Field Type Reference
 
 | Field | Type | Notes                                                                         |
@@ -193,6 +222,7 @@ Tags are optional and absent on recipes created before CHE-12 unless retroactive
 | `unit` (ingredient/nutrient) | string | May be empty string                                                           |
 | `role` (chat) | string (enum) | "user" or "model"                                                             |
 | `imageUrl` | string | `https://storage.googleapis.com/{PROJECT_ID}.firebasestorage.app/recipes/...` |
+| `videoUrl` | string? | Firebase Storage URL to ROTW video; absent/null on recipes not selected       |
 | `tags` | string[] | Optional; absent on pre-CHE-12 recipes. All values lowercase. |
 
 ---

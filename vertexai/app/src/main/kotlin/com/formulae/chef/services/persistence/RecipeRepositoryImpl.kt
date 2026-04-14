@@ -2,10 +2,12 @@ package com.formulae.chef.services.persistence
 
 import android.util.Log
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.tasks.await
 
 private const val RECIPES_KEY = "recipes"
+private const val RECIPE_OF_THE_MONTH_KEY = "recipe_of_the_month"
 
 class RecipeRepositoryImpl(
     private val database: FirebaseDatabase = FirebaseInstance.database
@@ -67,5 +69,22 @@ class RecipeRepositoryImpl(
             .addOnFailureListener { e ->
                 Log.e("FirebaseDB", "Error updating recipe", e)
             }
+    }
+
+    override suspend fun getRecipeById(recipeId: String): Recipe? {
+        val snapshot = recipesRef.child(recipeId).get().await()
+        return snapshot.getValue(Recipe::class.java)
+            ?.copy(isFavourite = snapshot.child("isFavourite").getValue(Boolean::class.java) ?: false)
+    }
+
+    override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? {
+        return database.getReference(RECIPE_OF_THE_MONTH_KEY)
+            .orderByChild("createdAt")
+            .limitToLast(1)
+            .get()
+            .await()
+            .children
+            .firstOrNull()
+            ?.getValue(RecipeOfTheMonth::class.java)
     }
 }

@@ -28,6 +28,7 @@ class RecipeTest {
         assertTrue(recipe.instructions.isEmpty())
         assertNull(recipe.tipsAndTricks)
         assertNull(recipe.imageUrl)
+        assertNull(recipe.videoUrl)
         assertEquals("", recipe.updatedAt)
         assertFalse(recipe.isFavourite)
         assertNull(recipe.copyId)
@@ -60,6 +61,7 @@ class RecipeTest {
             instructions = instructions,
             tipsAndTricks = "Use room temperature butter",
             imageUrl = "https://example.com/cake.jpg",
+            videoUrl = "https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4",
             updatedAt = "2026-01-01T00:00:00Z",
             isFavourite = true,
             copyId = "copy-1",
@@ -79,6 +81,7 @@ class RecipeTest {
         assertEquals(2, recipe.instructions.size)
         assertEquals("Use room temperature butter", recipe.tipsAndTricks)
         assertEquals("https://example.com/cake.jpg", recipe.imageUrl)
+        assertEquals("https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4", recipe.videoUrl)
         assertEquals("2026-01-01T00:00:00Z", recipe.updatedAt)
         assertTrue(recipe.isFavourite)
         assertEquals("copy-1", recipe.copyId)
@@ -99,7 +102,8 @@ class RecipeTest {
         val copy = original.copyOf(
             title = "Modified Title",
             isFavourite = true,
-            imageUrl = "https://example.com/new.jpg"
+            imageUrl = "https://example.com/new.jpg",
+            videoUrl = "https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4"
         )
 
         assertEquals("1", copy.id)
@@ -108,7 +112,29 @@ class RecipeTest {
         assertEquals("Original summary", copy.summary)
         assertTrue(copy.isFavourite)
         assertEquals("https://example.com/new.jpg", copy.imageUrl)
+        assertEquals("https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4", copy.videoUrl)
         assertEquals(listOf("chicken", "korean"), copy.tags)
+    }
+
+    @Test
+    fun `copyOf preserves videoUrl when not overridden`() {
+        val original = Recipe(
+            id = "1",
+            videoUrl = "https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4"
+        )
+
+        val copy = original.copyOf(title = "New Title")
+
+        assertEquals("https://storage.googleapis.com/bucket/videos/rotw/2026-04.mp4", copy.videoUrl)
+    }
+
+    @Test
+    fun `copyOf overrides videoUrl when provided`() {
+        val original = Recipe(id = "1", videoUrl = "https://example.com/old.mp4")
+
+        val copy = original.copyOf(videoUrl = "https://example.com/new.mp4")
+
+        assertEquals("https://example.com/new.mp4", copy.videoUrl)
     }
 
     @Test
