@@ -745,6 +745,14 @@ private class FakeRecipeRepository(
     override fun removeRecipeUid(recipeId: String) {
         removedUidRecipeIds.add(recipeId)
     }
+
+    override suspend fun getRecipeById(recipeId: String): Recipe? {
+        return recipes.find { it.id == recipeId }
+    }
+
+    override suspend fun getLatestRecipeOfTheMonth(): com.formulae.chef.feature.model.RecipeOfTheMonth? {
+        return null
+    }
 }
 
 private class FakeRecipeListRepository(

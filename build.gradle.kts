@@ -3,9 +3,11 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 plugins {
     id("com.android.application") version "8.13.2" apply false
     id("org.jetbrains.kotlin.android") version "2.1.20" apply false
+    id("org.jetbrains.kotlin.jvm") version "2.1.20" apply false
     id("com.google.gms.google-services") version "4.4.4" apply false
     id("com.github.ben-manes.versions") version "0.51.0" apply true
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.20" apply false
+    id("com.google.cloud.tools.jib") version "3.4.4" apply false
 }
 
 allprojects {

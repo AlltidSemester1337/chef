@@ -1,6 +1,7 @@
 package com.formulae.chef.feature.home
 
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -164,4 +165,6 @@ private class FakeRecipeRepository(
     override suspend fun loadAllRecipes(): List<Recipe> = recipes
     override fun removeRecipe(recipeId: String) = Unit
     override fun removeRecipeUid(recipeId: String) = Unit
+    override suspend fun getRecipeById(recipeId: String): Recipe? = recipes.find { it.id == recipeId }
+    override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? = null
 }
