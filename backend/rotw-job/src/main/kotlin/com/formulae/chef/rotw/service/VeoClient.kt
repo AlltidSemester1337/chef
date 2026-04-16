@@ -38,7 +38,8 @@ private const val MAX_POLL_ATTEMPTS = 20
 class VeoClient(
     private val projectId: String = System.getenv("GCP_PROJECT_ID")
         ?: error("GCP_PROJECT_ID env var not set"),
-    private val location: String = System.getenv("GCP_LOCATION") ?: "us-central1",
+    private val location: String = System.getenv("GCP_LOCATION")
+        ?: error("GCP_LOCATION env var not set"),
     private val modelId: String = "veo-002"
 ) {
     private val httpClient = HttpClient(CIO) {
