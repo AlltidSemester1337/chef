@@ -27,7 +27,7 @@ A Cloud Run Job that runs monthly to:
 | `GCP_PROJECT_ID` | Yes | GCP project ID (e.g. `my-project-123`) |
 | `FIREBASE_DB_URL` | Yes | Firebase RTDB URL (e.g. `https://my-project-default-rtdb.firebaseio.com`) |
 | `FIREBASE_STORAGE_BUCKET` | Yes | Firebase Storage bucket (e.g. `my-project.appspot.com`) |
-| `GCP_LOCATION` | No | Vertex AI region (default: `us-central1`) |
+| `GCP_LOCATION` | Yes | Vertex AI region (e.g. `europe-west1`) |
 
 ## Running locally
 
@@ -35,6 +35,7 @@ A Cloud Run Job that runs monthly to:
 # From the repo root
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 export GCP_PROJECT_ID=my-project-123
+export GCP_LOCATION=europe-west1
 export FIREBASE_DB_URL=https://my-project-default-rtdb.firebaseio.com
 export FIREBASE_STORAGE_BUCKET=my-project.appspot.com
 
@@ -67,11 +68,13 @@ This produces image `gcr.io/$GCP_PROJECT_ID/rotw-job:latest`.
 ## Deploying as a Cloud Run Job
 
 ```bash
+export GCP_REGION=europe-west1
+
 gcloud run jobs create rotw-job \
   --image gcr.io/$GCP_PROJECT_ID/rotw-job \
-  --region us-central1 \
+  --region $GCP_REGION \
   --service-account rotw-job@$GCP_PROJECT_ID.iam.gserviceaccount.com \
-  --set-env-vars "GCP_PROJECT_ID=$GCP_PROJECT_ID,FIREBASE_DB_URL=...,FIREBASE_STORAGE_BUCKET=..." \
+  --set-env-vars "GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_LOCATION=$GCP_REGION,FIREBASE_DB_URL=...,FIREBASE_STORAGE_BUCKET=..." \
   --set-secrets "GOOGLE_APPLICATION_CREDENTIALS=rotw-sa-key:latest"
 ```
 
@@ -82,9 +85,9 @@ The job is intended to run on the **first Sunday of each month at 22:00 UTC**:
 ```bash
 gcloud scheduler jobs create http rotw-monthly \
   --schedule "0 22 1-7 * 0" \
-  --uri "https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$GCP_PROJECT_ID/jobs/rotw-job:run" \
+  --uri "https://$GCP_REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$GCP_PROJECT_ID/jobs/rotw-job:run" \
   --oauth-service-account-email rotw-scheduler@$GCP_PROJECT_ID.iam.gserviceaccount.com \
-  --location us-central1
+  --location $GCP_REGION
 ```
 
 ## Firebase RTDB schema written by this job
