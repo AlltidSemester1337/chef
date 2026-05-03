@@ -26,7 +26,7 @@ private data class NavItem(
 private val navItems = listOf(
     NavItem("home", "Home", R.drawable.ic_home, R.drawable.ic_home_filled),
     NavItem("generate", "Generate", R.drawable.ic_chef_hat, R.drawable.ic_chef_hat_filled),
-    NavItem("collections", "Collections", R.drawable.ic_collections, R.drawable.ic_collections_filled)
+    NavItem("collection", "Collections", R.drawable.ic_collections, R.drawable.ic_collections_filled)
 )
 
 @Composable

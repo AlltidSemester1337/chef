@@ -1,17 +1,11 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-<<<<<<< HEAD
 import com.google.firebase.database.FirebaseDatabase
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
-=======
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
->>>>>>> 30785eb0 (WIP)
 
 data class Content(
     var role: String = "user", // Default value, must be mutable (var)
@@ -60,7 +54,6 @@ class ChatHistoryRepositoryImpl(
                 }
         }
     }
-<<<<<<< HEAD
 
     override suspend fun loadAllEntries(): List<Pair<String, com.google.firebase.vertexai.type.Content>> {
         return suspendCancellableCoroutine { continuation ->
@@ -92,6 +85,4 @@ class ChatHistoryRepositoryImpl(
             reference.child(pushId).removeValue().await()
         }
     }
-=======
->>>>>>> 30785eb0 (WIP)
 }

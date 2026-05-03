@@ -56,7 +56,9 @@ class HomeScreenViewModelTest {
         HomeScreenViewModel(FakeRecipeRepository(recipes))
 
     @Test
-    fun `setCurrentUser filters user recipes to own favourites and caps at USER_RECIPE_COUNT`() = runTest(testDispatcher) {
+    fun `setCurrentUser filters user recipes to own favourites and caps at USER_RECIPE_COUNT`() = runTest(
+        testDispatcher
+    ) {
         val viewModel = makeViewModel()
 
         viewModel.setCurrentUser(userUid)

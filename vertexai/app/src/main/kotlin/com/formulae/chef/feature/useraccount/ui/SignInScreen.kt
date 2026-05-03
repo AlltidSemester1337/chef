@@ -18,11 +18,10 @@ package com.formulae.chef.feature.useraccount.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -37,22 +36,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.formulae.chef.R
@@ -62,8 +59,8 @@ import com.formulae.chef.feature.useraccount.ui.components.InputField
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
+import com.formulae.chef.ui.theme.Terracotta600
 
-// TODO: Implement further alignment with design either Figma Pro or manually, collaborate w Bob!
 @Composable
 internal fun SignInRoute(
     userSessionService: UserSessionService,
@@ -95,89 +92,67 @@ private fun SignUpScreen(
 ) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .background(BackgroundColor),
-        contentAlignment = Alignment.BottomCenter
+            .fillMaxSize()
+            .background(BackgroundColor)
     ) {
+        // Background decoration
+        Image(
+            painter = painterResource(id = R.drawable.carrot),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .offset(x = 77.dp, y = 117.dp)
+                .width(288.dp)
+                .height(386.dp)
+                .rotate(10.89f)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        // "Sign in" link — top right
         TextButton(
             onClick = onSignInClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp, 0.dp)
+                .padding(end = 16.dp, top = 6.dp)
         ) {
-            // Sign in link
             Text(
                 text = stringResource(R.string.sign_in),
-                color = Color(0xFFC45234),
-                textAlign = TextAlign.Right,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                // TODO: Should be waved underline if possible?
-                textDecoration = TextDecoration.Underline
+                style = AppTypography.labelLarge.copy(
+                    color = Terracotta600,
+                    textDecoration = TextDecoration.Underline
+                )
             )
         }
-        // Background decoration SVG
-        // TODO: Fix weird right crop? Also not 100% sure size and position.
-        Box(
-            contentAlignment = Alignment.Center,
+
+        // Main content column
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(x = 0.dp, y = 100.dp)
-                .width(230.dp)
-                .height(350.dp)
-                .clip(RoundedCornerShape(16.dp)) // Outer clipping
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Background color using shape of the image
-            Image(
-                painter = painterResource(id = R.drawable.carrot),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(16.dp)) // Clip outer bounds
-            )
+            Spacer(modifier = Modifier.height(105.dp))
 
-            // Foreground PNG with transparent shape preserved
-            Image(
-                painter = painterResource(id = R.drawable.carrot),
-                contentDescription = stringResource(R.string.carrot),
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            // Logo/Avatar
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
                     .size(48.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = stringResource(R.string.welcome_message),
                 style = AppTypography.headlineLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .width(343.dp)
-                    .offset(x = 0.dp, y = 50.dp)
+                modifier = Modifier.fillMaxWidth()
             )
-        }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .offset(x = 10.dp, y = 200.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+            Spacer(modifier = Modifier.height(69.dp))
+
             InputField(
                 label = stringResource(R.string.email),
                 placeholder = "name@email.com",
@@ -185,12 +160,7 @@ private fun SignUpScreen(
                 onValueChange = onUpdateEmail
             )
 
-            // TODO: Double check this spacing with Figma design, generated code miss?
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            )
+            Spacer(modifier = Modifier.height(24.dp))
 
             InputField(
                 label = stringResource(R.string.password),
@@ -200,41 +170,24 @@ private fun SignUpScreen(
                 onValueChange = onUpdatePassword,
                 visualTransformation = PasswordVisualTransformation()
             )
-
-            // Can be re-enabled to support anonymous sessions (decided by design to remove for now)
-            // TextButton(onClick = onSkipSignUpClick) {
-            //    Text(text = stringResource(R.string.skip_sign_up), fontSize = 16.sp)
-            // }
         }
-        // Button section
-        Column(
+
+        // Create account button — anchored to bottom
+        Button(
+            onClick = onSignUpClick,
             modifier = Modifier
-                .fillMaxHeight()
-                .width(343.dp)
-                .padding(bottom = 10.dp),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 60.dp)
+                .height(44.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
+            shape = RoundedCornerShape(8.dp)
         ) {
-            // Create account button
-            Button(
-                onClick = onSignUpClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC45234)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.create_account),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 20.sp
-                )
-            }
+            Text(
+                text = stringResource(R.string.create_account),
+                style = AppTypography.labelLarge,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -245,14 +198,12 @@ fun PreviewSignUpScreen() {
     SignUpScreen(
         email = remember {
             object : State<String> {
-                override val value: String
-                    get() = "Email"
+                override val value: String get() = "Email"
             }
         },
         password = remember {
             object : State<String> {
-                override val value: String
-                    get() = "Password"
+                override val value: String get() = "Password"
             }
         },
         onUpdateEmail = { },
