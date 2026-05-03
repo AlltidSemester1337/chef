@@ -81,7 +81,7 @@ internal fun SignInRoute(
         { viewModel.updatePassword(it) },
         { viewModel.onSignInClick() },
         { viewModel.onSignUpClick() }
-    ) { viewModel.onSkipSignInClick() }
+    )
 }
 
 @Composable
@@ -91,8 +91,7 @@ private fun SignUpScreen(
     onUpdateEmail: (String) -> Unit,
     onUpdatePassword: (String) -> Unit,
     onSignInClick: () -> Unit,
-    onSignUpClick: () -> Unit,
-    onSkipSignUpClick: () -> Unit
+    onSignUpClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -222,7 +221,6 @@ fun PreviewSignUpScreen() {
         onUpdateEmail = { },
         onUpdatePassword = { },
         onSignInClick = { },
-        onSignUpClick = { },
-        onSkipSignUpClick = { }
+        onSignUpClick = { }
     )
 }

@@ -13,14 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.formulae.chef.R
+import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.GenerativeAISample
-import com.formulae.chef.ui.theme.SafeFigtreeFamily
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextPrimary
 
@@ -38,10 +36,7 @@ fun SectionHeader(
     ) {
         Text(
             text = title,
-            fontFamily = SafeFigtreeFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp,
-            color = TextPrimary
+            style = AppTypography.labelLarge.copy(color = TextPrimary)
         )
 
         if (linkText != null && onLinkClick != null) {
@@ -51,11 +46,10 @@ fun SectionHeader(
             ) {
                 Text(
                     text = linkText,
-                    fontFamily = SafeFigtreeFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = Terracotta600,
-                    textDecoration = TextDecoration.Underline
+                    style = AppTypography.labelLarge.copy(
+                        color = Terracotta600,
+                        textDecoration = TextDecoration.Underline
+                    )
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(

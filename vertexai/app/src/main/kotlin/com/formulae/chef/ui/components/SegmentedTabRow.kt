@@ -13,14 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.GenerativeAISample
-import com.formulae.chef.ui.theme.SafeFigtreeFamily
 import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.Terracotta800
 import com.formulae.chef.ui.theme.TextPrimary
@@ -53,11 +51,10 @@ fun SegmentedTabRow(
             ) {
                 Text(
                     text = tab,
-                    fontFamily = SafeFigtreeFamily,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    fontStyle = FontStyle.Italic,
-                    fontSize = 16.sp,
-                    color = if (isSelected) Terracotta800 else TextPrimary,
+                    style = AppTypography.labelLarge.copy(
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Terracotta800 else TextPrimary
+                    ),
                     textAlign = TextAlign.Center
                 )
             }

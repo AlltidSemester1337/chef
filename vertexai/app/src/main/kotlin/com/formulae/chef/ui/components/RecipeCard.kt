@@ -25,10 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.GenerativeAISample
-import com.formulae.chef.ui.theme.SafeFigtreeFamily
 import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.White
@@ -92,11 +91,11 @@ fun RecipeCard(
         ) {
             Text(
                 text = title,
-                fontFamily = SafeFigtreeFamily,
-                fontWeight = FontWeight.Bold,
-                fontStyle = FontStyle.Italic,
-                fontSize = 14.sp,
-                color = TextPrimary,
+                style = AppTypography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontStyle = FontStyle.Italic,
+                    color = TextPrimary
+                ),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
