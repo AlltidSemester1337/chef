@@ -128,16 +128,18 @@ private fun SignUpScreen(
             )
         }
 
-        // Keyboard-aware layer: shrinks when IME opens, button floats above keyboard
-        Box(
+        // Outer column shrinks with the keyboard; button is always below the fields
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding()
+                .navigationBarsPadding()
         ) {
-            // Scrollable content — allows fields to stay visible on small screens
+            // Scrollable content — takes all remaining space above the button
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -181,18 +183,13 @@ private fun SignUpScreen(
                     onValueChange = onUpdatePassword,
                     visualTransformation = PasswordVisualTransformation()
                 )
-
-                // Reserve space so fields aren't obscured by the floating button
-                Spacer(modifier = Modifier.height(80.dp))
             }
 
-            // Create account button — anchored to bottom of IME-aware layer
+            // Create account button — always anchored below the content, above the keyboard
             Button(
                 onClick = onSignUpClick,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 16.dp)
                     .height(44.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
