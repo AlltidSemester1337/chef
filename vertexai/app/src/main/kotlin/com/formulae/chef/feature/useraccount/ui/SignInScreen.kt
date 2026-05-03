@@ -112,22 +112,6 @@ private fun SignUpScreen(
                 .clip(RoundedCornerShape(16.dp))
         )
 
-        // "Sign in" link — top right, static
-        TextButton(
-            onClick = onSignInClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 16.dp, top = 6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.sign_in),
-                style = AppTypography.labelLarge.copy(
-                    color = Terracotta600,
-                    textDecoration = TextDecoration.Underline
-                )
-            )
-        }
-
         // Outer column shrinks with the keyboard; button is always below the fields
         Column(
             modifier = Modifier
@@ -201,6 +185,22 @@ private fun SignUpScreen(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+
+        // "Sign in" link — drawn last so it sits above the Column in z-order and receives touches
+        TextButton(
+            onClick = onSignInClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp, top = 6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.sign_in),
+                style = AppTypography.labelLarge.copy(
+                    color = Terracotta600,
+                    textDecoration = TextDecoration.Underline
+                )
+            )
         }
     }
 }
