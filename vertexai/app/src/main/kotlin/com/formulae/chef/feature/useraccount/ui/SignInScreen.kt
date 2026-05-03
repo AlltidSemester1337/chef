@@ -24,12 +24,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -95,7 +99,7 @@ private fun SignUpScreen(
             .fillMaxSize()
             .background(BackgroundColor)
     ) {
-        // Background decoration
+        // Background decoration — static, not affected by keyboard
         Image(
             painter = painterResource(id = R.drawable.carrot),
             contentDescription = null,
@@ -108,7 +112,7 @@ private fun SignUpScreen(
                 .clip(RoundedCornerShape(16.dp))
         )
 
-        // "Sign in" link — top right
+        // "Sign in" link — top right, static
         TextButton(
             onClick = onSignInClick,
             modifier = Modifier
@@ -124,70 +128,82 @@ private fun SignUpScreen(
             )
         }
 
-        // Main content column
-        Column(
+        // Keyboard-aware layer: shrinks when IME opens, button floats above keyboard
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .imePadding()
         ) {
-            Spacer(modifier = Modifier.height(105.dp))
-
-            Image(
-                painter = painterResource(id = R.drawable.logo),
-                contentDescription = stringResource(R.string.app_name),
+            // Scrollable content — allows fields to stay visible on small screens
+            Column(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(105.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
 
-            Text(
-                text = stringResource(R.string.welcome_message),
-                style = AppTypography.headlineLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(69.dp))
+                Text(
+                    text = stringResource(R.string.welcome_message),
+                    style = AppTypography.headlineLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            InputField(
-                label = stringResource(R.string.email),
-                placeholder = "name@email.com",
-                value = email.value,
-                onValueChange = onUpdateEmail
-            )
+                Spacer(modifier = Modifier.height(69.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+                InputField(
+                    label = stringResource(R.string.email),
+                    placeholder = "name@email.com",
+                    value = email.value,
+                    onValueChange = onUpdateEmail
+                )
 
-            InputField(
-                label = stringResource(R.string.password),
-                placeholder = stringResource(R.string.password_placeholder),
-                supportingText = stringResource(R.string.password_supporting_text),
-                value = password.value,
-                onValueChange = onUpdatePassword,
-                visualTransformation = PasswordVisualTransformation()
-            )
-        }
+                Spacer(modifier = Modifier.height(24.dp))
 
-        // Create account button — anchored to bottom
-        Button(
-            onClick = onSignUpClick,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 60.dp)
-                .height(44.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.create_account),
-                style = AppTypography.labelLarge,
-                textAlign = TextAlign.Center
-            )
+                InputField(
+                    label = stringResource(R.string.password),
+                    placeholder = stringResource(R.string.password_placeholder),
+                    supportingText = stringResource(R.string.password_supporting_text),
+                    value = password.value,
+                    onValueChange = onUpdatePassword,
+                    visualTransformation = PasswordVisualTransformation()
+                )
+
+                // Reserve space so fields aren't obscured by the floating button
+                Spacer(modifier = Modifier.height(80.dp))
+            }
+
+            // Create account button — anchored to bottom of IME-aware layer
+            Button(
+                onClick = onSignUpClick,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .height(44.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.create_account),
+                    style = AppTypography.labelLarge,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
