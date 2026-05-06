@@ -1,6 +1,5 @@
 package com.formulae.chef
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,17 +9,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -35,10 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,9 +44,9 @@ import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
+import com.formulae.chef.ui.theme.Terracotta200
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextSecondary
-import com.formulae.chef.ui.theme.White
 import com.google.firebase.auth.UserInfo
 
 @Composable
@@ -105,7 +96,9 @@ fun HomeScreen(
                 isOwner = currentUser?.uid == selectedRecipe?.uid
             )
         } else {
-            val firstName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Chef"
+            val firstName = currentUser?.displayName
+                ?.takeIf { it.isNotBlank() }
+                ?.split(" ")?.firstOrNull() ?: "Chef"
             HomeScreenContent(
                 viewModel = viewModel,
                 displayName = firstName,
@@ -135,74 +128,34 @@ private fun HomeScreenContent(
     val isLoadingRecipes by viewModel.isLoading.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Decorative carrot — behind all content, top-right area
-        Image(
-            painter = painterResource(id = R.drawable.carrot),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .offset(x = 200.dp, y = 24.dp)
-                .width(168.dp)
-                .height(225.dp)
-                .rotate(10.89f)
-                .clip(RoundedCornerShape(16.dp))
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header block (white background)
-            Column(
+            // Greeting header
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(White)
+                    .background(BackgroundColor)
                     .padding(horizontal = 16.dp)
-                    .padding(top = 48.dp, bottom = 24.dp)
+                    .padding(top = 48.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Hi, $displayName!",
-                        style = AppTypography.headlineLarge
-                    )
-                    IconButton(onClick = onSignOut) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Sign out",
-                            tint = Terracotta600
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
-                    text = "Looking for kitchen inspiration? Chat with Chef to generate your first recipe!",
-                    style = AppTypography.bodyLarge,
-                    modifier = Modifier.fillMaxWidth()
+                    text = "Hi, $displayName!",
+                    style = AppTypography.headlineLarge
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onNavigateToChat,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Generate personalized recipes",
-                        style = AppTypography.labelLarge
+                IconButton(onClick = onSignOut) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Sign out",
+                        tint = Terracotta600
                     )
                 }
             }
+            HorizontalDivider(color = Terracotta200)
 
             // Content area
             Column(
