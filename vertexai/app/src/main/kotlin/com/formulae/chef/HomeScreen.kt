@@ -1,24 +1,29 @@
 package com.formulae.chef
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,15 +35,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.ui.DetailRoute
-import com.formulae.chef.feature.collection.ui.RecipeItem
 import com.formulae.chef.feature.home.HomeScreenViewModel
+import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.components.ChefFab
+import com.formulae.chef.ui.components.RecipeCard
+import com.formulae.chef.ui.components.SectionHeader
+import com.formulae.chef.ui.theme.AppTypography
+import com.formulae.chef.ui.theme.BackgroundColor
+import com.formulae.chef.ui.theme.Terracotta600
+import com.formulae.chef.ui.theme.TextSecondary
+import com.formulae.chef.ui.theme.White
 import com.google.firebase.auth.UserInfo
 
 @Composable
@@ -88,13 +105,14 @@ fun HomeScreen(
                 isOwner = currentUser?.uid == selectedRecipe?.uid
             )
         } else {
+            val firstName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Chef"
             HomeScreenContent(
                 viewModel = viewModel,
+                displayName = firstName,
                 onNavigateToChat = onNavigateToChat,
                 onNavigateToCollection = onNavigateToCollection,
                 onNavigateToCommunity = onNavigateToCommunity,
-                onSignOut = onSignOut,
-                signedIn = !userSessionService.anonymousSession && currentUser != null
+                onSignOut = onSignOut
             )
         }
     }
@@ -103,11 +121,11 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenContent(
     viewModel: HomeScreenViewModel,
+    displayName: String,
     onNavigateToChat: () -> Unit,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
-    onSignOut: () -> Unit,
-    signedIn: Boolean
+    onSignOut: () -> Unit
 ) {
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
     var showChefOverlay by remember { mutableStateOf(false) }
@@ -116,125 +134,162 @@ private fun HomeScreenContent(
     val communityRecipes by viewModel.communityRecipes.collectAsState()
     val isLoadingRecipes by viewModel.isLoading.collectAsState()
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showChefOverlay = true }) {
-                Icon(Icons.Default.Chat, contentDescription = "Chat with Chef")
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Decorative carrot — behind all content, top-right area
+        Image(
+            painter = painterResource(id = R.drawable.carrot),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .offset(x = 200.dp, y = 24.dp)
+                .width(168.dp)
+                .height(225.dp)
+                .rotate(10.89f)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header block (white background)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(White)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 48.dp, bottom = 24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Hi, $displayName!",
+                        style = AppTypography.headlineLarge
+                    )
+                    IconButton(onClick = onSignOut) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Sign out",
+                            tint = Terracotta600
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Looking for kitchen inspiration? Chat with Chef to generate your first recipe!",
+                    style = AppTypography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = onNavigateToChat,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Terracotta600),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "Generate personalized recipes",
+                        style = AppTypography.labelLarge
+                    )
+                }
             }
-        }
-    ) { paddingValues ->
-        if (isLoadingRecipes) {
-            CircularProgressIndicator(
+
+            // Content area
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .wrapContentSize()
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                    .fillMaxWidth()
+                    .background(BackgroundColor)
                     .padding(horizontal = 16.dp)
             ) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "My Recipes",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        TextButton(onClick = onNavigateToCollection) {
-                            Text("View all")
-                        }
-                    }
-                }
-
-                if (userRecipes.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No recipes yet. Start chatting to create some!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                } else {
-                    items(userRecipes) { recipe ->
-                        RecipeItem(
-                            recipe = recipe,
-                            onRecipeClick = viewModel::onRecipeSelected,
-                            onRecipeRemove = {},
-                            recipeRemoveEnabled = false,
-                            painter = rememberAsyncImagePainter(recipe.imageUrl)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
+                if (isLoadingRecipes) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Community",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        TextButton(onClick = onNavigateToCommunity) {
-                            Text("Browse all")
-                        }
-                    }
-                }
-
-                if (communityRecipes.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No community recipes available yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
+                        CircularProgressIndicator()
                     }
                 } else {
-                    items(communityRecipes) { recipe ->
-                        RecipeItem(
-                            recipe = recipe,
-                            onRecipeClick = viewModel::onRecipeSelected,
-                            onRecipeRemove = {},
-                            recipeRemoveEnabled = false,
-                            painter = rememberAsyncImagePainter(recipe.imageUrl)
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    SectionHeader(
+                        title = "Your saved recipes",
+                        linkText = "All saved recipes",
+                        onLinkClick = onNavigateToCollection
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (userRecipes.isEmpty()) {
+                        Text(
+                            text = "Start chatting to get personalized recipes!",
+                            style = AppTypography.bodyMedium.copy(color = TextSecondary),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        RecipeCardGrid(
+                            recipes = userRecipes,
+                            onRecipeClick = viewModel::onRecipeSelected
                         )
                     }
-                }
 
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = onNavigateToChat,
-                            enabled = signedIn,
-                            modifier = Modifier.padding(4.dp)
-                        ) {
-                            Text(text = "Go to Chat")
-                        }
-                        Button(
-                            onClick = onSignOut,
-                            modifier = Modifier.padding(4.dp)
-                        ) {
-                            Text(text = "Sign out")
-                        }
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    SectionHeader(
+                        title = "What's cooking?",
+                        linkText = "Community collection",
+                        onLinkClick = onNavigateToCommunity
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (communityRecipes.isEmpty()) {
+                        Text(
+                            text = "No community recipes yet.",
+                            style = AppTypography.bodyMedium.copy(color = TextSecondary),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        RecipeCardGrid(
+                            recipes = communityRecipes,
+                            onRecipeClick = viewModel::onRecipeSelected
+                        )
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Chat with Chef, your personal cooking assistant, to generate recipes, " +
+                            "bounce off ideas, or get tips & tricks for your cooking!",
+                        style = AppTypography.bodyMedium.copy(
+                            fontStyle = FontStyle.Italic,
+                            color = TextSecondary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }
+
+        ChefFab(
+            onClick = { showChefOverlay = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp)
+        )
 
         if (showChefOverlay) {
             ChefOverlay(
@@ -242,6 +297,30 @@ private fun HomeScreenContent(
                 recipe = null,
                 onDismiss = { showChefOverlay = false }
             )
+        }
+    }
+}
+
+@Composable
+private fun RecipeCardGrid(
+    recipes: List<Recipe>,
+    onRecipeClick: (Recipe) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        recipes.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { recipe ->
+                    RecipeCard(
+                        title = recipe.title ?: "",
+                        imageUrl = recipe.imageUrl,
+                        onClick = { onRecipeClick(recipe) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (row.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
