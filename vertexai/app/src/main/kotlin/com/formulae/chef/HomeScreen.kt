@@ -1,5 +1,6 @@
 package com.formulae.chef
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -98,7 +100,11 @@ fun HomeScreen(
         } else {
             val firstName = currentUser?.displayName
                 ?.takeIf { it.isNotBlank() }
-                ?.split(" ")?.firstOrNull() ?: "Chef"
+                ?.split(" ")?.firstOrNull()
+                ?: currentUser?.email
+                    ?.substringBefore("@")
+                    ?.replaceFirstChar(Char::uppercaseChar)
+                ?: "there"
             HomeScreenContent(
                 viewModel = viewModel,
                 displayName = firstName,
@@ -155,7 +161,7 @@ private fun HomeScreenContent(
                     )
                 }
             }
-            HorizontalDivider(color = Terracotta200)
+            WaveDivider()
 
             // Content area
             Column(
@@ -251,6 +257,39 @@ private fun HomeScreenContent(
                 onDismiss = { showChefOverlay = false }
             )
         }
+    }
+}
+
+@Composable
+private fun WaveDivider(modifier: Modifier = Modifier) {
+    val color = Terracotta200
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(14.dp)
+    ) {
+        val waveHeight = 3.dp.toPx()
+        val waveLength = 18.dp.toPx()
+        val centerY = size.height / 2f
+        val path = Path()
+        path.moveTo(0f, centerY)
+        var x = 0f
+        while (x < size.width + waveLength) {
+            path.quadraticBezierTo(
+                x + waveLength / 4f,
+                centerY - waveHeight,
+                x + waveLength / 2f,
+                centerY
+            )
+            path.quadraticBezierTo(
+                x + waveLength * 3f / 4f,
+                centerY + waveHeight,
+                x + waveLength,
+                centerY
+            )
+            x += waveLength
+        }
+        drawPath(path, color = color, style = Stroke(width = 1.5.dp.toPx()))
     }
 }
 
