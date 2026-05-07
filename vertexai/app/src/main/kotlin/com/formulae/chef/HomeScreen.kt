@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,17 +98,12 @@ fun HomeScreen(
                 isOwner = currentUser?.uid == selectedRecipe?.uid
             )
         } else {
-            val firstName = currentUser?.displayName
-                ?.takeIf { it.isNotBlank() }
-                ?.split(" ")?.firstOrNull()
-                ?: currentUser?.email
-                    ?.substringBefore("@")
-                    ?.replaceFirstChar(Char::uppercaseChar)
-                ?: "there"
+            val firstName = remember(currentUser) {
+                resolveDisplayName(currentUser?.displayName, currentUser?.email)
+            }
             HomeScreenContent(
                 viewModel = viewModel,
                 displayName = firstName,
-                onNavigateToChat = onNavigateToChat,
                 onNavigateToCollection = onNavigateToCollection,
                 onNavigateToCommunity = onNavigateToCommunity,
                 onSignOut = onSignOut
@@ -121,7 +116,6 @@ fun HomeScreen(
 private fun HomeScreenContent(
     viewModel: HomeScreenViewModel,
     displayName: String,
-    onNavigateToChat: () -> Unit,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onSignOut: () -> Unit
@@ -155,7 +149,7 @@ private fun HomeScreenContent(
                 )
                 IconButton(onClick = onSignOut) {
                     Icon(
-                        imageVector = Icons.Outlined.Settings,
+                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
                         contentDescription = "Sign out",
                         tint = Terracotta600
                     )
@@ -263,6 +257,7 @@ private fun HomeScreenContent(
 @Composable
 private fun WaveDivider(modifier: Modifier = Modifier) {
     val color = Terracotta200
+    val path = remember { Path() }
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -271,17 +266,17 @@ private fun WaveDivider(modifier: Modifier = Modifier) {
         val waveHeight = 3.dp.toPx()
         val waveLength = 18.dp.toPx()
         val centerY = size.height / 2f
-        val path = Path()
+        path.reset()
         path.moveTo(0f, centerY)
         var x = 0f
         while (x < size.width + waveLength) {
-            path.quadraticBezierTo(
+            path.quadraticTo(
                 x + waveLength / 4f,
                 centerY - waveHeight,
                 x + waveLength / 2f,
                 centerY
             )
-            path.quadraticBezierTo(
+            path.quadraticTo(
                 x + waveLength * 3f / 4f,
                 centerY + waveHeight,
                 x + waveLength,
@@ -316,3 +311,8 @@ private fun RecipeCardGrid(
         }
     }
 }
+
+internal fun resolveDisplayName(displayName: String?, email: String?): String =
+    displayName?.takeIf { it.isNotBlank() }?.split(" ")?.firstOrNull()
+        ?: email?.substringBefore("@")?.replaceFirstChar(Char::uppercaseChar)
+        ?: "there"
