@@ -31,6 +31,7 @@ import com.formulae.chef.ui.theme.GenerativeAISample
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -44,9 +45,15 @@ class MainActivity : ComponentActivity() {
 
     init {
         Firebase.initialize(context = this)
-        Firebase.appCheck.installAppCheckProviderFactory(
+        // Debug provider keeps local dev builds / directly-installed test builds working without
+        // per-device Play Integrity setup. Play Integrity is required for release so App Check
+        // provides real abuse protection once Firebase enforces it for AI Logic (Nov 2, 2026).
+        val appCheckProviderFactory = if (BuildConfig.DEBUG) {
             DebugAppCheckProviderFactory.getInstance()
-        )
+        } else {
+            PlayIntegrityAppCheckProviderFactory.getInstance()
+        }
+        Firebase.appCheck.installAppCheckProviderFactory(appCheckProviderFactory)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
