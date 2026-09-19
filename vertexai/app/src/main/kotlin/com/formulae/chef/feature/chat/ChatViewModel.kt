@@ -29,11 +29,15 @@ import com.formulae.chef.feature.model.LikedMessage
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
+import com.formulae.chef.services.ai.BergetChatCompletionService
+import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
+import com.formulae.chef.services.persistence.Content
 import com.formulae.chef.services.persistence.LikedMessagesRepository
 import com.formulae.chef.services.persistence.LikedMessagesRepositoryImpl
+import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
@@ -41,13 +45,8 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import com.google.firebase.vertexai.Chat
 import com.google.firebase.vertexai.GenerativeModel
-import com.google.firebase.vertexai.type.Content
-import com.google.firebase.vertexai.type.GenerateContentResponse
 import com.google.firebase.vertexai.type.ImagePart
-import com.google.firebase.vertexai.type.TextPart
-import com.google.firebase.vertexai.type.asTextOrNull
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
 import io.opentelemetry.api.GlobalOpenTelemetry
@@ -81,10 +80,11 @@ private data class PreferenceDetectionResult(
 )
 
 class ChatViewModel(
-    chatGenerativeModel: GenerativeModel,
-    jsonGenerativeModel: GenerativeModel,
-    private val preferencesGenerativeModel: GenerativeModel,
-    private val compactionGenerativeModel: GenerativeModel,
+    private val chatCompletionService: BergetChatCompletionService,
+    private val chatConfig: BergetModelConfig,
+    private val jsonConfig: BergetModelConfig,
+    private val preferencesConfig: BergetModelConfig,
+    private val compactionConfig: BergetModelConfig,
     imageGenerativeModel: GenerativeModel,
     application: Application,
     userSessionService: UserSessionService,
@@ -95,7 +95,6 @@ class ChatViewModel(
 
     private val _imageGenerativeModel = imageGenerativeModel
     private val _userSessionService = userSessionService
-    private val _jsonGenerativeModel = jsonGenerativeModel
 
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> = MutableStateFlow(ChatUiState())
@@ -108,7 +107,6 @@ class ChatViewModel(
     private val _selectedRecipeFromChat = MutableStateFlow<Recipe?>(null)
     val selectedRecipeFromChat: StateFlow<Recipe?> = _selectedRecipeFromChat.asStateFlow()
 
-    private lateinit var chat: Chat
     private var _currentUser: UserInfo? = null
     private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
     private lateinit var _userPreferencesRepository: UserPreferencesRepository
@@ -145,7 +143,6 @@ class ChatViewModel(
 
             val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs, collectionTitles)
             _chatHistory.value = fullHistory
-            chat = chatGenerativeModel.startChat(history = fullHistory)
             _isLoading.value = false
             updateUiStateMessages(persistedHistory)
         }
@@ -193,7 +190,7 @@ class ChatViewModel(
         val likedTexts = _cachedLikedMessages.map { (_, msg) -> msg.text }.toSet()
         _uiState.value = ChatUiState(
             history.map { content ->
-                val text = content.parts.first().asTextOrNull() ?: ""
+                val text = content.parts.firstOrNull()?.text ?: ""
                 ChatMessage(
                     text = text,
                     participant = if (content.role == "user") Participant.USER else Participant.MODEL,
@@ -205,7 +202,7 @@ class ChatViewModel(
     }
 
     fun sendMessage(userMessage: String) {
-        val newUserContent = content(role = "user") { text(userMessage) }
+        val newUserContent = Content(role = "user", parts = listOf(Part(userMessage)))
         _uiState.value.addMessage(
             ChatMessage(
                 text = userMessage,
@@ -216,46 +213,44 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                val response = generateModelResponseInstrumented(
-                    prompt = userMessage,
-                    responseFunction = chat::sendMessage,
-                    spanName = "generateChatModelResponse"
+                val modelResponse = generateModelResponseInstrumented(
+                    config = chatConfig,
+                    spanName = "generateChatModelResponse",
+                    messages = _chatHistory.value + newUserContent
                 )
                 _uiState.value.replaceLastPendingMessage()
 
-                response.text?.let { modelResponse ->
-                    val newModelContent = content(role = "model") { text(modelResponse) }
-                    _chatHistory.value += newUserContent
-                    _chatHistory.value += newModelContent
-                    _chatHistoryPersistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
+                val newModelContent = Content(role = "model", parts = listOf(Part(modelResponse)))
+                _chatHistory.value += newUserContent
+                _chatHistory.value += newModelContent
+                _chatHistoryPersistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
 
-                    launch { detectAndSavePreferences(userMessage) }
+                launch { detectAndSavePreferences(userMessage) }
 
-                    val extractedRecipes = try {
-                        extractRecipeDetailsFromMessage(modelResponse)
-                    } catch (e: Exception) {
-                        Log.w("ChatViewModel", "Recipe extraction failed, showing plain text", e)
-                        emptyList()
-                    }
+                val extractedRecipes = try {
+                    extractRecipeDetailsFromMessage(modelResponse)
+                } catch (e: Exception) {
+                    Log.w("ChatViewModel", "Recipe extraction failed, showing plain text", e)
+                    emptyList()
+                }
 
-                    if (extractedRecipes.isNotEmpty()) {
-                        val messageId = UUID.randomUUID().toString()
-                        _uiState.value.addMessage(
-                            ChatMessage(
-                                id = messageId,
-                                participant = Participant.MODEL,
-                                recipes = extractedRecipes
-                            )
+                if (extractedRecipes.isNotEmpty()) {
+                    val messageId = UUID.randomUUID().toString()
+                    _uiState.value.addMessage(
+                        ChatMessage(
+                            id = messageId,
+                            participant = Participant.MODEL,
+                            recipes = extractedRecipes
                         )
-                        launch { generateImagesForMessage(messageId, extractedRecipes) }
-                    } else {
-                        _uiState.value.addMessage(
-                            ChatMessage(
-                                text = modelResponse,
-                                participant = Participant.MODEL
-                            )
+                    )
+                    launch { generateImagesForMessage(messageId, extractedRecipes) }
+                } else {
+                    _uiState.value.addMessage(
+                        ChatMessage(
+                            text = modelResponse,
+                            participant = Participant.MODEL
                         )
-                    }
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value.replaceLastPendingMessage()
@@ -288,8 +283,10 @@ class ChatViewModel(
             } else {
                 "User message: $userMessage"
             }
-            val response = preferencesGenerativeModel.generateContent(content { text(prompt) })
-            val responseText = response.text ?: return
+            val responseText = chatCompletionService.createChatCompletion(
+                preferencesConfig,
+                listOf(Content(role = "user", parts = listOf(Part(prompt))))
+            )
             val gson = Gson()
             val result = gson.fromJson(responseText, PreferenceDetectionResult::class.java)
             if (result.detected && result.updatedSummary.isNotBlank()) {
@@ -320,7 +317,7 @@ class ChatViewModel(
             if (entriesToCompact.isEmpty()) return
 
             val transcript = entriesToCompact.joinToString("\n") { (_, entryContent) ->
-                "${entryContent.role}: ${entryContent.parts.filterIsInstance<TextPart>().firstOrNull()?.text ?: ""}"
+                "${entryContent.role}: ${entryContent.parts.firstOrNull()?.text ?: ""}"
             }
             val currentPrefs = _cachedPreferences
             val likedToCompact = _cachedLikedMessages
@@ -334,8 +331,10 @@ class ChatViewModel(
                 }
                 append("Chat transcript to summarize:\n$transcript")
             }
-            val response = compactionGenerativeModel.generateContent(content { text(prompt) })
-            val newSummary = response.text?.trim() ?: return
+            val newSummary = chatCompletionService.createChatCompletion(
+                compactionConfig,
+                listOf(Content(role = "user", parts = listOf(Part(prompt))))
+            ).trim()
             if (newSummary.isNotBlank()) {
                 val updatedPrefs = UserPreferences(
                     summary = newSummary,
@@ -358,12 +357,10 @@ class ChatViewModel(
 
     private suspend fun extractRecipeDetailsFromMessage(messageText: String): List<Recipe> {
         val recipesJsonText = generateModelResponseInstrumented(
-            prompt = messageText,
-            responseFunction = { prompt ->
-                _jsonGenerativeModel.generateContent(content { text(prompt) })
-            },
-            spanName = "generateJsonModelResponse"
-        ).text!!
+            config = jsonConfig,
+            spanName = "generateJsonModelResponse",
+            messages = listOf(Content(role = "user", parts = listOf(Part(messageText))))
+        )
         val gson = Gson()
         val recipesWrapper = gson.fromJson(recipesJsonText, Recipes::class.java)
         return recipesWrapper.recipes.map { recipe ->
@@ -503,24 +500,26 @@ class ChatViewModel(
     }
 
     private suspend fun generateModelResponseInstrumented(
-        prompt: String,
-        responseFunction: suspend (String) -> GenerateContentResponse,
-        spanName: String
-    ): GenerateContentResponse {
+        config: BergetModelConfig,
+        spanName: String,
+        messages: List<Content>
+    ): String {
+        val prompt = messages.lastOrNull()?.parts?.firstOrNull()?.text ?: ""
         val tracer: Tracer = getTracer()
         val span: Span = tracer.spanBuilder(spanName)
-            .setAttribute("operation.name", "generateChatModelResponse")
-            .setAttribute("llm.model_name", "gemini-2.5-flash")
+            .setAttribute("openinference.span.kind", "LLM")
+            .setAttribute("operation.name", spanName)
+            .setAttribute("llm.model_name", config.model)
             .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
 
-        var response: GenerateContentResponse? = null
-        try {
+        return try {
             io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                response = responseFunction(prompt)
+                val response = chatCompletionService.createChatCompletion(config, messages)
                 span.setAttribute("llm.output_messages.0.message.role", "model")
-                span.setAttribute("llm.output_messages.0.message.content", response?.text ?: "")
+                span.setAttribute("llm.output_messages.0.message.content", response)
+                response
             }
         } catch (e: Exception) {
             span.recordException(e)
@@ -529,7 +528,6 @@ class ChatViewModel(
         } finally {
             span.end()
         }
-        return response!!
     }
 
     private fun getTracer(): Tracer {
@@ -539,6 +537,7 @@ class ChatViewModel(
     private suspend fun generateImageInstrumented(recipe: String): String {
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val span = getTracer().spanBuilder("generateImage")
+            .setAttribute("openinference.span.kind", "LLM")
             .setAttribute("operation.name", "generateImage")
             .setAttribute("llm.model_name", "vertexai/gemini-flash-image")
             .setAttribute("llm.input_messages.0.message.role", "user")
@@ -597,10 +596,11 @@ class ChatViewModel(
                 }
             }
 
-            val syntheticUser = content(role = "user") { text(contextText) }
-            val syntheticModel = content(role = "model") {
-                text("Understood, I'll keep these preferences in mind throughout our conversation.")
-            }
+            val syntheticUser = Content(role = "user", parts = listOf(Part(contextText)))
+            val syntheticModel = Content(
+                role = "model",
+                parts = listOf(Part("Understood, I'll keep these preferences in mind throughout our conversation."))
+            )
             return listOf(syntheticUser, syntheticModel) + history
         }
 

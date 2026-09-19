@@ -1,6 +1,13 @@
 package com.formulae.chef.services.persistence
 
-import com.google.firebase.vertexai.type.Content
+data class Content(
+    var role: String = "user", // Default value, must be mutable (var)
+    var parts: List<Part> = emptyList() // Default empty list, must be mutable
+)
+
+data class Part(
+    var text: String = ""
+)
 
 interface ChatHistoryRepository {
     val uid: String

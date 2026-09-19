@@ -33,6 +33,7 @@ if (localPropertiesFile.exists()) {
 val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
 val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
 val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
+val bergetApiKey: String = localProperties.getProperty("bergetApiKey", "")
 
 android {
     namespace = "com.formulae.chef"
@@ -55,6 +56,12 @@ android {
             "String",
             "gcpTtsApiKey",
             "\"${gcpTtsApiKey}\""
+        )
+
+        buildConfigField(
+            "String",
+            "bergetApiKey",
+            "\"${bergetApiKey}\""
         )
 
         applicationId = "com.formulae.chef"
@@ -125,6 +132,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.json:json:20231013")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.02.01"))

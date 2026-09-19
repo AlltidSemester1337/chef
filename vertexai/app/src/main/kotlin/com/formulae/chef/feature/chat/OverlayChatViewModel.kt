@@ -6,16 +6,19 @@ import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
-import com.google.firebase.vertexai.GenerativeModel
-import com.google.firebase.vertexai.type.content
+import com.formulae.chef.services.ai.BergetChatCompletionService
+import com.formulae.chef.services.ai.BergetModelConfig
+import com.formulae.chef.services.persistence.Content
+import com.formulae.chef.services.persistence.Part
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class OverlayChatViewModel(
-    private val defaultChatModel: GenerativeModel,
-    private val recipeContextModel: GenerativeModel
+    private val chatCompletionService: BergetChatCompletionService,
+    private val defaultConfig: BergetModelConfig,
+    private val recipeContextConfig: BergetModelConfig
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<ChatUiState> = MutableStateFlow(ChatUiState())
@@ -24,7 +27,8 @@ class OverlayChatViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private var chat = defaultChatModel.startChat()
+    private var activeConfig = defaultConfig
+    private var history: List<Content> = emptyList()
     private var contextInitialized = false
 
     fun initWithRecipeContext(recipe: Recipe) {
@@ -32,11 +36,13 @@ class OverlayChatViewModel(
         contextInitialized = true
 
         val contextText = buildRecipeContextText(recipe)
-        val silentUserContent = content(role = "user") { text(contextText) }
-        val silentModelContent = content(role = "model") { text("Understood, I have the recipe details.") }
-        chat = recipeContextModel.startChat(
-            history = listOf(silentUserContent, silentModelContent)
+        val silentUserContent = Content(role = "user", parts = listOf(Part(contextText)))
+        val silentModelContent = Content(
+            role = "model",
+            parts = listOf(Part("Understood, I have the recipe details."))
         )
+        activeConfig = recipeContextConfig
+        history = listOf(silentUserContent, silentModelContent)
         _uiState.value.addMessage(
             ChatMessage(
                 text = "I've loaded ${recipe.title} — what would you like to know?",
@@ -52,17 +58,16 @@ class OverlayChatViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = chat.sendMessage(userMessage)
+                val newUserContent = Content(role = "user", parts = listOf(Part(userMessage)))
+                val modelResponse = chatCompletionService.createChatCompletion(
+                    activeConfig,
+                    history + newUserContent
+                )
                 _uiState.value.replaceLastPendingMessage()
-                response.text?.let { modelResponse ->
-                    _uiState.value.addMessage(
-                        ChatMessage(text = modelResponse, participant = Participant.MODEL)
-                    )
-                } ?: _uiState.value.addMessage(
-                    ChatMessage(
-                        text = "Sorry, I didn't get a response. Please try again.",
-                        participant = Participant.ERROR
-                    )
+                history = history + newUserContent +
+                    Content(role = "model", parts = listOf(Part(modelResponse)))
+                _uiState.value.addMessage(
+                    ChatMessage(text = modelResponse, participant = Participant.MODEL)
                 )
             } catch (e: Exception) {
                 _uiState.value.replaceLastPendingMessage()
@@ -81,6 +86,7 @@ class OverlayChatViewModel(
     fun reset() {
         contextInitialized = false
         _uiState.value = ChatUiState()
-        chat = defaultChatModel.startChat()
+        activeConfig = defaultConfig
+        history = emptyList()
     }
 }

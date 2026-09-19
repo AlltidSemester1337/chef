@@ -4,10 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.OverlayChatViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.vertexai.type.content
-import com.google.firebase.vertexai.type.generationConfig
-import com.google.firebase.vertexai.vertexAI
+import com.formulae.chef.services.ai.BERGET_MISTRAL_SMALL_3_2
+import com.formulae.chef.services.ai.BergetChatCompletionService
+import com.formulae.chef.services.ai.BergetModelConfig
 
 private const val OVERLAY_DEFAULT_SYSTEM_INSTRUCTIONS =
     """You are Chef, a friendly AI cooking assistant. Answer questions about cooking, recipes,
@@ -20,25 +19,25 @@ Do not proactively suggest new recipes unless specifically asked."""
 
 val OverlayChatViewModelFactory = object : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-        val chatConfig = generationConfig {
-            temperature = 1.0f
-            maxOutputTokens = 2048
-            topP = 0.95f
-        }
+        val chatCompletionService = BergetChatCompletionService(BuildConfig.bergetApiKey)
 
-        val defaultModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash",
-            generationConfig = chatConfig,
-            systemInstruction = content { text(OVERLAY_DEFAULT_SYSTEM_INSTRUCTIONS) }
+        val defaultConfig = BergetModelConfig(
+            model = BERGET_MISTRAL_SMALL_3_2,
+            systemInstruction = OVERLAY_DEFAULT_SYSTEM_INSTRUCTIONS,
+            temperature = 1.0f,
+            topP = 0.95f,
+            maxTokens = 2048
         )
 
-        val recipeContextModel = Firebase.vertexAI.generativeModel(
-            modelName = "gemini-2.5-flash",
-            generationConfig = chatConfig,
-            systemInstruction = content { text(OVERLAY_RECIPE_CONTEXT_SYSTEM_INSTRUCTIONS) }
+        val recipeContextConfig = BergetModelConfig(
+            model = BERGET_MISTRAL_SMALL_3_2,
+            systemInstruction = OVERLAY_RECIPE_CONTEXT_SYSTEM_INSTRUCTIONS,
+            temperature = 1.0f,
+            topP = 0.95f,
+            maxTokens = 2048
         )
 
         @Suppress("UNCHECKED_CAST")
-        return OverlayChatViewModel(defaultModel, recipeContextModel) as T
+        return OverlayChatViewModel(chatCompletionService, defaultConfig, recipeContextConfig) as T
     }
 }

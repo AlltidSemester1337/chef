@@ -21,10 +21,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.ChatViewModel
+import com.formulae.chef.services.ai.BERGET_MISTRAL_SMALL_3_2
+import com.formulae.chef.services.ai.BergetChatCompletionService
+import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
 import com.google.firebase.Firebase
 import com.google.firebase.vertexai.type.ResponseModality
-import com.google.firebase.vertexai.type.content
 import com.google.firebase.vertexai.type.generationConfig
 import com.google.firebase.vertexai.vertexAI
 
@@ -48,25 +50,6 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         viewModelClass: Class<T>,
         extras: CreationExtras
     ): T {
-        val chatConfig = generationConfig {
-            temperature = 1.0f
-            maxOutputTokens = 8192
-            topP = 0.95f
-        }
-
-        val jsonConfig = generationConfig {
-            temperature = 0.2f
-            maxOutputTokens = 8192
-            topP = 0.95f
-            responseMimeType = "application/json"
-        }
-
-        val textConfig = generationConfig {
-            temperature = 0.2f
-            maxOutputTokens = 8192
-            topP = 0.95f
-        }
-
         val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
 
         val systemPrompt = application.assets
@@ -77,19 +60,43 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         return with(viewModelClass) {
             when {
                 isAssignableFrom(ChatViewModel::class.java) -> {
-                    // Initialize a GenerativeModel with the `gemini-2.5-flash` AI model for chat
-                    val chatGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash",
-                        generationConfig = chatConfig,
-                        systemInstruction = content { text(systemPrompt) }
+                    val chatCompletionService = BergetChatCompletionService(BuildConfig.bergetApiKey)
+
+                    val chatConfig = BergetModelConfig(
+                        model = BERGET_MISTRAL_SMALL_3_2,
+                        systemInstruction = systemPrompt,
+                        temperature = 1.0f,
+                        topP = 0.95f,
+                        maxTokens = 8192
                     )
 
-                    val jsonGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
-                        generationConfig = jsonConfig,
-                        systemInstruction = content { text(DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS) }
+                    val jsonConfig = BergetModelConfig(
+                        model = BERGET_MISTRAL_SMALL_3_2,
+                        systemInstruction = DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS,
+                        temperature = 0.2f,
+                        topP = 0.95f,
+                        maxTokens = 8192,
+                        jsonMode = true
                     )
 
+                    val preferencesConfig = BergetModelConfig(
+                        model = BERGET_MISTRAL_SMALL_3_2,
+                        systemInstruction = EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS,
+                        temperature = 0.2f,
+                        topP = 0.95f,
+                        maxTokens = 8192,
+                        jsonMode = true
+                    )
+
+                    val compactionConfig = BergetModelConfig(
+                        model = BERGET_MISTRAL_SMALL_3_2,
+                        systemInstruction = COMPACT_HISTORY_SYSTEM_INSTRUCTIONS,
+                        temperature = 0.2f,
+                        topP = 0.95f,
+                        maxTokens = 8192
+                    )
+
+                    // Image generation stays on Gemini via Firebase Vertex AI (out of scope for CHE-35).
                     val imageConfig = generationConfig {
                         responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
                     }
@@ -99,26 +106,15 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         generationConfig = imageConfig
                     )
 
-                    val preferencesGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
-                        generationConfig = jsonConfig,
-                        systemInstruction = content { text(EXTRACT_PREFERENCES_SYSTEM_INSTRUCTIONS) }
-                    )
-
-                    val compactionGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-lite",
-                        generationConfig = textConfig,
-                        systemInstruction = content { text(COMPACT_HISTORY_SYSTEM_INSTRUCTIONS) }
-                    )
-
                     val userSessionService = UserSessionServiceFirebaseImpl()
                     val applicationScope = (application as ChefApplication).applicationScope
 
                     ChatViewModel(
-                        chatGenerativeModel = chatGenerativeModel,
-                        jsonGenerativeModel = jsonGenerativeModel,
-                        preferencesGenerativeModel = preferencesGenerativeModel,
-                        compactionGenerativeModel = compactionGenerativeModel,
+                        chatCompletionService = chatCompletionService,
+                        chatConfig = chatConfig,
+                        jsonConfig = jsonConfig,
+                        preferencesConfig = preferencesConfig,
+                        compactionConfig = compactionConfig,
                         imageGenerativeModel = imageGenerativeModel,
                         application = application,
                         userSessionService = userSessionService,
