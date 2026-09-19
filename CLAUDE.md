@@ -12,7 +12,7 @@ Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that g
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. Three properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey`. A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
+The project requires JDK 17 and Android SDK with platform 36. Four properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey`, `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON-extraction/preference/compaction text models). A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
 
 ```bash
 # Build the main Chef app
@@ -91,9 +91,11 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 
 ## ADB Device Interaction
 
+**Do not use ADB tools proactively.** Only use ADB (screenshots, taps, logcat, install, etc.) when the user explicitly asks for it — manual device driving is faster than automation for most verification steps, including ones that seem simple. Default to asking the user to check the device/app and report back.
+
 App package name: `com.formulae.chef`
 
-Useful ADB commands for this project:
+Useful ADB commands for this project (for use once ADB use has been requested):
 
 ```bash
 # Check connected devices
@@ -160,13 +162,14 @@ Default emulator ports: `9000` (Realtime Database), `9099` (Authentication).
 
 ### External REST API Integration Tests
 
-For features that call external REST APIs (e.g. GCP Cloud TTS), add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `GcpTextToSpeechServiceTest` for the pattern.
+This split matters — do not conflate the two categories:
 
-These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
+- **Deterministic/cheap utility REST APIs** (e.g. GCP Cloud TTS): add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `GcpTextToSpeechServiceTest` for the pattern. These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
+- **AI model API calls** (Gemini, Imagen, Berget.ai/Mistral chat completions, or any other per-request-metered generative inference call): do **NOT** write an automated `androidTest` that hits the real API, even guarded — these cost money per token/request and have non-deterministic output. Unit-test only the pure request/response-shaping logic (e.g. request-body builders, response parsers) with hardcoded fixtures, no network. Regression testing for these is covered by manual E2E sessions, not automated integration tests.
 
 ### AI Model API Calls
 
-Vertex AI (Gemini) and Imagen API regression testing requires real GCP credentials and incurs API costs. These are covered by manual E2E testing sessions, not automated integration tests.
+Vertex AI (Gemini), Imagen, and Berget.ai/Mistral chat completions API regression testing requires real credentials and incurs API costs. These are covered by manual E2E testing sessions, not automated integration tests — see the split above.
 
 ## Context Hub (chub)
 
