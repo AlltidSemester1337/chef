@@ -11,7 +11,7 @@ The following files are **gitignored** and must be obtained from the team before
 
 | File | Purpose |
 |------|---------|
-| `local.properties` | Must contain `firebaseDbUrl`, `phoenixApiKey`, and `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup) |
+| `local.properties` | Must contain `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models) |
 | `vertexai/app/google-services.json` | Firebase / GCP service account credentials |
 | `vertexai/app/src/main/assets/gcp.json` | Vertex AI (Gemini) credentials |
 | `vertexai/app/src/main/assets/imagen-google-services.json` | Imagen image generation credentials |

@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
         val spanExporter = OtlpHttpSpanExporter.builder()
             .addHeader("Authorization", "Bearer ${BuildConfig.phoenixApiKey}")
             .addHeader("api_key", BuildConfig.phoenixApiKey)
-            .setEndpoint("https://app.phoenix.arize.com/v1/traces")
+            .setEndpoint("https://app.phoenix.arize.com/s/humlekottekonsult/v1/traces")
             .build()
 
         val resource = Resource.create(

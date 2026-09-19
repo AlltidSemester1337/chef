@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.model
 
+import com.google.gson.Gson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -192,6 +193,51 @@ class RecipeTest {
         val recipe2 = Recipe(id = "2", title = "Pie")
 
         assertFalse(recipe1 == recipe2)
+    }
+}
+
+class RecipeTipsAndTricksDeserializationTest {
+
+    private val gson = Gson()
+
+    @Test
+    fun `tipsAndTricks as plain string deserializes unchanged`() {
+        val json = """{"tipsAndTricks": "Use room temperature butter"}"""
+        val recipe = gson.fromJson(json, Recipe::class.java)
+
+        assertEquals("Use room temperature butter", recipe.tipsAndTricks)
+    }
+
+    @Test
+    fun `tipsAndTricks as JSON array normalizes to bullet lines`() {
+        val json = """{"tipsAndTricks": ["Use room temperature butter", "Do not overmix"]}"""
+        val recipe = gson.fromJson(json, Recipe::class.java)
+
+        assertEquals("- Use room temperature butter\n- Do not overmix", recipe.tipsAndTricks)
+    }
+
+    @Test
+    fun `tipsAndTricks missing deserializes to null`() {
+        val json = """{"title": "Test"}"""
+        val recipe = gson.fromJson(json, Recipe::class.java)
+
+        assertNull(recipe.tipsAndTricks)
+    }
+
+    @Test
+    fun `tipsAndTricks as JSON null deserializes to null`() {
+        val json = """{"tipsAndTricks": null}"""
+        val recipe = gson.fromJson(json, Recipe::class.java)
+
+        assertNull(recipe.tipsAndTricks)
+    }
+
+    @Test
+    fun `tipsAndTricks as empty array normalizes to empty string`() {
+        val json = """{"tipsAndTricks": []}"""
+        val recipe = gson.fromJson(json, Recipe::class.java)
+
+        assertEquals("", recipe.tipsAndTricks)
     }
 }
 

@@ -7,22 +7,13 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 
-data class Content(
-    var role: String = "user", // Default value, must be mutable (var)
-    var parts: List<Part> = emptyList() // Default empty list, must be mutable
-)
-
-data class Part(
-    var text: String = ""
-)
-
 class ChatHistoryRepositoryImpl(
     override val uid: String,
     private val database: FirebaseDatabase = FirebaseInstance.database
 ) : ChatHistoryRepository {
     private val _chatHistoryKey = "users/$uid/chat_history"
 
-    override fun saveNewEntries(newEntries: List<com.google.firebase.vertexai.type.Content>) {
+    override fun saveNewEntries(newEntries: List<Content>) {
         val reference = database.getReference(_chatHistoryKey)
         for (entry in newEntries) {
             reference.push().setValue(entry).addOnCompleteListener { task ->
@@ -35,18 +26,13 @@ class ChatHistoryRepositoryImpl(
         }
     }
 
-    override suspend fun loadChatHistoryLastTwentyEntries(): List<com.google.firebase.vertexai.type.Content> {
+    override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
         return suspendCancellableCoroutine { continuation ->
             database.getReference(_chatHistoryKey).get()
                 .addOnSuccessListener { dataSnapshot ->
                     val contentList = dataSnapshot.children.mapNotNull { child ->
                         child.getValue(Content::class.java)
-                    }.takeLast(20).map { content ->
-                        com.google.firebase.vertexai.type.Content(
-                            content.role,
-                            content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) }
-                        )
-                    }
+                    }.takeLast(20)
                     continuation.resume(contentList)
                 }.addOnFailureListener { exception ->
                     Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)
@@ -55,20 +41,14 @@ class ChatHistoryRepositoryImpl(
         }
     }
 
-    override suspend fun loadAllEntries(): List<Pair<String, com.google.firebase.vertexai.type.Content>> {
+    override suspend fun loadAllEntries(): List<Pair<String, Content>> {
         return suspendCancellableCoroutine { continuation ->
             database.getReference(_chatHistoryKey).get()
                 .addOnSuccessListener { dataSnapshot ->
                     val entries = dataSnapshot.children.mapNotNull { child ->
                         val content = child.getValue(Content::class.java) ?: return@mapNotNull null
                         val key = child.key ?: return@mapNotNull null
-                        Pair(
-                            key,
-                            com.google.firebase.vertexai.type.Content(
-                                content.role,
-                                content.parts.map { part -> com.google.firebase.vertexai.type.TextPart(part.text) }
-                            )
-                        )
+                        Pair(key, content)
                     }
                     continuation.resume(entries)
                 }

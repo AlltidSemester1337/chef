@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
-import com.google.firebase.vertexai.GenerativeModel
-import com.google.firebase.vertexai.type.content
+import com.formulae.chef.services.ai.BergetChatCompletionService
+import com.formulae.chef.services.ai.BergetModelConfig
+import com.formulae.chef.services.persistence.Content
+import com.formulae.chef.services.persistence.Part
 import com.google.gson.Gson
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
@@ -18,8 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AskChefVariantViewModel(
-    private val recipeAdjustModel: GenerativeModel,
-    private val jsonGenerativeModel: GenerativeModel
+    private val chatCompletionService: BergetChatCompletionService,
+    private val recipeAdjustConfig: BergetModelConfig,
+    private val jsonConfig: BergetModelConfig
 ) : ViewModel() {
 
     sealed class State {
@@ -39,17 +42,15 @@ class AskChefVariantViewModel(
                 val prompt = buildAdjustPrompt(recipe, userRequest)
                 val adjustedText = generateInstrumented(
                     spanName = "adjustRecipe",
-                    modelName = "gemini-2.5-flash",
+                    config = recipeAdjustConfig,
                     prompt = prompt
-                ) { recipeAdjustModel.generateContent(content { text(it) }).text }
-                    ?: throw Exception("Empty response from adjust model")
+                )
 
                 val jsonText = generateInstrumented(
                     spanName = "extractRecipeJson",
-                    modelName = "gemini-2.5-flash-lite",
+                    config = jsonConfig,
                     prompt = adjustedText
-                ) { jsonGenerativeModel.generateContent(content { text(it) }).text }
-                    ?: throw Exception("Empty response from JSON model")
+                )
 
                 val recipes = Gson().fromJson(jsonText, Recipes::class.java).recipes
                 if (recipes.isEmpty()) throw Exception("No recipe in JSON response")
@@ -64,22 +65,25 @@ class AskChefVariantViewModel(
 
     private suspend fun generateInstrumented(
         spanName: String,
-        modelName: String,
-        prompt: String,
-        call: suspend (String) -> String?
-    ): String? {
+        config: BergetModelConfig,
+        prompt: String
+    ): String {
         val tracer = GlobalOpenTelemetry.getTracer("com.formulae.chef")
         val span: Span = tracer.spanBuilder(spanName)
+            .setAttribute("openinference.span.kind", "LLM")
             .setAttribute("operation.name", spanName)
-            .setAttribute("llm.model_name", modelName)
+            .setAttribute("llm.model_name", config.model)
             .setAttribute("llm.input_messages.0.message.role", "user")
             .setAttribute("llm.input_messages.0.message.content", prompt)
             .startSpan()
         return try {
             io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                val result = call(prompt)
+                val result = chatCompletionService.createChatCompletion(
+                    config,
+                    listOf(Content(role = "user", parts = listOf(Part(prompt))))
+                )
                 span.setAttribute("llm.output_messages.0.message.role", "model")
-                span.setAttribute("llm.output_messages.0.message.content", result ?: "")
+                span.setAttribute("llm.output_messages.0.message.content", result)
                 result
             }
         } catch (e: Exception) {

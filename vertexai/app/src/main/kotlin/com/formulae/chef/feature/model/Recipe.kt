@@ -1,6 +1,11 @@
 package com.formulae.chef.feature.model
 
 import com.google.firebase.database.PropertyName
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.annotations.JsonAdapter
+import java.lang.reflect.Type
 
 data class Recipe(
     var id: String? = null,
@@ -14,6 +19,7 @@ data class Recipe(
     var ingredients: List<Ingredient> = listOf(),
     var difficulty: Difficulty? = Difficulty.EASY,
     var instructions: List<String> = listOf(),
+    @JsonAdapter(TipsAndTricksDeserializer::class)
     var tipsAndTricks: String? = null,
 
     var imageUrl: String? = null,
@@ -63,6 +69,22 @@ data class Recipe(
             copyId,
             tags
         )
+    }
+}
+
+/**
+ * Some LLM providers return `tipsAndTricks` as a JSON array of tip strings instead of the
+ * documented single bullet-formatted string (e.g. Mistral Small 3.2 via Berget.ai). Accept both
+ * shapes and normalize to the "- " per-line format [parseTips] expects.
+ */
+private class TipsAndTricksDeserializer : JsonDeserializer<String?> {
+    override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): String? {
+        if (json == null || json.isJsonNull) return null
+        return if (json.isJsonArray) {
+            json.asJsonArray.joinToString("\n") { "- ${it.asString.trim()}" }
+        } else {
+            json.asString
+        }
     }
 }
 

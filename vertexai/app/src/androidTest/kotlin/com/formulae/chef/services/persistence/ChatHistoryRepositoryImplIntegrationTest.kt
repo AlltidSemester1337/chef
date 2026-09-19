@@ -2,8 +2,6 @@ package com.formulae.chef.services.persistence
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.vertexai.type.TextPart
-import com.google.firebase.vertexai.type.content
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
@@ -48,23 +46,23 @@ class ChatHistoryRepositoryImplIntegrationTest {
 
     @Test
     fun saveNewEntries_andLoad_preservesRoleAndText() = runBlocking {
-        val userEntry = content(role = "user") { text("What can I cook tonight?") }
-        val modelEntry = content(role = "model") { text("Here are some ideas...") }
+        val userEntry = Content(role = "user", parts = listOf(Part("What can I cook tonight?")))
+        val modelEntry = Content(role = "model", parts = listOf(Part("Here are some ideas...")))
 
         repository.saveNewEntries(listOf(userEntry, modelEntry))
 
         val loaded = waitForEntries(count = 2)
         assertEquals(2, loaded.size)
         assertEquals("user", loaded[0].role)
-        assertEquals("What can I cook tonight?", (loaded[0].parts.first() as TextPart).text)
+        assertEquals("What can I cook tonight?", loaded[0].parts.first().text)
         assertEquals("model", loaded[1].role)
-        assertEquals("Here are some ideas...", (loaded[1].parts.first() as TextPart).text)
+        assertEquals("Here are some ideas...", loaded[1].parts.first().text)
     }
 
     @Test
     fun loadChatHistoryLastTwentyEntries_returnsAtMostTwentyEntries() = runBlocking {
         val entries = (1..25).map { i ->
-            content(role = if (i % 2 == 0) "model" else "user") { text("Message $i") }
+            Content(role = if (i % 2 == 0) "model" else "user", parts = listOf(Part("Message $i")))
         }
         repository.saveNewEntries(entries)
 
@@ -75,28 +73,28 @@ class ChatHistoryRepositoryImplIntegrationTest {
     @Test
     fun loadChatHistoryLastTwentyEntries_returnsLastEntries_notFirst() = runBlocking {
         val entries = (1..25).map { i ->
-            content(role = "user") { text("Message $i") }
+            Content(role = "user", parts = listOf(Part("Message $i")))
         }
         repository.saveNewEntries(entries)
 
         val loaded = waitForEntries(count = 20)
         // The last 20 of 25 messages should be messages 6–25
-        val texts = loaded.map { (it.parts.first() as TextPart).text }
+        val texts = loaded.map { it.parts.first().text }
         assertTrue("Message 1" !in texts)
         assertTrue("Message 25" in texts)
     }
 
     @Test
     fun saveNewEntries_multipleCallsAppend() = runBlocking {
-        repository.saveNewEntries(listOf(content(role = "user") { text("First") }))
-        repository.saveNewEntries(listOf(content(role = "model") { text("Second") }))
+        repository.saveNewEntries(listOf(Content(role = "user", parts = listOf(Part("First")))))
+        repository.saveNewEntries(listOf(Content(role = "model", parts = listOf(Part("Second")))))
 
         val loaded = waitForEntries(count = 2)
         assertEquals(2, loaded.size)
     }
 
     /** Polls until [count] entries are visible in the DB, to account for async writes. */
-    private suspend fun waitForEntries(count: Int): List<com.google.firebase.vertexai.type.Content> {
+    private suspend fun waitForEntries(count: Int): List<Content> {
         repeat(10) {
             val entries = repository.loadChatHistoryLastTwentyEntries()
             if (entries.size >= count) return entries

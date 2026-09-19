@@ -1,15 +1,15 @@
 package com.formulae.chef.feature.chat
 
 import com.formulae.chef.feature.model.UserPreferences
-import com.google.firebase.vertexai.type.Content
-import com.google.firebase.vertexai.type.TextPart
+import com.formulae.chef.services.persistence.Content
+import com.formulae.chef.services.persistence.Part
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatHistoryHelpersTest {
 
-    private fun makeContent(role: String, text: String) = Content(role, listOf(TextPart(text)))
+    private fun makeContent(role: String, text: String) = Content(role, listOf(Part(text)))
 
     // --- buildChatHistoryWithPreferences ---
 
@@ -42,7 +42,7 @@ class ChatHistoryHelpersTest {
     fun buildChatHistory_prependedUserEntry_containsPrefSummary() {
         val prefs = UserPreferences(summary = "no fish, metric units")
         val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), prefs)
-        val userText = (result[0].parts.first() as TextPart).text
+        val userText = result[0].parts.first().text
         assertTrue(userText.contains("no fish, metric units"))
     }
 
@@ -51,7 +51,7 @@ class ChatHistoryHelpersTest {
         val prefs = UserPreferences(summary = "no fish")
         val titles = listOf("Pasta Carbonara", "Chicken Tikka")
         val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), prefs, titles)
-        val userText = (result[0].parts.first() as TextPart).text
+        val userText = result[0].parts.first().text
         assertTrue(userText.contains("Pasta Carbonara"))
         assertTrue(userText.contains("Chicken Tikka"))
     }
@@ -61,7 +61,7 @@ class ChatHistoryHelpersTest {
         val titles = listOf("Beef Rendang")
         val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), null, titles)
         assertEquals(2, result.size)
-        val userText = (result[0].parts.first() as TextPart).text
+        val userText = result[0].parts.first().text
         assertTrue(userText.contains("Beef Rendang"))
     }
 
@@ -77,7 +77,7 @@ class ChatHistoryHelpersTest {
         val prefs = UserPreferences(summary = "vegan")
         val titles = listOf("Lentil Soup", "Falafel")
         val result = ChatViewModel.buildChatHistoryWithPreferences(emptyList(), prefs, titles)
-        val userText = (result[0].parts.first() as TextPart).text
+        val userText = result[0].parts.first().text
         assertTrue(userText.contains("vegan"))
         assertTrue(userText.contains("Lentil Soup"))
         assertTrue(userText.contains("Falafel"))
