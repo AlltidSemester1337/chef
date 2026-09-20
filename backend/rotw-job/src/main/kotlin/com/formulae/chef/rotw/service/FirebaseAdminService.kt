@@ -80,9 +80,11 @@ class FirebaseAdminService {
         return snapshot.children.mapNotNull { it.key }.toSet()
     }
 
-    suspend fun uploadVideo(videoBytes: ByteArray, monthOf: String): String {
+    suspend fun uploadVideo(videoBytes: ByteArray, monthOf: String, recipeId: String): String {
         val bucket = StorageClient.getInstance().bucket()
-        val blobName = "$STORAGE_VIDEO_PATH/$monthOf.mp4"
+        // Keyed by recipeId, not just monthOf, so a repeated/retried run within the same
+        // month can't overwrite an earlier run's video out from under its recipe record.
+        val blobName = "$STORAGE_VIDEO_PATH/$monthOf-$recipeId.mp4"
         val blob = bucket.create(blobName, ByteArrayInputStream(videoBytes), "video/mp4")
         blob.createAcl(Acl.of(Acl.User.ofAllUsers(), Acl.Role.READER))
         val downloadUrl = "https://storage.googleapis.com/$storageBucket/$blobName"

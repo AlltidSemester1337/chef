@@ -3,7 +3,7 @@
 A Cloud Run Job that runs monthly to:
 1. Pick a random favourite recipe that has never been featured before
 2. Generate an 8-second cinematic food video (with audio) via **Google Veo 3.1 Lite** (Vertex AI, GA)
-3. Upload the video to **Firebase Storage** under `videos/rotw/YYYY-MM.mp4`
+3. Upload the video to **Firebase Storage** under `videos/rotw/YYYY-MM-{recipeId}.mp4`
 4. Write a record to the `recipe_of_the_month` RTDB node
 5. Update `videoUrl` on the selected recipe in the `recipes` RTDB node
 6. Mark the recipe as used in `video_generation_history` so it is never selected again
@@ -80,11 +80,16 @@ gcloud run jobs create rotw-job \
 
 ### Scheduled execution
 
-The job is intended to run on the **first Sunday of each month at 22:00 UTC**:
+The job is intended to run on the **first Sunday of each month at 22:00 UTC**. Standard cron
+(which Cloud Scheduler uses) applies OR semantics when both day-of-month and day-of-week are
+restricted, so a single cron expression can't express "Nth weekday of month" — `"0 22 1-7 * 0"`
+would actually fire every day 1st–7th *and* every Sunday. Instead, the scheduler triggers the
+job **daily** at 22:00 UTC, and `RecipeOfTheMonthJob.execute()` checks `isFirstSundayOfMonth()`
+first and exits immediately (no Firebase reads, no Veo calls, no cost) on every other day:
 
 ```bash
 gcloud scheduler jobs create http rotw-monthly \
-  --schedule "0 22 1-7 * 0" \
+  --schedule "0 22 * * *" \
   --uri "https://$GCP_REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$GCP_PROJECT_ID/jobs/rotw-job:run" \
   --oauth-service-account-email rotw-scheduler@$GCP_PROJECT_ID.iam.gserviceaccount.com \
   --location $GCP_REGION
@@ -97,7 +102,7 @@ recipe_of_the_month/
   {pushId}/
     recipeId:    string   # ID of the selected recipe
     recipeTitle: string
-    videoUrl:    string   # Firebase Storage HTTPS download URL
+    videoUrl:    string   # Firebase Storage HTTPS download URL, e.g. videos/rotw/2026-04-abc123.mp4
     monthOf:     string   # "YYYY-MM"
     createdAt:   string   # ISO-8601 timestamp
 

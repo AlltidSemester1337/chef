@@ -191,7 +191,7 @@ Written by the `rotw-job` Cloud Run job on the first Sunday of each month (CHE-2
 RecipeOfTheMonth {
   recipeId:    string    // push ID of the selected recipe in `recipes`
   recipeTitle: string    // recipe title (denormalised for fast home screen render)
-  videoUrl:    string    // Firebase Storage HTTPS URL, e.g. videos/rotw/2026-04.mp4
+  videoUrl:    string    // Firebase Storage HTTPS URL, e.g. videos/rotw/2026-04-abc123.mp4
   monthOf:     string    // "YYYY-MM", e.g. "2026-04"
   createdAt:   string    // ISO 8601 timestamp
 }

@@ -7,7 +7,9 @@ import com.formulae.chef.rotw.service.GeminiPromptBuilder
 import com.formulae.chef.rotw.service.VeoClient
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import org.slf4j.LoggerFactory
@@ -20,6 +22,12 @@ class RecipeOfTheMonthJob(
     private val geminiPromptBuilder: GeminiPromptBuilder = GeminiPromptBuilder()
 ) {
     suspend fun execute() {
+        val today = LocalDate.now(ZoneOffset.UTC)
+        if (!isFirstSundayOfMonth(today)) {
+            logger.info("Not the first Sunday of the month ($today) — skipping this run.")
+            return
+        }
+
         logger.info("Starting Recipe of the Month job")
 
         val favourites = firebaseAdminService.loadFavouriteRecipes()
@@ -46,7 +54,7 @@ class RecipeOfTheMonthJob(
         logger.info("Video generated: ${videoBytes.size} bytes")
 
         try {
-            val videoUrl = firebaseAdminService.uploadVideo(videoBytes, monthOf)
+            val videoUrl = firebaseAdminService.uploadVideo(videoBytes, monthOf, selected.id)
 
             val record = RecipeOfTheMonthRecord(
                 recipeId = selected.id,
@@ -70,7 +78,7 @@ class RecipeOfTheMonthJob(
                 Files.write(tempFile, videoBytes)
                 logger.error(
                     "Upload or RTDB write failed. Video preserved at $tempFile — " +
-                        "re-upload manually to Firebase Storage at videos/rotw/$monthOf.mp4 " +
+                        "re-upload manually to Firebase Storage at videos/rotw/$monthOf-${selected.id}.mp4 " +
                         "and write the recipe_of_the_month record by hand. Recipe: ${selected.id}",
                     e
                 )
@@ -92,7 +100,7 @@ class RecipeOfTheMonthJob(
         val videoBytes = veoClient.fetchExistingOperation(operationName)
         logger.info("Recovered video: ${videoBytes.size} bytes")
 
-        val videoUrl = firebaseAdminService.uploadVideo(videoBytes, monthOf)
+        val videoUrl = firebaseAdminService.uploadVideo(videoBytes, monthOf, recipeId)
         val record = RecipeOfTheMonthRecord(
             recipeId = recipeId,
             recipeTitle = recipeTitle,
@@ -119,3 +127,11 @@ fun selectRecipe(
 ): RecipeData? = favourites
     .filter { it.id !in alreadySelected }
     .randomOrNull()
+
+/**
+ * Cloud Scheduler cron can't express "Nth weekday of month" directly — a day-of-month
+ * AND day-of-week restriction is OR'd together by standard cron, not AND'd, so this
+ * check runs against a daily trigger instead. Pure function — fully unit-testable.
+ */
+fun isFirstSundayOfMonth(date: LocalDate): Boolean =
+    date.dayOfWeek == DayOfWeek.SUNDAY && date.dayOfMonth <= 7
