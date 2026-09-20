@@ -39,10 +39,10 @@ class RecipeOfTheMonthJob(
         logger.info("Selected recipe: ${selected.id} — ${selected.title}")
 
         val prompt = geminiPromptBuilder.buildPrompt(selected)
-        logger.info("Generated Veo 2 prompt: ${prompt.take(100)}...")
+        logger.info("Generated Veo 3.1 prompt: ${prompt.take(100)}...")
 
         val monthOf = YearMonth.now(ZoneOffset.UTC).toString()
-        val videoBytes = veoClient.generateVideo(prompt, durationSeconds = 15)
+        val videoBytes = veoClient.generateVideo(prompt, durationSeconds = 8)
         logger.info("Video generated: ${videoBytes.size} bytes")
 
         try {
@@ -62,9 +62,9 @@ class RecipeOfTheMonthJob(
 
             logger.info("Recipe of the Month job complete. Recipe: ${selected.title}, Month: $monthOf")
         } catch (e: Exception) {
-            // Veo 2 generation already completed (~$5.25 cost incurred). Attempt to preserve
+            // Veo 3.1 generation already completed (cost incurred). Attempt to preserve
             // the video bytes to /tmp so they survive for the duration of this Cloud Run Job
-            // execution and can be manually re-uploaded without re-running Veo 2.
+            // execution and can be manually re-uploaded without re-running Veo 3.1.
             try {
                 val tempFile: Path = Files.createTempFile("rotw-$monthOf-", ".mp4")
                 Files.write(tempFile, videoBytes)

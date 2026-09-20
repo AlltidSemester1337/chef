@@ -2,7 +2,7 @@
 
 A Cloud Run Job that runs monthly to:
 1. Pick a random favourite recipe that has never been featured before
-2. Generate a 15-second cinematic food video via **Google Veo 2** (Vertex AI)
+2. Generate an 8-second cinematic food video (with audio) via **Google Veo 3.1 Fast** (Vertex AI, preview)
 3. Upload the video to **Firebase Storage** under `videos/rotw/YYYY-MM.mp4`
 4. Write a record to the `recipe_of_the_month` RTDB node
 5. Update `videoUrl` on the selected recipe in the `recipes` RTDB node
@@ -14,7 +14,7 @@ A Cloud Run Job that runs monthly to:
 - A GCP project with the **Vertex AI API** enabled
 - A Firebase project (Realtime Database + Storage)
 - A service account with the following roles:
-  - `roles/aiplatform.user` — for Veo 2 video generation
+  - `roles/aiplatform.user` — for Veo 3.1 video generation
   - `roles/firebase.admin` — for RTDB reads/writes
   - `roles/storage.objectAdmin` — for Firebase Storage uploads
 - The service account key exported as a JSON file (for local runs)
@@ -42,7 +42,7 @@ export FIREBASE_STORAGE_BUCKET=my-project.appspot.com
 ./gradlew :backend:rotw-job:run
 ```
 
-> **Note:** A real run generates a video via Veo 2, which costs ~$5.25/video. Only run against production credentials when you intend to produce an actual video.
+> **Note:** A real run generates a video via Veo 3.1 Fast (preview model, with audio), which costs roughly $1.20-$3.20/video depending on current billing — see "Current approximate cost" below. Only run against production credentials when you intend to produce an actual video.
 
 ## Running tests (no API calls, no cost)
 
@@ -107,11 +107,13 @@ video_generation_history/
 
 The `recipes/{id}/videoUrl` field is also updated on the selected recipe so the Android app can show the video in the recipe detail screen.
 
-## Cost
+## Current approximate cost
 
 | Item | Cost |
 |---|---|
-| Veo 2 video generation (15s) | ~$5.25 per run |
+| Veo 3.1 Fast video generation (8s, with audio, 720p) | ~$1.20-$3.20 per run (preview pricing, unverified — check actual billing) |
 | Firebase Storage (video retained indefinitely) | ~$0.026/GB/month |
 | Cloud Run Job execution | negligible |
 | Cloud Scheduler | free tier |
+
+**Note:** `veo-3.1-fast-generate-preview` is a preview model — pricing and availability are not GA-guaranteed and may change. Verify the first real run's cost against actual GCP billing.

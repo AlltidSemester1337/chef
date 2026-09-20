@@ -28,7 +28,7 @@ private const val POLL_INTERVAL_MS = 30_000L
 private const val MAX_POLL_ATTEMPTS = 20
 
 /**
- * Calls the Vertex AI Veo 2 API to generate a short food video.
+ * Calls the Vertex AI Veo 3.1 Fast API to generate a short food video.
  *
  * Endpoint: predictLongRunning → returns an LRO name → poll until done.
  * Video is returned as base64-encoded MP4 bytes.
@@ -40,7 +40,7 @@ class VeoClient(
         ?: error("GCP_PROJECT_ID env var not set"),
     private val location: String = System.getenv("GCP_LOCATION")
         ?: error("GCP_LOCATION env var not set"),
-    private val modelId: String = "veo-002"
+    private val modelId: String = "veo-3.1-fast-generate-preview"
 ) {
     private val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -55,7 +55,7 @@ class VeoClient(
         return credentials.accessToken.tokenValue
     }
 
-    suspend fun generateVideo(prompt: String, durationSeconds: Int = 15): ByteArray {
+    suspend fun generateVideo(prompt: String, durationSeconds: Int = 8): ByteArray {
         val token = accessToken()
         val baseUrl = "https://$location-aiplatform.googleapis.com/v1"
         val predictUrl =
@@ -70,12 +70,14 @@ class VeoClient(
                 "durationSeconds": $durationSeconds,
                 "aspectRatio": "16:9",
                 "sampleCount": 1,
-                "enhancePrompt": true
+                "enhancePrompt": true,
+                "generateAudio": true,
+                "resolution": "720p"
               }
             }
         """.trimIndent()
 
-        logger.info("Submitting Veo 2 generation request for prompt: ${prompt.take(80)}...")
+        logger.info("Submitting Veo 3.1 generation request for prompt: ${prompt.take(80)}...")
 
         val lroResponse: JsonObject = httpClient.post(predictUrl) {
             contentType(ContentType.Application.Json)
@@ -85,7 +87,7 @@ class VeoClient(
 
         val operationName = extractOperationName(lroResponse)
 
-        logger.info("Veo 2 LRO started: $operationName")
+        logger.info("Veo 3.1 LRO started: $operationName")
 
         return pollForCompletion(operationName, "$baseUrl/$operationName", token)
     }
@@ -104,15 +106,15 @@ class VeoClient(
 
             val done = status["done"]?.jsonPrimitive?.boolean ?: false
             if (done) {
-                logger.info("Veo 2 generation complete after ${attempt + 1} polls")
+                logger.info("Veo 3.1 generation complete after ${attempt + 1} polls")
                 return extractVideoBytes(status)
             }
 
-            status["error"]?.let { apiError -> error("Veo 2 operation failed: $apiError") }
+            status["error"]?.let { apiError -> error("Veo 3.1 operation failed: $apiError") }
 
-            logger.info("Veo 2 still processing (attempt ${attempt + 1}/$MAX_POLL_ATTEMPTS)...")
+            logger.info("Veo 3.1 still processing (attempt ${attempt + 1}/$MAX_POLL_ATTEMPTS)...")
         }
-        error("Veo 2 generation timed out after $MAX_POLL_ATTEMPTS poll attempts")
+        error("Veo 3.1 generation timed out after $MAX_POLL_ATTEMPTS poll attempts")
     }
 }
 
@@ -122,18 +124,18 @@ class VeoClient(
  * these are parsed successfully and must be checked for explicitly.
  */
 internal fun extractOperationName(response: JsonObject): String {
-    response["error"]?.let { apiError -> error("Veo 2 API request failed: $apiError") }
+    response["error"]?.let { apiError -> error("Veo 3.1 API request failed: $apiError") }
     return response["name"]?.jsonPrimitive?.content
-        ?: error("No operation name returned from Veo 2 API. Response: $response")
+        ?: error("No operation name returned from Veo 3.1 API. Response: $response")
 }
 
 internal fun extractVideoBytes(status: JsonObject): ByteArray {
-    status["error"]?.let { apiError -> error("Veo 2 operation failed: $apiError") }
+    status["error"]?.let { apiError -> error("Veo 3.1 operation failed: $apiError") }
     val videoBase64 = status["response"]
         ?.jsonObject?.get("videos")
         ?.jsonArray?.firstOrNull()
         ?.jsonObject?.get("bytesBase64Encoded")
         ?.jsonPrimitive?.content
-        ?: error("No video bytes in Veo 2 response. Response: $status")
+        ?: error("No video bytes in Veo 3.1 response. Response: $status")
     return Base64.getDecoder().decode(videoBase64)
 }

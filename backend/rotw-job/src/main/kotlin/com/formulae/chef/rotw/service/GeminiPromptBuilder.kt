@@ -3,7 +3,7 @@ package com.formulae.chef.rotw.service
 import com.formulae.chef.rotw.model.RecipeData
 
 /**
- * Builds a Veo 2 prompt from a recipe's data.
+ * Builds a Veo 3.1 prompt from a recipe's data.
  * Pure function — no external dependencies, fully unit-testable.
  */
 class GeminiPromptBuilder {
