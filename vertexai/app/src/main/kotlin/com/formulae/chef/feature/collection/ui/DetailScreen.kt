@@ -32,9 +32,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -86,8 +86,12 @@ import com.formulae.chef.feature.model.RecipeVariant
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.buildTtsFlow
+import com.formulae.chef.ui.components.BottomWaveAccent
+import com.formulae.chef.ui.components.BottomWaveAccentOffset
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.components.SegmentedTabRow
+import com.formulae.chef.ui.components.WaveDivider
+import com.formulae.chef.ui.components.WavyBottomShape
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
 import com.formulae.chef.ui.theme.Terracotta200
@@ -193,6 +197,12 @@ private fun CreateDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(280.dp)
+                        .clip(WavyBottomShape())
+                )
+                BottomWaveAccent(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .offset(y = BottomWaveAccentOffset)
                 )
             } else {
                 Spacer(
@@ -233,7 +243,7 @@ private fun CreateDetailScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(text = recipe.title, style = AppTypography.headlineLarge)
 
@@ -242,10 +252,13 @@ private fun CreateDetailScreen(
             if (prepCookText != null || difficultyText != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
-                    prepCookText?.let { InfoIconText(icon = Icons.Outlined.Schedule, text = it) }
+                    prepCookText?.let {
+                        InfoIconText(icon = Icons.Outlined.Schedule, text = it, modifier = Modifier.weight(1f))
+                    }
                     difficultyText?.let { InfoIconText(icon = Icons.Outlined.BarChart, text = it) }
                 }
             }
@@ -347,9 +360,18 @@ private fun CreateDetailScreen(
             } else {
                 InstructionsTabContent(recipe = recipe)
             }
+        }
 
+        Spacer(modifier = Modifier.height(16.dp))
+        WaveDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
             if (listNames.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
                 SectionHeader(title = "Featured in lists")
                 Spacer(modifier = Modifier.height(12.dp))
                 ChipFlowRow(items = listNames)
@@ -411,12 +433,19 @@ private fun HeaderIconButton(
 }
 
 @Composable
-private fun InfoIconText(icon: ImageVector, text: String) {
+private fun InfoIconText(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = TextPrimary,
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .size(16.dp)
+        )
         Text(text = text, style = AppTypography.bodyMedium.copy(color = TextPrimary))
     }
 }
@@ -429,7 +458,8 @@ private fun IngredientsTabContent(recipe: Recipe) {
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .width(150.dp)
+                .padding(end = 20.dp, top = 8.dp)
+                .fillMaxWidth(0.64f)
         )
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -512,7 +542,7 @@ private fun TagFlowRow(tags: List<String>) {
                 Icon(
                     imageVector = Icons.Outlined.Sell,
                     contentDescription = null,
-                    tint = TextPrimary,
+                    tint = Terracotta600,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(text = tag, style = AppTypography.bodyMedium.copy(color = TextPrimary))
