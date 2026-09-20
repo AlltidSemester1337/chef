@@ -547,29 +547,31 @@ class ChatViewModel(
             .setAllAttributes(LlmSpanAttributes.input("generateImage", modelName, prompt))
             .startSpan()
 
-        try {
-            val response = _imageGenerativeModel.generateContent(content { text(prompt) })
-            val imagePart = response.candidates?.firstOrNull()?.content?.parts
-                ?.filterIsInstance<ImagePart>()
-                ?.firstOrNull()
-                ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
+        return try {
+            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+                val response = _imageGenerativeModel.generateContent(content { text(prompt) })
+                val imagePart = response.candidates?.firstOrNull()?.content?.parts
+                    ?.filterIsInstance<ImagePart>()
+                    ?.firstOrNull()
+                    ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
 
-            val outputStream = ByteArrayOutputStream()
-            imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-            val imageBytes = outputStream.toByteArray()
-            val imagePath = "recipes/${UUID.randomUUID()}.jpg"
+                val outputStream = ByteArrayOutputStream()
+                imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                val imageBytes = outputStream.toByteArray()
+                val imagePath = "recipes/${UUID.randomUUID()}.jpg"
 
-            Firebase.storage("gs://$_projectId.firebasestorage.app/")
-                .reference.child(imagePath)
-                .putBytes(imageBytes)
-                .await()
+                Firebase.storage("gs://$_projectId.firebasestorage.app/")
+                    .reference.child(imagePath)
+                    .putBytes(imageBytes)
+                    .await()
 
-            val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
+                val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
 
-            span.setAllAttributes(LlmSpanAttributes.output(gcsUri))
-            span.setStatus(StatusCode.OK)
+                span.setAllAttributes(LlmSpanAttributes.output(gcsUri))
+                span.setStatus(StatusCode.OK)
 
-            return gcsUri
+                gcsUri
+            }
         } catch (e: Exception) {
             span.recordException(e)
             span.setStatus(StatusCode.ERROR)

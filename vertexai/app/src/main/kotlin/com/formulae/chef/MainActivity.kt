@@ -62,9 +62,9 @@ class MainActivity : ComponentActivity() {
 
         this.actionBar?.hide()
 
-        // Touches the lazy singleton, initializing the OTLP exporter and registering the global
-        // OpenTelemetry SDK exactly once per process.
-        ChefTelemetry.tracerProvider
+        // Initializes the OTLP exporter and registers the global OpenTelemetry SDK exactly once
+        // per process, even if onCreate runs again after an Activity recreation.
+        ChefTelemetry.ensureInitialized()
 
         val userSessionService = UserSessionServiceFirebaseImpl()
 

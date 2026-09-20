@@ -39,6 +39,11 @@ object ChefTelemetry {
             }
     }
 
+    /** Triggers the lazy init if it hasn't run yet. Call once, e.g. from `Activity.onCreate`. */
+    fun ensureInitialized() {
+        tracerProvider
+    }
+
     /** Force-exports any buffered spans. Call when the app leaves the foreground. */
     fun flush() {
         tracerProvider.forceFlush()
