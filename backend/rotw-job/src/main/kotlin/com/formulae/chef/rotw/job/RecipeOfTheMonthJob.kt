@@ -80,6 +80,33 @@ class RecipeOfTheMonthJob(
             throw e
         }
     }
+
+    /**
+     * Completes a run whose Veo operation already succeeded but whose upload/RTDB
+     * write step crashed (or whose client-side polling itself was broken). Video
+     * generation is billed at submission time, so this avoids paying twice for the
+     * same clip — see VeoClient.fetchExistingOperation.
+     */
+    suspend fun recoverOperation(operationName: String, recipeId: String, recipeTitle: String, monthOf: String) {
+        logger.info("Recovering existing Veo operation: $operationName")
+        val videoBytes = veoClient.fetchExistingOperation(operationName)
+        logger.info("Recovered video: ${videoBytes.size} bytes")
+
+        val videoUrl = firebaseAdminService.uploadVideo(videoBytes, monthOf)
+        val record = RecipeOfTheMonthRecord(
+            recipeId = recipeId,
+            recipeTitle = recipeTitle,
+            videoUrl = videoUrl,
+            monthOf = monthOf,
+            createdAt = Instant.now().toString()
+        )
+
+        firebaseAdminService.writeRecipeOfTheMonth(record)
+        firebaseAdminService.markRecipeSelected(recipeId)
+        firebaseAdminService.updateRecipeVideoUrl(recipeId, videoUrl)
+
+        logger.info("Recovery complete. Recipe: $recipeTitle, Month: $monthOf")
+    }
 }
 
 /**

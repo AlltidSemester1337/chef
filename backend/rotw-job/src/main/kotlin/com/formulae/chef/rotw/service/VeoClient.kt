@@ -5,7 +5,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -30,8 +29,8 @@ private const val MAX_POLL_ATTEMPTS = 20
 /**
  * Calls the Vertex AI Veo 3.1 Lite API to generate a short food video.
  *
- * Endpoint: predictLongRunning → returns an LRO name → poll until done.
- * Video is returned as base64-encoded MP4 bytes.
+ * Endpoint: predictLongRunning → returns an LRO name → poll via fetchPredictOperation
+ * until done. Video is returned as base64-encoded MP4 bytes.
  *
  * Required env vars: GCP_PROJECT_ID, GCP_LOCATION (default: us-central1)
  */
@@ -57,9 +56,7 @@ class VeoClient(
 
     suspend fun generateVideo(prompt: String, durationSeconds: Int = 8): ByteArray {
         val token = accessToken()
-        val baseUrl = "https://$location-aiplatform.googleapis.com/v1"
-        val predictUrl =
-            "$baseUrl/projects/$projectId/locations/$location/publishers/google/models/$modelId:predictLongRunning"
+        val modelUrl = modelUrl()
 
         // JsonPrimitive.toString() produces a properly JSON-escaped quoted string
         val escapedPrompt = kotlinx.serialization.json.JsonPrimitive(prompt).toString()
@@ -79,7 +76,7 @@ class VeoClient(
 
         logger.info("Submitting Veo 3.1 generation request for prompt: ${prompt.take(80)}...")
 
-        val lroResponse: JsonObject = httpClient.post(predictUrl) {
+        val lroResponse: JsonObject = httpClient.post("$modelUrl:predictLongRunning") {
             contentType(ContentType.Application.Json)
             headers { append("Authorization", "Bearer $token") }
             setBody(requestBody)
@@ -89,19 +86,33 @@ class VeoClient(
 
         logger.info("Veo 3.1 LRO started: $operationName")
 
-        return pollForCompletion(operationName, "$baseUrl/$operationName", token)
+        return pollForCompletion(operationName, modelUrl)
     }
 
-    private suspend fun pollForCompletion(
-        operationName: String,
-        operationUrl: String,
-        initialToken: String
-    ): ByteArray {
+    /**
+     * Resumes polling a previously submitted operation, e.g. after a client-side crash
+     * during polling. Generation is billed at submission time, so this recovers the
+     * already-paid-for video instead of triggering a new (billable) generation.
+     */
+    suspend fun fetchExistingOperation(operationName: String): ByteArray =
+        pollForCompletion(operationName, modelUrl())
+
+    private fun modelUrl(): String =
+        "https://$location-aiplatform.googleapis.com/v1" +
+            "/projects/$projectId/locations/$location/publishers/google/models/$modelId"
+
+    private suspend fun pollForCompletion(operationName: String, modelUrl: String): ByteArray {
+        val fetchUrl = "$modelUrl:fetchPredictOperation"
         repeat(MAX_POLL_ATTEMPTS) { attempt ->
             delay(POLL_INTERVAL_MS)
             val token = accessToken()
-            val status: JsonObject = httpClient.get(operationUrl) {
+            // Vertex AI publisher-model LROs are polled via a POST to :fetchPredictOperation
+            // with the operation name in the body — a plain GET on the operation resource
+            // (the standard Google Cloud LRO pattern) 404s for this API.
+            val status: JsonObject = httpClient.post(fetchUrl) {
+                contentType(ContentType.Application.Json)
                 headers { append("Authorization", "Bearer $token") }
+                setBody("""{ "operationName": "$operationName" }""")
             }.body()
 
             val done = status["done"]?.jsonPrimitive?.boolean ?: false
