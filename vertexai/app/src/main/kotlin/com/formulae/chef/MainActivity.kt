@@ -19,6 +19,7 @@ package com.formulae.chef
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -58,6 +59,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Let the app own window-inset handling (status/nav bars and the IME) instead of the
+        // decor view panning or resizing the window. Combined with adjustResize in the manifest,
+        // this is what makes Modifier.imePadding() report real keyboard insets to Compose.
+        enableEdgeToEdge()
         val recipeRepository = RecipeRepositoryImpl()
         val recipeListRepository = RecipeListRepositoryImpl()
         val recipeVariantRepository = RecipeVariantRepositoryImpl()
