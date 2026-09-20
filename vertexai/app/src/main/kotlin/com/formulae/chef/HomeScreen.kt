@@ -93,7 +93,9 @@ fun HomeScreen(
     val selectedRecipe by viewModel.selectedRecipe.collectAsState()
     var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
 
-    val cookingViewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(userSessionService))
+    val cookingViewModel: HomeViewModel = viewModel(
+        factory = remember { HomeViewModelFactory(userSessionService) }
+    )
     val cookingUiState by cookingViewModel.uiState.collectAsState()
 
     if (isLoading) {

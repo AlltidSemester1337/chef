@@ -41,10 +41,9 @@ class HomeViewModel(
 
     init {
         viewModelScope.launch {
-            val user = userSessionService.currentUser.first { it != null }
-            if (user != null) {
-                loadOrGenerateResources(user.uid)
-            }
+            if (userSessionService.anonymousSession) return@launch
+            val user = userSessionService.currentUser.first { it != null } ?: return@launch
+            loadOrGenerateResources(user.uid)
         }
     }
 
@@ -81,22 +80,24 @@ class HomeViewModel(
         }
     }
 
-    private fun isStale(cached: CachedCookingResources, preferencesUpdatedAt: String?): Boolean {
-        if (cached.updatedAt.isBlank()) return true
-        return try {
-            val cacheTime = ZonedDateTime.parse(cached.updatedAt)
-            val maxAge = ZonedDateTime.now(ZoneOffset.UTC).minusDays(CACHE_MAX_AGE_DAYS)
-            if (cacheTime.isBefore(maxAge)) return true
+    companion object {
+        internal fun isStale(cached: CachedCookingResources, preferencesUpdatedAt: String?): Boolean {
+            if (cached.updatedAt.isBlank()) return true
+            return try {
+                val cacheTime = ZonedDateTime.parse(cached.updatedAt)
+                val maxAge = ZonedDateTime.now(ZoneOffset.UTC).minusDays(CACHE_MAX_AGE_DAYS)
+                if (cacheTime.isBefore(maxAge)) return true
 
-            if (!preferencesUpdatedAt.isNullOrBlank()) {
-                val prefsTime = ZonedDateTime.parse(preferencesUpdatedAt)
-                prefsTime.isAfter(cacheTime)
-            } else {
-                false
+                if (!preferencesUpdatedAt.isNullOrBlank()) {
+                    val prefsTime = ZonedDateTime.parse(preferencesUpdatedAt)
+                    prefsTime.isAfter(cacheTime)
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not parse timestamps for staleness check, treating as stale", e)
+                true
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not parse timestamps for staleness check, treating as stale", e)
-            true
         }
     }
 
