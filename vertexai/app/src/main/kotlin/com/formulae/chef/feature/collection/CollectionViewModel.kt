@@ -47,8 +47,8 @@ class CollectionViewModel(
     private val _lists = MutableStateFlow<List<RecipeList>>(emptyList())
     val lists: StateFlow<List<RecipeList>> = _lists.asStateFlow()
 
-    private val _expandedListId = MutableStateFlow<String?>(null)
-    val expandedListId: StateFlow<String?> = _expandedListId.asStateFlow()
+    private val _viewingListId = MutableStateFlow<String?>(null)
+    val viewingListId: StateFlow<String?> = _viewingListId.asStateFlow()
 
     private val _variants = MutableStateFlow<List<RecipeVariant>>(emptyList())
     val variants: StateFlow<List<RecipeVariant>> = _variants.asStateFlow()
@@ -130,8 +130,8 @@ class CollectionViewModel(
         val uid = currentUid ?: return
         listRepository.deleteList(uid, listId)
         _lists.value = _lists.value.filter { it.id != listId }
-        if (_expandedListId.value == listId) {
-            _expandedListId.value = null
+        if (_viewingListId.value == listId) {
+            _viewingListId.value = null
         }
     }
 
@@ -159,8 +159,12 @@ class CollectionViewModel(
         }
     }
 
-    fun onExpandList(listId: String?) {
-        _expandedListId.value = if (_expandedListId.value == listId) null else listId
+    fun onViewList(listId: String) {
+        _viewingListId.value = listId
+    }
+
+    fun onCloseListView() {
+        _viewingListId.value = null
     }
 
     fun onRecipeSelected(recipe: Recipe) {

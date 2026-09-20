@@ -3,14 +3,17 @@ package com.formulae.chef.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +41,7 @@ fun RecipeCard(
     imageUrl: String?,
     showBookmark: Boolean = false,
     onBookmarkClick: (() -> Unit)? = null,
+    onAddToListClick: (() -> Unit)? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -62,22 +66,44 @@ fun RecipeCard(
                 )
             }
 
-            if (showBookmark) {
-                IconButton(
-                    onClick = { onBookmarkClick?.invoke() },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(White)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.BookmarkBorder,
-                        contentDescription = "Bookmark",
-                        modifier = Modifier.size(20.dp),
-                        tint = TextPrimary
-                    )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (onAddToListClick != null) {
+                    IconButton(
+                        onClick = onAddToListClick,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(White)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlaylistAdd,
+                            contentDescription = "Add to list",
+                            modifier = Modifier.size(20.dp),
+                            tint = TextPrimary
+                        )
+                    }
+                }
+
+                if (showBookmark) {
+                    IconButton(
+                        onClick = { onBookmarkClick?.invoke() },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(White)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.BookmarkBorder,
+                            contentDescription = "Bookmark",
+                            modifier = Modifier.size(20.dp),
+                            tint = TextPrimary
+                        )
+                    }
                 }
             }
         }
