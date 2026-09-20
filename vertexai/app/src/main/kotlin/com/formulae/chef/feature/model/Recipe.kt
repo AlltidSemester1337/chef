@@ -23,6 +23,7 @@ data class Recipe(
     var tipsAndTricks: String? = null,
 
     var imageUrl: String? = null,
+    var videoUrl: String? = null,
     var updatedAt: String = "",
     @get:PropertyName("isFavourite")
     @set:PropertyName("isFavourite")
@@ -45,6 +46,7 @@ data class Recipe(
         instructions: List<String> = this.instructions,
         tipsAndTricks: String? = this.tipsAndTricks,
         imageUrl: String? = this.imageUrl,
+        videoUrl: String? = this.videoUrl,
         updatedAt: String = this.updatedAt,
         isFavourite: Boolean = this.isFavourite,
         copyId: String? = this.copyId,
@@ -64,6 +66,7 @@ data class Recipe(
             instructions,
             tipsAndTricks,
             imageUrl,
+            videoUrl,
             updatedAt,
             isFavourite,
             copyId,

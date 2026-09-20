@@ -40,11 +40,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.ui.DetailRoute
+import com.formulae.chef.feature.collection.ui.RecipeVideoSection
 import com.formulae.chef.feature.home.HomeScreenViewModel
 import com.formulae.chef.feature.home.HomeUiState
 import com.formulae.chef.feature.home.HomeViewModel
 import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.components.ChefFab
 import com.formulae.chef.ui.components.RecipeCard
@@ -152,6 +154,7 @@ private fun HomeScreenContent(
     val userRecipes by viewModel.userRecipes.collectAsState()
     val communityRecipes by viewModel.communityRecipes.collectAsState()
     val isLoadingRecipes by viewModel.isLoading.collectAsState()
+    val recipeOfTheMonth by viewModel.recipeOfTheMonth.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -246,6 +249,15 @@ private fun HomeScreenContent(
                         )
                     }
 
+                    recipeOfTheMonth?.takeIf { it.videoUrl.isNotEmpty() }?.let { rotw ->
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        RecipeOfTheMonthSection(
+                            rotw = rotw,
+                            onViewRecipe = { viewModel.onRecipeOfTheMonthClicked(rotw) }
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
@@ -302,6 +314,32 @@ private fun HomeScreenContent(
                 onDismiss = { showChefOverlay = false }
             )
         }
+    }
+}
+
+@Composable
+private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
+    SectionHeader(
+        title = "Recipe of the Month",
+        linkText = "View recipe",
+        onLinkClick = onViewRecipe
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Terracotta100)
+            .padding(12.dp)
+    ) {
+        Text(
+            text = rotw.recipeTitle,
+            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        RecipeVideoSection(videoUrl = rotw.videoUrl)
     }
 }
 

@@ -7,5 +7,6 @@ pluginManagement {
 }
 
 include(
-        ":vertexai:app"
+        ":vertexai:app",
+        ":backend:rotw-job"
 )

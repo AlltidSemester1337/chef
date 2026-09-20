@@ -1,6 +1,7 @@
 package com.formulae.chef.feature.home
 
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,8 +53,10 @@ class HomeScreenViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeViewModel(recipes: List<Recipe> = allRecipes): HomeScreenViewModel =
-        HomeScreenViewModel(FakeRecipeRepository(recipes))
+    private fun makeViewModel(
+        recipes: List<Recipe> = allRecipes,
+        recipeOfTheMonth: RecipeOfTheMonth? = null
+    ): HomeScreenViewModel = HomeScreenViewModel(FakeRecipeRepository(recipes, recipeOfTheMonth))
 
     @Test
     fun `setCurrentUser filters user recipes to own favourites and caps at USER_RECIPE_COUNT`() = runTest(
@@ -221,14 +224,39 @@ class HomeScreenViewModelTest {
         assertTrue(viewModel.checkedSteps.value.isEmpty())
         assertNull(viewModel.currentServings.value)
     }
+
+    @Test
+    fun `setCurrentUser fetches recipeOfTheMonth from repository`() = runTest(testDispatcher) {
+        val rotw = RecipeOfTheMonth(recipeId = "u1", recipeTitle = "User Recipe 1", videoUrl = "https://video")
+        val viewModel = makeViewModel(recipeOfTheMonth = rotw)
+
+        viewModel.setCurrentUser(userUid)
+        advanceUntilIdle()
+
+        assertEquals(rotw, viewModel.recipeOfTheMonth.value)
+    }
+
+    @Test
+    fun `onRecipeOfTheMonthClicked loads the recipe and sets selectedRecipe`() = runTest(testDispatcher) {
+        val rotw = RecipeOfTheMonth(recipeId = "u1", recipeTitle = "User Recipe 1", videoUrl = "https://video")
+        val viewModel = makeViewModel(recipeOfTheMonth = rotw)
+
+        viewModel.onRecipeOfTheMonthClicked(rotw)
+        advanceUntilIdle()
+
+        assertEquals("u1", viewModel.selectedRecipe.value?.id)
+    }
 }
 
 private class FakeRecipeRepository(
-    private val recipes: List<Recipe>
+    private val recipes: List<Recipe>,
+    private val recipeOfTheMonth: RecipeOfTheMonth? = null
 ) : RecipeRepository {
     override fun saveRecipe(recipe: Recipe) = Unit
     override suspend fun loadUserRecipes(uid: String): List<Recipe> = recipes.filter { it.uid == uid }
     override suspend fun loadAllRecipes(): List<Recipe> = recipes
     override fun removeRecipe(recipeId: String) = Unit
     override fun removeRecipeUid(recipeId: String) = Unit
+    override suspend fun getRecipeById(recipeId: String): Recipe? = recipes.find { it.id == recipeId }
+    override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? = recipeOfTheMonth
 }
