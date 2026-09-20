@@ -63,6 +63,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.rememberAsyncImagePainter
@@ -438,8 +439,19 @@ internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier)
             prepare()
         }
     }
-    DisposableEffect(Unit) {
-        onDispose { player.release() }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    isPlaying = false
+                }
+            }
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -459,7 +471,7 @@ internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier)
                 factory = { ctx ->
                     PlayerView(ctx).apply {
                         this.player = player
-                        useController = true
+                        useController = false
                     }
                 },
                 modifier = Modifier.fillMaxSize()
@@ -473,6 +485,7 @@ internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier)
                         .align(Alignment.Center)
                 ) {
                     IconButton(onClick = {
+                        player.seekTo(0)
                         player.play()
                         isPlaying = true
                     }) {
