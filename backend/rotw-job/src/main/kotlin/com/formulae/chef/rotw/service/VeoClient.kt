@@ -83,8 +83,7 @@ class VeoClient(
             setBody(requestBody)
         }.body()
 
-        val operationName = lroResponse["name"]?.jsonPrimitive?.content
-            ?: error("No operation name returned from Veo 2 API")
+        val operationName = extractOperationName(lroResponse)
 
         logger.info("Veo 2 LRO started: $operationName")
 
@@ -106,22 +105,35 @@ class VeoClient(
             val done = status["done"]?.jsonPrimitive?.boolean ?: false
             if (done) {
                 logger.info("Veo 2 generation complete after ${attempt + 1} polls")
-                val videoBase64 = status["response"]
-                    ?.jsonObject?.get("videos")
-                    ?.jsonArray?.firstOrNull()
-                    ?.jsonObject?.get("bytesBase64Encoded")
-                    ?.jsonPrimitive?.content
-                    ?: error("No video bytes in Veo 2 response")
-                return Base64.getDecoder().decode(videoBase64)
+                return extractVideoBytes(status)
             }
 
-            val error = status["error"]
-            if (error != null) {
-                error("Veo 2 operation failed: $error")
-            }
+            status["error"]?.let { apiError -> error("Veo 2 operation failed: $apiError") }
 
             logger.info("Veo 2 still processing (attempt ${attempt + 1}/$MAX_POLL_ATTEMPTS)...")
         }
         error("Veo 2 generation timed out after $MAX_POLL_ATTEMPTS poll attempts")
     }
+}
+
+/**
+ * Vertex AI returns HTTP error bodies (e.g. 404/403) as a plain JSON object with an
+ * "error" field rather than throwing — Ktor's default `expectSuccess = false` means
+ * these are parsed successfully and must be checked for explicitly.
+ */
+internal fun extractOperationName(response: JsonObject): String {
+    response["error"]?.let { apiError -> error("Veo 2 API request failed: $apiError") }
+    return response["name"]?.jsonPrimitive?.content
+        ?: error("No operation name returned from Veo 2 API. Response: $response")
+}
+
+internal fun extractVideoBytes(status: JsonObject): ByteArray {
+    status["error"]?.let { apiError -> error("Veo 2 operation failed: $apiError") }
+    val videoBase64 = status["response"]
+        ?.jsonObject?.get("videos")
+        ?.jsonArray?.firstOrNull()
+        ?.jsonObject?.get("bytesBase64Encoded")
+        ?.jsonPrimitive?.content
+        ?: error("No video bytes in Veo 2 response. Response: $status")
+    return Base64.getDecoder().decode(videoBase64)
 }
