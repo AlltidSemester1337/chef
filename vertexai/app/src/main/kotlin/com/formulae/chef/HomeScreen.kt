@@ -2,6 +2,7 @@ package com.formulae.chef
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
@@ -30,15 +32,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.home.HomeScreenViewModel
+import com.formulae.chef.feature.home.HomeUiState
+import com.formulae.chef.feature.home.HomeViewModel
+import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.components.ChefFab
@@ -46,8 +54,10 @@ import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
+import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.Terracotta200
 import com.formulae.chef.ui.theme.Terracotta600
+import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.TextSecondary
 import com.google.firebase.auth.UserInfo
 
@@ -83,12 +93,16 @@ fun HomeScreen(
     val selectedRecipe by viewModel.selectedRecipe.collectAsState()
     var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
 
+    val cookingViewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(userSessionService))
+    val cookingUiState by cookingViewModel.uiState.collectAsState()
+
     if (isLoading) {
         CircularProgressIndicator()
     } else {
         if (!userSessionService.anonymousSession && currentUser == null) {
             onSignOut()
         }
+        val signedIn = !userSessionService.anonymousSession && currentUser != null
         if (selectedRecipe != null) {
             DetailRoute(
                 recipe = selectedRecipe!!,
@@ -106,7 +120,8 @@ fun HomeScreen(
                 displayName = firstName,
                 onNavigateToCollection = onNavigateToCollection,
                 onNavigateToCommunity = onNavigateToCommunity,
-                onSignOut = onSignOut
+                onSignOut = onSignOut,
+                homeUiState = if (signedIn) cookingUiState else HomeUiState()
             )
         }
     }
@@ -118,7 +133,8 @@ private fun HomeScreenContent(
     displayName: String,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    homeUiState: HomeUiState = HomeUiState()
 ) {
     val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
     var showChefOverlay by remember { mutableStateOf(false) }
@@ -232,6 +248,31 @@ private fun HomeScreenContent(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    if (homeUiState.isLoading) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (homeUiState.resources.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        SectionHeader(title = "Cooking resources")
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            homeUiState.resources.forEach { resource ->
+                                CookingResourceCard(resource = resource)
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
@@ -249,6 +290,45 @@ private fun HomeScreenContent(
                 viewModel = overlayViewModel,
                 recipe = null,
                 onDismiss = { showChefOverlay = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CookingResourceCard(resource: CookingResource) {
+    val uriHandler = LocalUriHandler.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Terracotta100)
+            .clickable(enabled = resource.url.isNotBlank()) {
+                uriHandler.openUri(resource.url)
+            }
+            .padding(12.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = resource.title,
+                style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+                modifier = Modifier.weight(1f)
+            )
+            if (resource.type.isNotBlank()) {
+                Text(
+                    text = resource.type,
+                    style = AppTypography.bodySmall.copy(color = Terracotta600)
+                )
+            }
+        }
+        if (resource.description.isNotBlank()) {
+            Text(
+                text = resource.description,
+                style = AppTypography.bodyMedium.copy(color = TextSecondary),
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
