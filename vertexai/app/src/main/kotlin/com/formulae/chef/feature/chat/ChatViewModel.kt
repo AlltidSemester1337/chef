@@ -424,20 +424,30 @@ class ChatViewModel(
                     Log.e("ChatViewModel", "Recipe has no ID, cannot star")
                     return@launch
                 }
-                val recipeToSave = recipe.copyOf(
-                    uid = _currentUser?.uid ?: "",
-                    isFavourite = true
-                )
-                withContext(Dispatchers.IO) {
-                    _recipeRepositoryImpl.saveRecipe(recipeToSave)
+                val message = _uiState.value.messages.find { it.id == messageId }
+                val isCurrentlyStarred = message?.starredRecipeIds?.contains(recipeId) == true
+                if (isCurrentlyStarred) {
+                    withContext(Dispatchers.IO) {
+                        _recipeRepositoryImpl.removeRecipe(recipeId)
+                    }
+                    _uiState.value.updateRecipeStarred(messageId, recipeId, isStarred = false)
+                    Toast.makeText(context, "Recipe removed from collection.", Toast.LENGTH_SHORT).show()
+                } else {
+                    val recipeToSave = recipe.copyOf(
+                        uid = _currentUser?.uid ?: "",
+                        isFavourite = true
+                    )
+                    withContext(Dispatchers.IO) {
+                        _recipeRepositoryImpl.saveRecipe(recipeToSave)
+                    }
+                    _uiState.value.updateRecipeStarred(messageId, recipeId, isStarred = true)
+                    Toast.makeText(context, "Recipe saved to collection.", Toast.LENGTH_SHORT).show()
                 }
-                _uiState.value.updateRecipeStarred(messageId, recipeId, isStarred = true)
-                Toast.makeText(context, "Recipe saved to collection.", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Log.e("FirebaseSave", "Failed to save recipe", e)
+                Log.e("FirebaseSave", "Failed to update recipe", e)
                 Toast.makeText(
                     context,
-                    "Failed to save recipe: ${e.localizedMessage}",
+                    "Failed to update recipe: ${e.localizedMessage}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
