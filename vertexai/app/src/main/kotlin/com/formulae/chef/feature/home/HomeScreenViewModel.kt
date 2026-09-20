@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.persistence.RecipeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,16 +27,38 @@ class HomeScreenViewModel(
     private val _selectedRecipe = MutableStateFlow<Recipe?>(null)
     val selectedRecipe: StateFlow<Recipe?> = _selectedRecipe.asStateFlow()
 
+    private val _recipeOfTheMonth = MutableStateFlow<RecipeOfTheMonth?>(null)
+    val recipeOfTheMonth: StateFlow<RecipeOfTheMonth?> = _recipeOfTheMonth.asStateFlow()
+
     fun setCurrentUser(uid: String?) {
         viewModelScope.launch { fetchRecipes(uid) }
+        viewModelScope.launch { fetchRecipeOfTheMonth() }
     }
 
     fun onRecipeSelected(recipe: Recipe) {
         _selectedRecipe.value = recipe
     }
 
+    fun onRecipeOfTheMonthClicked(rotw: RecipeOfTheMonth) {
+        viewModelScope.launch {
+            try {
+                repository.getRecipeById(rotw.recipeId)?.let { onRecipeSelected(it) }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load recipe of the month detail", e)
+            }
+        }
+    }
+
     fun clearSelectedRecipe() {
         _selectedRecipe.value = null
+    }
+
+    private suspend fun fetchRecipeOfTheMonth() {
+        try {
+            _recipeOfTheMonth.value = repository.getLatestRecipeOfTheMonth()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load recipe of the month", e)
+        }
     }
 
     private suspend fun fetchRecipes(uid: String?) {
