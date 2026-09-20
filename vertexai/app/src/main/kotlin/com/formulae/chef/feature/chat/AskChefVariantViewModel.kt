@@ -10,10 +10,13 @@ import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.persistence.Content
 import com.formulae.chef.services.persistence.Part
+import com.formulae.chef.services.telemetry.LlmSpanAttributes
+import com.formulae.chef.services.telemetry.getTracer
+import com.formulae.chef.services.telemetry.withParentSpan
 import com.google.gson.Gson
-import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.context.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,23 +42,27 @@ class AskChefVariantViewModel(
         viewModelScope.launch {
             _state.value = State.Loading
             try {
-                val prompt = buildAdjustPrompt(recipe, userRequest)
-                val adjustedText = generateInstrumented(
-                    spanName = "adjustRecipe",
-                    config = recipeAdjustConfig,
-                    prompt = prompt
-                )
+                val resultRecipe = withParentSpan("adjustRecipeFlow") {
+                    val prompt = buildAdjustPrompt(recipe, userRequest)
+                    val adjustedText = generateInstrumented(
+                        spanName = "adjustRecipe",
+                        config = recipeAdjustConfig,
+                        prompt = prompt
+                    )
 
-                val jsonText = generateInstrumented(
-                    spanName = "extractRecipeJson",
-                    config = jsonConfig,
-                    prompt = adjustedText
-                )
+                    val jsonText = generateInstrumented(
+                        spanName = "extractRecipeJson",
+                        config = jsonConfig,
+                        prompt = adjustedText
+                    )
 
-                val recipes = Gson().fromJson(jsonText, Recipes::class.java).recipes
-                if (recipes.isEmpty()) throw Exception("No recipe in JSON response")
+                    val recipes = Gson().fromJson(jsonText, Recipes::class.java).recipes
+                    if (recipes.isEmpty()) throw Exception("No recipe in JSON response")
 
-                _state.value = State.Success(recipes.first())
+                    recipes.first()
+                }
+
+                _state.value = State.Success(resultRecipe)
             } catch (e: Exception) {
                 Log.e(TAG, "adjustRecipe failed", e)
                 _state.value = State.Error
@@ -68,22 +75,18 @@ class AskChefVariantViewModel(
         config: BergetModelConfig,
         prompt: String
     ): String {
-        val tracer = GlobalOpenTelemetry.getTracer("com.formulae.chef")
-        val span: Span = tracer.spanBuilder(spanName)
-            .setAttribute("openinference.span.kind", "LLM")
-            .setAttribute("operation.name", spanName)
-            .setAttribute("llm.model_name", config.model)
-            .setAttribute("llm.input_messages.0.message.role", "user")
-            .setAttribute("llm.input_messages.0.message.content", prompt)
+        val span = getTracer().spanBuilder(spanName)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(LlmSpanAttributes.input(spanName, config.model, prompt))
             .startSpan()
         return try {
-            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+            Context.current().with(span).makeCurrent().use {
                 val result = chatCompletionService.createChatCompletion(
                     config,
                     listOf(Content(role = "user", parts = listOf(Part(prompt))))
                 )
-                span.setAttribute("llm.output_messages.0.message.role", "model")
-                span.setAttribute("llm.output_messages.0.message.content", result)
+                span.setAllAttributes(LlmSpanAttributes.output(result))
+                span.setStatus(StatusCode.OK)
                 result
             }
         } catch (e: Exception) {

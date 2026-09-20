@@ -41,6 +41,9 @@ import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
+import com.formulae.chef.services.telemetry.LlmSpanAttributes
+import com.formulae.chef.services.telemetry.getTracer
+import com.formulae.chef.services.telemetry.withParentSpan
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
@@ -49,10 +52,8 @@ import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.ImagePart
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
-import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.api.trace.Tracer
 import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -492,22 +493,24 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun deriveRecipesFromMessage(messageText: String): List<Recipe> {
-        val recipes = extractRecipeDetailsFromMessage(messageText)
-        return recipes.map { recipe ->
-            val imageUrl = try {
-                createImageForRecipeAsync(recipe.toString())
-            } catch (e: Exception) {
-                Log.e(
-                    "ChatViewModel",
-                    "Image generation pipeline failed for '${recipe.title}' [${e.javaClass.simpleName}: ${e.message}]",
-                    e
-                )
-                null
+    private suspend fun deriveRecipesFromMessage(messageText: String): List<Recipe> =
+        withParentSpan("deriveRecipesFromMessage") {
+            val recipes = extractRecipeDetailsFromMessage(messageText)
+            recipes.map { recipe ->
+                val imageUrl = try {
+                    createImageForRecipeAsync(recipe.toString())
+                } catch (e: Exception) {
+                    Log.e(
+                        "ChatViewModel",
+                        "Image generation pipeline failed for '${recipe.title}' " +
+                            "[${e.javaClass.simpleName}: ${e.message}]",
+                        e
+                    )
+                    null
+                }
+                recipe.copyOf(imageUrl = imageUrl)
             }
-            recipe.copyOf(imageUrl = imageUrl)
         }
-    }
 
     private suspend fun generateModelResponseInstrumented(
         config: BergetModelConfig,
@@ -515,20 +518,16 @@ class ChatViewModel(
         messages: List<Content>
     ): String {
         val prompt = messages.lastOrNull()?.parts?.firstOrNull()?.text ?: ""
-        val tracer: Tracer = getTracer()
-        val span: Span = tracer.spanBuilder(spanName)
-            .setAttribute("openinference.span.kind", "LLM")
-            .setAttribute("operation.name", spanName)
-            .setAttribute("llm.model_name", config.model)
-            .setAttribute("llm.input_messages.0.message.role", "user")
-            .setAttribute("llm.input_messages.0.message.content", prompt)
+        val span = getTracer().spanBuilder(spanName)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(LlmSpanAttributes.input(spanName, config.model, prompt))
             .startSpan()
 
         return try {
             io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
                 val response = chatCompletionService.createChatCompletion(config, messages)
-                span.setAttribute("llm.output_messages.0.message.role", "model")
-                span.setAttribute("llm.output_messages.0.message.content", response)
+                span.setAllAttributes(LlmSpanAttributes.output(response))
+                span.setStatus(StatusCode.OK)
                 response
             }
         } catch (e: Exception) {
@@ -540,43 +539,39 @@ class ChatViewModel(
         }
     }
 
-    private fun getTracer(): Tracer {
-        return GlobalOpenTelemetry.getTracer("com.formulae.chef")
-    }
-
     private suspend fun generateImageInstrumented(recipe: String): String {
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
+        val modelName = "vertexai/gemini-flash-image"
         val span = getTracer().spanBuilder("generateImage")
-            .setAttribute("openinference.span.kind", "LLM")
-            .setAttribute("operation.name", "generateImage")
-            .setAttribute("llm.model_name", "vertexai/gemini-flash-image")
-            .setAttribute("llm.input_messages.0.message.role", "user")
-            .setAttribute("llm.input_messages.0.message.content", prompt)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(LlmSpanAttributes.input("generateImage", modelName, prompt))
             .startSpan()
 
-        try {
-            val response = _imageGenerativeModel.generateContent(content { text(prompt) })
-            val imagePart = response.candidates?.firstOrNull()?.content?.parts
-                ?.filterIsInstance<ImagePart>()
-                ?.firstOrNull()
-                ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
+        return try {
+            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
+                val response = _imageGenerativeModel.generateContent(content { text(prompt) })
+                val imagePart = response.candidates?.firstOrNull()?.content?.parts
+                    ?.filterIsInstance<ImagePart>()
+                    ?.firstOrNull()
+                    ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
 
-            val outputStream = ByteArrayOutputStream()
-            imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-            val imageBytes = outputStream.toByteArray()
-            val imagePath = "recipes/${UUID.randomUUID()}.jpg"
+                val outputStream = ByteArrayOutputStream()
+                imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                val imageBytes = outputStream.toByteArray()
+                val imagePath = "recipes/${UUID.randomUUID()}.jpg"
 
-            Firebase.storage("gs://$_projectId.firebasestorage.app/")
-                .reference.child(imagePath)
-                .putBytes(imageBytes)
-                .await()
+                Firebase.storage("gs://$_projectId.firebasestorage.app/")
+                    .reference.child(imagePath)
+                    .putBytes(imageBytes)
+                    .await()
 
-            val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
+                val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
 
-            span.setAttribute("llm.output_messages.0.message.role", "model")
-            span.setAttribute("llm.output_messages.0.message.content", gcsUri)
+                span.setAllAttributes(LlmSpanAttributes.output(gcsUri))
+                span.setStatus(StatusCode.OK)
 
-            return gcsUri
+                gcsUri
+            }
         } catch (e: Exception) {
             span.recordException(e)
             span.setStatus(StatusCode.ERROR)

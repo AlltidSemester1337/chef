@@ -34,13 +34,6 @@ import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
-import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.sdk.resources.Resource
-import io.opentelemetry.sdk.trace.SdkTracerProvider
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 
 class MainActivity : ComponentActivity() {
 
@@ -69,30 +62,9 @@ class MainActivity : ComponentActivity() {
 
         this.actionBar?.hide()
 
-        // Initialize the OTLP exporter
-        val spanExporter = OtlpHttpSpanExporter.builder()
-            .addHeader("Authorization", "Bearer ${BuildConfig.phoenixApiKey}")
-            .addHeader("api_key", BuildConfig.phoenixApiKey)
-            .setEndpoint("https://app.phoenix.arize.com/s/humlekottekonsult/v1/traces")
-            .build()
-
-        val resource = Resource.create(
-            Attributes.builder()
-                .put(AttributeKey.stringKey("service.name"), "Chef-Android")
-                .put(AttributeKey.stringKey("project.name"), "Chef-Android")
-                .put(AttributeKey.stringKey("openinference.project.name"), "Chef-Android")
-                .build()
-        )
-
-        // Initialize the OpenTelemetry SDK
-        val tracerProvider = SdkTracerProvider.builder()
-            .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
-            .setResource(resource)
-            .build()
-
-        OpenTelemetrySdk.builder()
-            .setTracerProvider(tracerProvider)
-            .buildAndRegisterGlobal()
+        // Initializes the OTLP exporter and registers the global OpenTelemetry SDK exactly once
+        // per process, even if onCreate runs again after an Activity recreation.
+        ChefTelemetry.ensureInitialized()
 
         val userSessionService = UserSessionServiceFirebaseImpl()
 
@@ -107,5 +79,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Force-export any buffered spans instead of relying on the batch timer, since the
+        // process may be killed while backgrounded before the default 5s delay fires.
+        ChefTelemetry.flush()
     }
 }
