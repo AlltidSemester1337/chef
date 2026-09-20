@@ -66,6 +66,25 @@ class RecipeRepositoryImplIntegrationTest {
     }
 
     @Test
+    fun saveRecipe_withExistingId_persistsUnderThatIdWithoutCreatingDuplicate() = runBlocking {
+        val recipe = Recipe(
+            id = "client-generated-id",
+            uid = testUid,
+            title = "Chat Derived Recipe",
+            summary = "From chat extraction",
+            difficulty = Difficulty.MEDIUM
+        )
+
+        repository.saveRecipe(recipe)
+        val loaded = waitForRecipes(count = 1)
+        assertEquals("client-generated-id", loaded[0].id)
+
+        repository.removeRecipe("client-generated-id")
+        val remaining = waitForRecipes(count = 0)
+        assertTrue(remaining.isEmpty())
+    }
+
+    @Test
     fun loadAllRecipes_returnsAllSavedRecipes() = runBlocking {
         repository.saveRecipe(Recipe(uid = testUid, title = "Recipe A", summary = "A"))
         repository.saveRecipe(Recipe(uid = testUid, title = "Recipe B", summary = "B"))

@@ -14,12 +14,12 @@ class RecipeRepositoryImpl(
 
     override fun saveRecipe(recipe: Recipe) {
         val reference = database.getReference(RECIPES_KEY)
-        val newDocumentRef = reference.push()
-        val recipeWithId = recipe.copy(id = newDocumentRef.key)
+        val documentRef = recipe.id?.let { reference.child(it) } ?: reference.push()
+        val recipeWithId = recipe.copy(id = documentRef.key)
 
-        newDocumentRef.setValue(recipeWithId).addOnCompleteListener { task ->
+        documentRef.setValue(recipeWithId).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("FirebaseDB", "Recipe $newDocumentRef saved successfully!")
+                Log.d("FirebaseDB", "Recipe $documentRef saved successfully!")
             } else {
                 Log.e("FirebaseDB", "Failed to add new recipe: ", task.exception)
             }

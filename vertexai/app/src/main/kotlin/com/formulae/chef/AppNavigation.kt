@@ -1,5 +1,6 @@
 package com.formulae.chef
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -55,7 +56,12 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = "home",
-            modifier = Modifier.padding(innerPadding)
+            // consumeWindowInsets tells descendants that the Scaffold already accounted for these
+            // insets (bottom bar + system bars), so a screen-level Modifier.imePadding() only adds
+            // the keyboard height *beyond* what is already reserved instead of stacking on top.
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable("home") {
                 val homeViewModel: HomeScreenViewModel = viewModel(
