@@ -624,7 +624,7 @@ internal fun LazyListScope.recipeCardRows(
                 RecipeCard(
                     title = recipe.title,
                     imageUrl = recipe.imageUrl,
-                    showBookmark = true,
+                    showBookmark = onBookmarkClick != null,
                     onBookmarkClick = onBookmarkClick?.let { callback -> { callback(recipe) } },
                     onAddToListClick = onAddToListClick?.let { callback -> { callback(recipe) } },
                     onClick = { onRecipeClick(recipe) },
