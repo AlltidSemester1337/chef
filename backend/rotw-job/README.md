@@ -2,7 +2,7 @@
 
 A Cloud Run Job that runs monthly to:
 1. Pick a random favourite recipe that has never been featured before
-2. Generate an 8-second cinematic food video (with audio) via **Google Veo 3.1 Fast** (Vertex AI, preview)
+2. Generate an 8-second cinematic food video (with audio) via **Google Veo 3.1 Lite** (Vertex AI, GA)
 3. Upload the video to **Firebase Storage** under `videos/rotw/YYYY-MM.mp4`
 4. Write a record to the `recipe_of_the_month` RTDB node
 5. Update `videoUrl` on the selected recipe in the `recipes` RTDB node
@@ -27,7 +27,7 @@ A Cloud Run Job that runs monthly to:
 | `GCP_PROJECT_ID` | Yes | GCP project ID (e.g. `my-project-123`) |
 | `FIREBASE_DB_URL` | Yes | Firebase RTDB URL (e.g. `https://my-project-default-rtdb.firebaseio.com`) |
 | `FIREBASE_STORAGE_BUCKET` | Yes | Firebase Storage bucket (e.g. `my-project.appspot.com`) |
-| `GCP_LOCATION` | Yes | Vertex AI region (e.g. `europe-west1`) |
+| `GCP_LOCATION` | Yes | Vertex AI region (e.g. `us-central1`) |
 
 ## Running locally
 
@@ -35,14 +35,14 @@ A Cloud Run Job that runs monthly to:
 # From the repo root
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 export GCP_PROJECT_ID=my-project-123
-export GCP_LOCATION=europe-west1
+export GCP_LOCATION=us-central1
 export FIREBASE_DB_URL=https://my-project-default-rtdb.firebaseio.com
 export FIREBASE_STORAGE_BUCKET=my-project.appspot.com
 
 ./gradlew :backend:rotw-job:run
 ```
 
-> **Note:** A real run generates a video via Veo 3.1 Fast (preview model, with audio), which costs roughly $1.20-$3.20/video depending on current billing — see "Current approximate cost" below. Only run against production credentials when you intend to produce an actual video.
+> **Note:** A real run generates a video via Veo 3.1 Lite (GA model, with audio), which costs roughly $0.40/video depending on current billing — see "Current approximate cost" below. Only run against production credentials when you intend to produce an actual video.
 
 ## Running tests (no API calls, no cost)
 
@@ -68,7 +68,7 @@ This produces image `gcr.io/$GCP_PROJECT_ID/rotw-job:latest`.
 ## Deploying as a Cloud Run Job
 
 ```bash
-export GCP_REGION=europe-west1
+export GCP_REGION=us-central1
 
 gcloud run jobs create rotw-job \
   --image gcr.io/$GCP_PROJECT_ID/rotw-job \
@@ -111,9 +111,9 @@ The `recipes/{id}/videoUrl` field is also updated on the selected recipe so the 
 
 | Item | Cost |
 |---|---|
-| Veo 3.1 Fast video generation (8s, with audio, 720p) | ~$1.20-$3.20 per run (preview pricing, unverified — check actual billing) |
+| Veo 3.1 Lite video generation (8s, with audio, 720p) | ~$0.40 per run (unverified — check actual billing) |
 | Firebase Storage (video retained indefinitely) | ~$0.026/GB/month |
 | Cloud Run Job execution | negligible |
 | Cloud Scheduler | free tier |
 
-**Note:** `veo-3.1-fast-generate-preview` is a preview model — pricing and availability are not GA-guaranteed and may change. Verify the first real run's cost against actual GCP billing.
+**Note:** `veo-3.1-lite-generate-001` is GA on Vertex AI as of April 2026. Verify the first real run's cost against actual GCP billing.

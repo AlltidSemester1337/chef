@@ -28,7 +28,7 @@ private const val POLL_INTERVAL_MS = 30_000L
 private const val MAX_POLL_ATTEMPTS = 20
 
 /**
- * Calls the Vertex AI Veo 3.1 Fast API to generate a short food video.
+ * Calls the Vertex AI Veo 3.1 Lite API to generate a short food video.
  *
  * Endpoint: predictLongRunning → returns an LRO name → poll until done.
  * Video is returned as base64-encoded MP4 bytes.
@@ -40,7 +40,7 @@ class VeoClient(
         ?: error("GCP_PROJECT_ID env var not set"),
     private val location: String = System.getenv("GCP_LOCATION")
         ?: error("GCP_LOCATION env var not set"),
-    private val modelId: String = "veo-3.1-fast-generate-preview"
+    private val modelId: String = "veo-3.1-lite-generate-001"
 ) {
     private val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
