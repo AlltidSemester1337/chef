@@ -111,7 +111,8 @@ fun HomeScreen(
                 onBack = { viewModel.clearSelectedRecipe() },
                 showIngredients = showIngredients,
                 onTabChanged = { showIngredients = it },
-                isOwner = currentUser?.uid == selectedRecipe?.uid
+                isOwner = currentUser?.uid == selectedRecipe?.uid,
+                onNavigateToChat = onNavigateToChat
             )
         } else {
             val firstName = remember(currentUser) {
