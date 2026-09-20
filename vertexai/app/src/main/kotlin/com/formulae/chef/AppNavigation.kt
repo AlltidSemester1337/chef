@@ -73,7 +73,7 @@ fun AppNavigation(
                     onNavigateToChat = { navController.navigate("generate") },
                     onNavigateToCollection = { navController.navigate("collection") },
                     onNavigateToCommunity = {
-                        navController.navigate("collection?tab=${RecipeSource.ALL_RECIPES.name}")
+                        navController.navigate("collection?tab=${RecipeSource.COMMUNITY.name}")
                     },
                     onSignOut = {
                         userSessionService.signOut()
@@ -91,12 +91,12 @@ fun AppNavigation(
                 arguments = listOf(
                     navArgument("tab") {
                         type = NavType.StringType
-                        defaultValue = RecipeSource.USER_FAVOURITES.name
+                        defaultValue = RecipeSource.SAVED.name
                     }
                 )
             ) { backStackEntry ->
                 val tab = RecipeSource.valueOf(
-                    backStackEntry.arguments?.getString("tab") ?: RecipeSource.USER_FAVOURITES.name
+                    backStackEntry.arguments?.getString("tab") ?: RecipeSource.SAVED.name
                 )
                 CollectionRoute(
                     repository = recipeRepository,

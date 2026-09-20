@@ -392,18 +392,18 @@ class CollectionViewModelTest {
     }
 
     @Test
-    fun `onDeleteList clears expandedListId if it matches`() = runTest(testDispatcher) {
+    fun `onDeleteList clears viewingListId if it matches`() = runTest(testDispatcher) {
         val sampleLists = listOf(RecipeList(id = "list-1", name = "Work week"))
         val listRepo = FakeRecipeListRepository(sampleLists)
         val (viewModel, _) = makeViewModel(listRepo = listRepo)
         viewModel.setCurrentUser("user-1")
         advanceUntilIdle()
-        viewModel.onExpandList("list-1")
-        assertEquals("list-1", viewModel.expandedListId.value)
+        viewModel.onViewList("list-1")
+        assertEquals("list-1", viewModel.viewingListId.value)
 
         viewModel.onDeleteList("list-1")
 
-        assertNull(viewModel.expandedListId.value)
+        assertNull(viewModel.viewingListId.value)
     }
 
     @Test
@@ -450,24 +450,32 @@ class CollectionViewModelTest {
     }
 
     @Test
-    fun `onExpandList toggles expandedListId`() = runTest(testDispatcher) {
+    fun `onViewList sets viewingListId`() = runTest(testDispatcher) {
         val (viewModel, _) = makeViewModel()
 
-        viewModel.onExpandList("list-1")
-        assertEquals("list-1", viewModel.expandedListId.value)
-
-        viewModel.onExpandList("list-1")
-        assertNull(viewModel.expandedListId.value)
+        viewModel.onViewList("list-1")
+        assertEquals("list-1", viewModel.viewingListId.value)
     }
 
     @Test
-    fun `onExpandList switches to a different list`() = runTest(testDispatcher) {
+    fun `onViewList switches to a different list`() = runTest(testDispatcher) {
         val (viewModel, _) = makeViewModel()
 
-        viewModel.onExpandList("list-1")
-        viewModel.onExpandList("list-2")
+        viewModel.onViewList("list-1")
+        viewModel.onViewList("list-2")
 
-        assertEquals("list-2", viewModel.expandedListId.value)
+        assertEquals("list-2", viewModel.viewingListId.value)
+    }
+
+    @Test
+    fun `onCloseListView clears viewingListId`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+
+        viewModel.onViewList("list-1")
+        assertEquals("list-1", viewModel.viewingListId.value)
+
+        viewModel.onCloseListView()
+        assertNull(viewModel.viewingListId.value)
     }
 
     // --- Variant tests ---
