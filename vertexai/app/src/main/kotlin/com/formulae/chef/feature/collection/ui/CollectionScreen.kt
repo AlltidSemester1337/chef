@@ -286,7 +286,8 @@ internal fun CollectionRoute(
                     onVariantSelected = collectionViewModel::onVariantSelected,
                     onPinVariant = collectionViewModel::onPinVariant,
                     onDeleteVariant = collectionViewModel::onDeleteVariant,
-                    onStartCreateVariant = collectionViewModel::onStartCreateVariant
+                    onStartCreateVariant = collectionViewModel::onStartCreateVariant,
+                    onNavigateToChat = { navController.navigate("generate") }
                 )
             }
         }

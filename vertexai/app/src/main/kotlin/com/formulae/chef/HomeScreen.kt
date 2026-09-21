@@ -1,6 +1,5 @@
 package com.formulae.chef
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,8 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -54,10 +51,10 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.components.ChefFab
 import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
+import com.formulae.chef.ui.components.WaveDivider
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
 import com.formulae.chef.ui.theme.Terracotta100
-import com.formulae.chef.ui.theme.Terracotta200
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.TextSecondary
@@ -94,6 +91,9 @@ fun HomeScreen(
 
     val selectedRecipe by viewModel.selectedRecipe.collectAsState()
     var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
+    val isCookingMode by viewModel.isCookingMode.collectAsState()
+    val checkedSteps by viewModel.checkedSteps.collectAsState()
+    val currentServings by viewModel.currentServings.collectAsState()
 
     val cookingViewModel: HomeViewModel = viewModel(
         factory = remember { HomeViewModelFactory(userSessionService) }
@@ -111,9 +111,17 @@ fun HomeScreen(
             DetailRoute(
                 recipe = selectedRecipe!!,
                 onBack = { viewModel.clearSelectedRecipe() },
+                isCookingMode = isCookingMode,
                 showIngredients = showIngredients,
+                checkedSteps = checkedSteps,
+                currentServings = currentServings,
+                onToggleCookingMode = viewModel::onToggleCookingMode,
                 onTabChanged = { showIngredients = it },
-                isOwner = currentUser?.uid == selectedRecipe?.uid
+                onStepChecked = viewModel::onStepChecked,
+                onStepUnchecked = viewModel::onStepUnchecked,
+                onServingsChanged = viewModel::onServingsChanged,
+                isOwner = currentUser?.uid == selectedRecipe?.uid,
+                onNavigateToChat = onNavigateToChat
             )
         } else {
             val firstName = remember(currentUser) {
@@ -371,40 +379,6 @@ private fun CookingResourceCard(resource: CookingResource) {
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
-    }
-}
-
-@Composable
-private fun WaveDivider(modifier: Modifier = Modifier) {
-    val color = Terracotta200
-    val path = remember { Path() }
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(14.dp)
-    ) {
-        val waveHeight = 3.dp.toPx()
-        val waveLength = 18.dp.toPx()
-        val centerY = size.height / 2f
-        path.reset()
-        path.moveTo(0f, centerY)
-        var x = 0f
-        while (x < size.width + waveLength) {
-            path.quadraticTo(
-                x + waveLength / 4f,
-                centerY - waveHeight,
-                x + waveLength / 2f,
-                centerY
-            )
-            path.quadraticTo(
-                x + waveLength * 3f / 4f,
-                centerY + waveHeight,
-                x + waveLength,
-                centerY
-            )
-            x += waveLength
-        }
-        drawPath(path, color = color, style = Stroke(width = 1.5.dp.toPx()))
     }
 }
 

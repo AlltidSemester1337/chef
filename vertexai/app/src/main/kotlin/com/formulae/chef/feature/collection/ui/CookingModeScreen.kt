@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +35,8 @@ import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.parsedServingsCount
+import com.formulae.chef.ui.theme.AppTypography
+import com.formulae.chef.ui.theme.TextPrimary
 import kotlin.math.floor
 import kotlinx.coroutines.launch
 
@@ -89,7 +90,7 @@ internal fun CookingModeContent(
             }
             Text(
                 text = "$displayServings servings",
-                style = MaterialTheme.typography.bodyLarge,
+                style = AppTypography.bodyLarge.copy(color = TextPrimary),
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
             IconButton(
@@ -104,20 +105,20 @@ internal fun CookingModeContent(
 
     if (showIngredients) {
         // Ingredients with scaled quantities
-        Text(text = "Ingredients", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Ingredients", style = AppTypography.labelLarge.copy(color = TextPrimary))
         Spacer(modifier = Modifier.height(8.dp))
         recipe.ingredients.forEach { ingredient ->
             val scaledQty = scaleQuantity(ingredient.quantity, multiplier)
             val unit = ingredient.unit?.takeIf { it.isNotBlank() }?.let { "$it " } ?: ""
             Text(
                 text = "• $scaledQty $unit${ingredient.name}",
-                style = MaterialTheme.typography.bodyLarge,
+                style = AppTypography.bodyLarge.copy(color = TextPrimary),
                 modifier = Modifier.padding(vertical = 2.dp)
             )
         }
     } else {
         // Instructions with checkboxes and auto-scroll
-        Text(text = "Instructions", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Instructions", style = AppTypography.labelLarge.copy(color = TextPrimary))
         Spacer(modifier = Modifier.height(8.dp))
         recipe.instructions.forEachIndexed { index, step ->
             val isChecked = index in checkedSteps
@@ -149,7 +150,7 @@ internal fun CookingModeContent(
                 ) {
                     Text(
                         text = "${index + 1}. $step",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = AppTypography.bodyLarge.copy(color = TextPrimary),
                         textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
                     )
                 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,6 +54,7 @@ fun SegmentedTabRow(
                     text = tab,
                     style = AppTypography.labelLarge.copy(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontStyle = FontStyle.Italic,
                         color = if (isSelected) Terracotta800 else TextPrimary
                     ),
                     textAlign = TextAlign.Center
