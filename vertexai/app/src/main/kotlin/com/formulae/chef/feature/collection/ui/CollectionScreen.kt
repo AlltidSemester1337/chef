@@ -89,6 +89,7 @@ import com.formulae.chef.feature.model.RecipeList
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
+import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.components.SegmentedTabRow
@@ -170,10 +171,15 @@ internal fun CollectionRoute(
         return lists.filter { it.recipeIds.contains(id) }.map { it.name }
     }
 
-    val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
+    val overlayViewModel: OverlayChatViewModel = viewModel(
+        factory = remember { OverlayChatViewModelFactory(userSessionService) }
+    )
+    val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
     var showChefOverlay by remember { mutableStateOf(false) }
 
-    val askChefVariantViewModel: AskChefVariantViewModel = viewModel(factory = AskChefVariantViewModelFactory)
+    val askChefVariantViewModel: AskChefVariantViewModel = viewModel(
+        factory = remember { AskChefVariantViewModelFactory(userSessionService) }
+    )
     val askChefState by askChefVariantViewModel.state.collectAsState()
     var editBaseRecipe by remember { mutableStateOf<Recipe?>(null) }
     val context = LocalContext.current
@@ -187,6 +193,8 @@ internal fun CollectionRoute(
         if (isEditingVariant) editBaseRecipe = null
     }
 
+    var showAskChefQuotaExceeded by remember { mutableStateOf(false) }
+
     LaunchedEffect(askChefState) {
         when (val s = askChefState) {
             is AskChefVariantViewModel.State.Success -> {
@@ -199,6 +207,10 @@ internal fun CollectionRoute(
                     "Sorry, Chef couldn't adjust that. Try editing manually.",
                     Toast.LENGTH_LONG
                 ).show()
+                askChefVariantViewModel.reset()
+            }
+            is AskChefVariantViewModel.State.QuotaExceeded -> {
+                showAskChefQuotaExceeded = true
                 askChefVariantViewModel.reset()
             }
             else -> {}
@@ -298,6 +310,14 @@ internal fun CollectionRoute(
                 recipe = selectedRecipe,
                 onDismiss = { showChefOverlay = false }
             )
+        }
+
+        if (overlayQuotaExceeded) {
+            BetaQuotaExceededDialog(onDismiss = overlayViewModel::onQuotaExceededDialogDismissed)
+        }
+
+        if (showAskChefQuotaExceeded) {
+            BetaQuotaExceededDialog(onDismiss = { showAskChefQuotaExceeded = false })
         }
     }
 }

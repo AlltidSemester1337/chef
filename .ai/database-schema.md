@@ -73,6 +73,7 @@ User {
   chat_history:    { [pushId]: ChatMessage }    // Map of chat messages keyed by Firebase push ID
   liked_messages:  { [pushId]: LikedMessage }   // Map of liked AI responses keyed by Firebase push ID
   lists:           { [pushId]: RecipeList }     // Map of user-created recipe lists keyed by Firebase push ID
+  betaInteractionCount: number                  // Lifetime count of costly AI interactions during open beta (CHE-39). Absent = 0.
 }
 ```
 
@@ -159,12 +160,13 @@ ROOT
         │   └── {pushId} (object)
         │       ├── text:     string   // model message text the user liked
         │       └── likedAt:  string   // ISO 8601 timestamp
-        └── lists (object)
-            └── {pushId} (object)
-                ├── id:        string   // same as pushId
-                ├── name:      string   // user-provided list name
-                └── recipeIds: array
-                    └── [n]: string    // recipe push ID
+        ├── lists (object)
+        │   └── {pushId} (object)
+        │       ├── id:        string   // same as pushId
+        │       ├── name:      string   // user-provided list name
+        │       └── recipeIds: array
+        │           └── [n]: string    // recipe push ID
+        └── betaInteractionCount: number    // lifetime AI-interaction count during open beta (CHE-39); absent = 0
 ```
 
 ### Tag Categories
@@ -224,6 +226,7 @@ featured twice, even if `recipe_of_the_month` entries are cleaned up.
 | `imageUrl` | string | `https://storage.googleapis.com/{PROJECT_ID}.firebasestorage.app/recipes/...` |
 | `videoUrl` | string? | Firebase Storage URL to ROTW video; absent/null on recipes not selected       |
 | `tags` | string[] | Optional; absent on pre-CHE-12 recipes. All values lowercase. |
+| `betaInteractionCount` | number | Lifetime count of costly AI interactions during open beta (CHE-39); absent path treated as 0; admins are exempt and never accumulate this. |
 
 ---
 

@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.AskChefVariantViewModel
+import com.formulae.chef.services.BetaQuotaService
 import com.formulae.chef.services.ai.BERGET_MISTRAL_SMALL_3_2
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
+import com.formulae.chef.services.authentication.UserSessionService
 
 private const val RECIPE_ADJUST_SYSTEM_INSTRUCTIONS =
     """You are Chef, a cooking assistant. The user will provide an existing recipe and a modification request.
@@ -20,7 +22,9 @@ Apply the requested changes and return the complete modified recipe as detailed 
 - Any relevant tips or tricks
 Be precise about quantities and keep the style consistent with the original."""
 
-val AskChefVariantViewModelFactory = object : ViewModelProvider.Factory {
+class AskChefVariantViewModelFactory(
+    private val userSessionService: UserSessionService
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         val chatCompletionService = BergetChatCompletionService(BuildConfig.bergetApiKey)
 
@@ -42,6 +46,11 @@ val AskChefVariantViewModelFactory = object : ViewModelProvider.Factory {
         )
 
         @Suppress("UNCHECKED_CAST")
-        return AskChefVariantViewModel(chatCompletionService, recipeAdjustConfig, jsonConfig) as T
+        return AskChefVariantViewModel(
+            chatCompletionService,
+            recipeAdjustConfig,
+            jsonConfig,
+            BetaQuotaService(userSessionService)
+        ) as T
     }
 }

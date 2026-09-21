@@ -61,6 +61,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -86,7 +87,9 @@ import com.formulae.chef.R
 import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.voice.sanitizeMarkdown
+import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefTopBar
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
@@ -99,7 +102,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 internal fun ChatRoute(
-    chatViewModel: ChatViewModel = viewModel(factory = GenerativeViewModelFactory)
+    userSessionService: UserSessionService,
+    chatViewModel: ChatViewModel = viewModel(
+        factory = remember { GenerativeViewModelFactory(userSessionService) }
+    )
 ) {
     val selectedRecipe by chatViewModel.selectedRecipeFromChat.collectAsState()
 
@@ -125,6 +131,7 @@ internal fun ChatRoute(
 private fun ChatContent(chatViewModel: ChatViewModel) {
     val chatUiState by chatViewModel.uiState.collectAsState()
     val isLoading by chatViewModel.isLoading.collectAsState()
+    val quotaExceeded by chatViewModel.quotaExceeded.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val messageCount = chatUiState.messages.size
@@ -200,6 +207,10 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
             isRecording = voice.isRecording,
             onStartRecording = voice.onStartRecording
         )
+    }
+
+    if (quotaExceeded) {
+        BetaQuotaExceededDialog(onDismiss = chatViewModel::onQuotaExceededDialogDismissed)
     }
 }
 

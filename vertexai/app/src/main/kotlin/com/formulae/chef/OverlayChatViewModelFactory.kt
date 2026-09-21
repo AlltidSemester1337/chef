@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.OverlayChatViewModel
+import com.formulae.chef.services.BetaQuotaService
 import com.formulae.chef.services.ai.BERGET_MISTRAL_SMALL_3_2
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
+import com.formulae.chef.services.authentication.UserSessionService
 
 private const val OVERLAY_DEFAULT_SYSTEM_INSTRUCTIONS =
     """You are Chef, a friendly AI cooking assistant. Answer questions about cooking, recipes,
@@ -17,7 +19,9 @@ private const val OVERLAY_RECIPE_CONTEXT_SYSTEM_INSTRUCTIONS =
 Focus on Q&A assistance: answer questions about steps, ingredient substitutions, timing, tips, and serving suggestions.
 Do not proactively suggest new recipes unless specifically asked."""
 
-val OverlayChatViewModelFactory = object : ViewModelProvider.Factory {
+class OverlayChatViewModelFactory(
+    private val userSessionService: UserSessionService
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         val chatCompletionService = BergetChatCompletionService(BuildConfig.bergetApiKey)
 
@@ -38,6 +42,11 @@ val OverlayChatViewModelFactory = object : ViewModelProvider.Factory {
         )
 
         @Suppress("UNCHECKED_CAST")
-        return OverlayChatViewModel(chatCompletionService, defaultConfig, recipeContextConfig) as T
+        return OverlayChatViewModel(
+            chatCompletionService,
+            defaultConfig,
+            recipeContextConfig,
+            BetaQuotaService(userSessionService)
+        ) as T
     }
 }
