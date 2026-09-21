@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import com.formulae.chef.R
 import com.formulae.chef.services.authentication.UserSessionService
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -110,6 +111,8 @@ class SignInViewModel(
                     context.getString(R.string.account_already_exists_error),
                     Toast.LENGTH_SHORT
                 ).show()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("SignInViewModel", "Error creating account", e)
                 Toast.makeText(
