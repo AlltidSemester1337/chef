@@ -69,6 +69,10 @@ class HomeScreenViewModel(
 
     fun clearSelectedRecipe() {
         _selectedRecipe.value = null
+        cookingRecipeId = null
+        _isCookingMode.value = false
+        _checkedSteps.value = emptySet()
+        _currentServings.value = null
     }
 
     fun onToggleCookingMode() {

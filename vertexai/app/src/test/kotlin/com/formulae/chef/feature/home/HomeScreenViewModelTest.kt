@@ -226,6 +226,37 @@ class HomeScreenViewModelTest {
     }
 
     @Test
+    fun `clearSelectedRecipe resets cooking mode state`() = runTest(testDispatcher) {
+        val viewModel = makeViewModel()
+        viewModel.onRecipeSelected(Recipe(id = "r1", servings = "4 servings"))
+        viewModel.onToggleCookingMode()
+        viewModel.onStepChecked(0)
+
+        viewModel.clearSelectedRecipe()
+
+        assertFalse(viewModel.isCookingMode.value)
+        assertTrue(viewModel.checkedSteps.value.isEmpty())
+        assertNull(viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `re-selecting the same recipe after clearSelectedRecipe does not restore stale cooking state`() =
+        runTest(testDispatcher) {
+            val viewModel = makeViewModel()
+            val recipe = Recipe(id = "r1", servings = "4 servings")
+            viewModel.onRecipeSelected(recipe)
+            viewModel.onToggleCookingMode()
+            viewModel.onStepChecked(0)
+
+            viewModel.clearSelectedRecipe()
+            viewModel.onRecipeSelected(recipe)
+
+            assertFalse(viewModel.isCookingMode.value)
+            assertTrue(viewModel.checkedSteps.value.isEmpty())
+            assertNull(viewModel.currentServings.value)
+        }
+
+    @Test
     fun `setCurrentUser fetches recipeOfTheMonth from repository`() = runTest(testDispatcher) {
         val rotw = RecipeOfTheMonth(recipeId = "u1", recipeTitle = "User Recipe 1", videoUrl = "https://video")
         val viewModel = makeViewModel(recipeOfTheMonth = rotw)

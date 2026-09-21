@@ -72,6 +72,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -417,7 +418,7 @@ private fun CreateDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 24.dp)
-                    .clickable { onNavigateToChat() }
+                    .clickable(role = Role.Button, onClick = onNavigateToChat)
             )
         }
     }
