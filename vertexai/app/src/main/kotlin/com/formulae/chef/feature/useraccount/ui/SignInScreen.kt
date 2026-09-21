@@ -73,14 +73,16 @@ internal fun SignInRoute(
 ) {
     val email = viewModel.email.collectAsState()
     val password = viewModel.password.collectAsState()
+    val isSignUpMode = viewModel.isSignUpMode.collectAsState()
 
     SignUpScreen(
         email,
         password,
+        isSignUpMode,
         { viewModel.updateEmail(it) },
         { viewModel.updatePassword(it) },
-        { viewModel.onSignInClick() },
-        { viewModel.onSignUpClick() }
+        { viewModel.onToggleSignUpMode(it) },
+        { viewModel.onPrimaryCtaClick() }
     )
 }
 
@@ -88,10 +90,11 @@ internal fun SignInRoute(
 private fun SignUpScreen(
     email: State<String>,
     password: State<String>,
+    isSignUpMode: State<Boolean>,
     onUpdateEmail: (String) -> Unit,
     onUpdatePassword: (String) -> Unit,
-    onSignInClick: () -> Unit,
-    onSignUpClick: () -> Unit
+    onToggleSignUpMode: (Boolean) -> Unit,
+    onPrimaryCtaClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -168,9 +171,9 @@ private fun SignUpScreen(
                 )
             }
 
-            // Create account button — always anchored below the content, above the keyboard
+            // Primary CTA — reads "Sign in" by default, "Create account" when the sign-up toggle is on
             Button(
-                onClick = onSignUpClick,
+                onClick = onPrimaryCtaClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -179,22 +182,25 @@ private fun SignUpScreen(
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.create_account),
+                    text = stringResource(
+                        if (isSignUpMode.value) R.string.create_account else R.string.sign_in
+                    ),
                     style = AppTypography.labelLarge,
                     textAlign = TextAlign.Center
                 )
             }
         }
 
-        // "Sign in" link — drawn last so it sits above the Column in z-order and receives touches
+        // Mode toggle — text alone, reads the opposite of the current CTA and flips the mode when tapped.
+        // Drawn last so it sits above the Column in z-order and receives touches.
         TextButton(
-            onClick = onSignInClick,
+            onClick = { onToggleSignUpMode(!isSignUpMode.value) },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = 16.dp, top = 6.dp)
         ) {
             Text(
-                text = stringResource(R.string.sign_in),
+                text = stringResource(if (isSignUpMode.value) R.string.sign_in else R.string.sign_up),
                 style = AppTypography.labelLarge.copy(
                     color = Terracotta600,
                     textDecoration = TextDecoration.Underline
@@ -218,9 +224,14 @@ fun PreviewSignUpScreen() {
                 override val value: String get() = "Password"
             }
         },
+        isSignUpMode = remember {
+            object : State<Boolean> {
+                override val value: Boolean get() = false
+            }
+        },
         onUpdateEmail = { },
         onUpdatePassword = { },
-        onSignInClick = { },
-        onSignUpClick = { }
+        onToggleSignUpMode = { },
+        onPrimaryCtaClick = { }
     )
 }

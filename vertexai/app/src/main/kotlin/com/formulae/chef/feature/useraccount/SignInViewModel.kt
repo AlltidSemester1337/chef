@@ -23,7 +23,9 @@ import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.formulae.chef.R
 import com.formulae.chef.services.authentication.UserSessionService
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -36,8 +38,17 @@ class SignInViewModel(
 ) : AndroidViewModel(application) {
     val email = MutableStateFlow("")
     val password = MutableStateFlow("")
+    val isSignUpMode = MutableStateFlow(false)
 
-    fun onSignInClick() {
+    fun onToggleSignUpMode(enabled: Boolean) {
+        isSignUpMode.value = enabled
+    }
+
+    fun onPrimaryCtaClick() {
+        if (isSignUpMode.value) onSignUpClick() else onSignInClick()
+    }
+
+    private fun onSignInClick() {
         viewModelScope.launch {
             try {
                 val emailInput = email.value
@@ -82,12 +93,31 @@ class SignInViewModel(
         password.value = newPassword
     }
 
-    fun onSignUpClick() {
+    private fun onSignUpClick() {
         viewModelScope.launch {
-            val email = email.value
-            val password = password.value
-            userSessionService.createUser(email.trim(), password.trim())
-            navController.navigate("home")
+            val context: Context = getApplication<Application>().applicationContext
+            try {
+                val emailInput = email.value
+                val passwordInput = password.value
+                withContext(Dispatchers.IO) {
+                    userSessionService.createUser(emailInput.trim(), passwordInput.trim())
+                }
+                navController.navigate("home")
+            } catch (e: FirebaseAuthUserCollisionException) {
+                Log.e("SignInViewModel", "Account already exists", e)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.account_already_exists_error),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Log.e("SignInViewModel", "Error creating account", e)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.create_account_generic_error),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 }
