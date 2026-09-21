@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
+import com.formulae.chef.services.BetaQuotaService
+import com.formulae.chef.services.QuotaResult
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.persistence.Content
@@ -25,7 +27,8 @@ import kotlinx.coroutines.launch
 class AskChefVariantViewModel(
     private val chatCompletionService: BergetChatCompletionService,
     private val recipeAdjustConfig: BergetModelConfig,
-    private val jsonConfig: BergetModelConfig
+    private val jsonConfig: BergetModelConfig,
+    private val betaQuotaService: BetaQuotaService
 ) : ViewModel() {
 
     sealed class State {
@@ -33,6 +36,7 @@ class AskChefVariantViewModel(
         object Loading : State()
         data class Success(val recipe: Recipe) : State()
         object Error : State()
+        object QuotaExceeded : State()
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -41,6 +45,10 @@ class AskChefVariantViewModel(
     fun adjustRecipe(recipe: Recipe, userRequest: String) {
         viewModelScope.launch {
             _state.value = State.Loading
+            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+                _state.value = State.QuotaExceeded
+                return@launch
+            }
             try {
                 val resultRecipe = withParentSpan("adjustRecipeFlow") {
                     val prompt = buildAdjustPrompt(recipe, userRequest)

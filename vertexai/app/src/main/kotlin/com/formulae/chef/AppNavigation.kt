@@ -84,7 +84,7 @@ fun AppNavigation(
                 )
             }
             composable("generate") {
-                ChatRoute()
+                ChatRoute(userSessionService = userSessionService)
             }
             composable(
                 route = "collection?tab={tab}",

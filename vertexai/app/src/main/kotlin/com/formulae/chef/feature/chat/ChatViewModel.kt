@@ -29,6 +29,8 @@ import com.formulae.chef.feature.model.LikedMessage
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
+import com.formulae.chef.services.BetaQuotaService
+import com.formulae.chef.services.QuotaResult
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.authentication.UserSessionService
@@ -89,13 +91,21 @@ class ChatViewModel(
     imageGenerativeModel: GenerativeModel,
     application: Application,
     userSessionService: UserSessionService,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val betaQuotaService: BetaQuotaService = BetaQuotaService(userSessionService)
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
 
     private val _imageGenerativeModel = imageGenerativeModel
     private val _userSessionService = userSessionService
+
+    private val _quotaExceeded = MutableStateFlow(false)
+    val quotaExceeded: StateFlow<Boolean> = _quotaExceeded.asStateFlow()
+
+    fun onQuotaExceededDialogDismissed() {
+        _quotaExceeded.value = false
+    }
 
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
     private val _uiState: MutableStateFlow<ChatUiState> = MutableStateFlow(ChatUiState())
@@ -213,6 +223,11 @@ class ChatViewModel(
         )
 
         viewModelScope.launch {
+            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+                _uiState.value.replaceLastPendingMessage()
+                _quotaExceeded.value = true
+                return@launch
+            }
             try {
                 val modelResponse = generateModelResponseInstrumented(
                     config = chatConfig,

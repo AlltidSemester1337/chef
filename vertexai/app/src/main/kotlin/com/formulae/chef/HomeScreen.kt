@@ -48,6 +48,7 @@ import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefFab
 import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
@@ -130,6 +131,7 @@ fun HomeScreen(
             HomeScreenContent(
                 viewModel = viewModel,
                 displayName = firstName,
+                userSessionService = userSessionService,
                 onNavigateToCollection = onNavigateToCollection,
                 onNavigateToCommunity = onNavigateToCommunity,
                 onSignOut = onSignOut,
@@ -143,12 +145,16 @@ fun HomeScreen(
 private fun HomeScreenContent(
     viewModel: HomeScreenViewModel,
     displayName: String,
+    userSessionService: UserSessionService,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onSignOut: () -> Unit,
     homeUiState: HomeUiState = HomeUiState()
 ) {
-    val overlayViewModel: OverlayChatViewModel = viewModel(factory = OverlayChatViewModelFactory)
+    val overlayViewModel: OverlayChatViewModel = viewModel(
+        factory = remember { OverlayChatViewModelFactory(userSessionService) }
+    )
+    val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
     var showChefOverlay by remember { mutableStateOf(false) }
 
     val userRecipes by viewModel.userRecipes.collectAsState()
@@ -313,6 +319,10 @@ private fun HomeScreenContent(
                 recipe = null,
                 onDismiss = { showChefOverlay = false }
             )
+        }
+
+        if (overlayQuotaExceeded) {
+            BetaQuotaExceededDialog(onDismiss = overlayViewModel::onQuotaExceededDialogDismissed)
         }
     }
 }

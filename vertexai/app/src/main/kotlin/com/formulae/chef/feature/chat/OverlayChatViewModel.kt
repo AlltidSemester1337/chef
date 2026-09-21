@@ -6,6 +6,8 @@ import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.BetaQuotaService
+import com.formulae.chef.services.QuotaResult
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.persistence.Content
@@ -18,7 +20,8 @@ import kotlinx.coroutines.launch
 class OverlayChatViewModel(
     private val chatCompletionService: BergetChatCompletionService,
     private val defaultConfig: BergetModelConfig,
-    private val recipeContextConfig: BergetModelConfig
+    private val recipeContextConfig: BergetModelConfig,
+    private val betaQuotaService: BetaQuotaService
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<ChatUiState> = MutableStateFlow(ChatUiState())
@@ -26,6 +29,13 @@ class OverlayChatViewModel(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _quotaExceeded = MutableStateFlow(false)
+    val quotaExceeded: StateFlow<Boolean> = _quotaExceeded.asStateFlow()
+
+    fun onQuotaExceededDialogDismissed() {
+        _quotaExceeded.value = false
+    }
 
     private var activeConfig = defaultConfig
     private var history: List<Content> = emptyList()
@@ -56,6 +66,11 @@ class OverlayChatViewModel(
             ChatMessage(text = userMessage, participant = Participant.USER, isPending = true)
         )
         viewModelScope.launch {
+            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+                _uiState.value.replaceLastPendingMessage()
+                _quotaExceeded.value = true
+                return@launch
+            }
             _isLoading.value = true
             try {
                 val newUserContent = Content(role = "user", parts = listOf(Part(userMessage)))

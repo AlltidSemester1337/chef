@@ -24,7 +24,7 @@ import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.services.ai.BERGET_MISTRAL_SMALL_3_2
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
-import com.formulae.chef.services.authentication.UserSessionServiceFirebaseImpl
+import com.formulae.chef.services.authentication.UserSessionService
 import com.google.firebase.Firebase
 import com.google.firebase.vertexai.type.ResponseModality
 import com.google.firebase.vertexai.type.generationConfig
@@ -45,7 +45,9 @@ preference summary, produce a single updated prose summary capturing all stated 
 dietary restrictions, and recurring cooking context. Be concise but complete. Return only the
 summary text, no JSON wrapping."""
 
-val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
+class GenerativeViewModelFactory(
+    private val userSessionService: UserSessionService
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(
         viewModelClass: Class<T>,
         extras: CreationExtras
@@ -106,7 +108,6 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                         generationConfig = imageConfig
                     )
 
-                    val userSessionService = UserSessionServiceFirebaseImpl()
                     val applicationScope = (application as ChefApplication).applicationScope
 
                     ChatViewModel(
