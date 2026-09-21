@@ -66,7 +66,7 @@ class OverlayChatViewModel(
             ChatMessage(text = userMessage, participant = Participant.USER, isPending = true)
         )
         viewModelScope.launch {
-            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+            if (betaQuotaService.checkQuota() == QuotaResult.Blocked) {
                 _uiState.value.replaceLastPendingMessage()
                 _quotaExceeded.value = true
                 return@launch
@@ -78,6 +78,7 @@ class OverlayChatViewModel(
                     activeConfig,
                     history + newUserContent
                 )
+                betaQuotaService.recordInteraction()
                 _uiState.value.replaceLastPendingMessage()
                 history = history + newUserContent +
                     Content(role = "model", parts = listOf(Part(modelResponse)))

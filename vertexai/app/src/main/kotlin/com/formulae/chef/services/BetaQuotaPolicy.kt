@@ -28,6 +28,10 @@ object BetaQuotaPolicy {
             else -> Classification.NeedsInteractionCount
         }
 
+    /**
+     * [count] is the number of interactions already recorded (checked up front, before the next
+     * interaction is attempted) - so reaching the limit blocks the *next* attempt.
+     */
     fun resultForInteractionCount(count: Int): QuotaResult =
-        if (count > BETA_INTERACTION_LIMIT) QuotaResult.Blocked else QuotaResult.Allowed
+        if (count >= BETA_INTERACTION_LIMIT) QuotaResult.Blocked else QuotaResult.Allowed
 }

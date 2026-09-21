@@ -45,7 +45,7 @@ class AskChefVariantViewModel(
     fun adjustRecipe(recipe: Recipe, userRequest: String) {
         viewModelScope.launch {
             _state.value = State.Loading
-            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+            if (betaQuotaService.checkQuota() == QuotaResult.Blocked) {
                 _state.value = State.QuotaExceeded
                 return@launch
             }
@@ -70,6 +70,7 @@ class AskChefVariantViewModel(
                     recipes.first()
                 }
 
+                betaQuotaService.recordInteraction()
                 _state.value = State.Success(resultRecipe)
             } catch (e: Exception) {
                 Log.e(TAG, "adjustRecipe failed", e)

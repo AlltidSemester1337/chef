@@ -223,7 +223,7 @@ class ChatViewModel(
         )
 
         viewModelScope.launch {
-            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
+            if (betaQuotaService.checkQuota() == QuotaResult.Blocked) {
                 _uiState.value.replaceLastPendingMessage()
                 _quotaExceeded.value = true
                 return@launch
@@ -234,6 +234,7 @@ class ChatViewModel(
                     spanName = "generateChatModelResponse",
                     messages = _chatHistory.value + newUserContent
                 )
+                betaQuotaService.recordInteraction()
                 _uiState.value.replaceLastPendingMessage()
 
                 val newModelContent = Content(role = "model", parts = listOf(Part(modelResponse)))

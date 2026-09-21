@@ -9,12 +9,18 @@ import com.google.firebase.database.Transaction
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 
 class BetaQuotaRepositoryImpl(
     override val uid: String,
     private val database: FirebaseDatabase = FirebaseInstance.database
 ) : BetaQuotaRepository {
     private val _quotaKey = "users/$uid/betaInteractionCount"
+
+    override suspend fun getCount(): Int {
+        val snapshot = database.getReference(_quotaKey).get().await()
+        return snapshot.getValue(Int::class.java) ?: 0
+    }
 
     override suspend fun incrementAndGet(): Int {
         return suspendCancellableCoroutine { continuation ->
@@ -33,6 +39,11 @@ class BetaQuotaRepositoryImpl(
                     if (error != null) {
                         Log.e("BetaQuotaRepo", "Error incrementing beta interaction count", error.toException())
                         continuation.resumeWithException(error.toException())
+                        return
+                    }
+                    if (!committed) {
+                        Log.e("BetaQuotaRepo", "Transaction did not commit for $_quotaKey")
+                        continuation.resumeWithException(IllegalStateException("Transaction not committed"))
                         return
                     }
                     continuation.resume(currentData?.getValue(Int::class.java) ?: 0)

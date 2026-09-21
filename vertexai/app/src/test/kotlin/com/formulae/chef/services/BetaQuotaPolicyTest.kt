@@ -42,13 +42,21 @@ class BetaQuotaPolicyTest {
     }
 
     @Test
-    fun `count at limit is allowed`() {
-        assertEquals(QuotaResult.Allowed, BetaQuotaPolicy.resultForInteractionCount(BETA_INTERACTION_LIMIT))
+    fun `count at limit is blocked`() {
+        assertEquals(QuotaResult.Blocked, BetaQuotaPolicy.resultForInteractionCount(BETA_INTERACTION_LIMIT))
     }
 
     @Test
     fun `count below limit is allowed`() {
         assertEquals(QuotaResult.Allowed, BetaQuotaPolicy.resultForInteractionCount(1))
+    }
+
+    @Test
+    fun `count one below limit is allowed`() {
+        assertEquals(
+            QuotaResult.Allowed,
+            BetaQuotaPolicy.resultForInteractionCount(BETA_INTERACTION_LIMIT - 1)
+        )
     }
 
     @Test
