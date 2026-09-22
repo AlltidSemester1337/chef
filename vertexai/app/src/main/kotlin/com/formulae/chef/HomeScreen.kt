@@ -69,6 +69,7 @@ import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.TextSecondary
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.UserInfo
 import kotlinx.coroutines.launch
 
@@ -388,6 +389,14 @@ private fun HomeScreenContent(
                             try {
                                 userSessionService.deleteUser(currentUserUid.orEmpty())
                                 onSignOut()
+                            } catch (e: FirebaseAuthRecentLoginRequiredException) {
+                                Log.w("HomeScreen", "Delete account requires a fresh sign-in", e)
+                                Toast.makeText(
+                                    context,
+                                    "For your security, please sign out and sign back in, " +
+                                        "then try deleting your account again.",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             } catch (e: Exception) {
                                 Log.e("HomeScreen", "Failed to delete account", e)
                                 Toast.makeText(
