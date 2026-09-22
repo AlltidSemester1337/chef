@@ -91,6 +91,7 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.voice.sanitizeMarkdown
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefTopBar
+import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
 import com.formulae.chef.ui.theme.Terracotta100
@@ -132,6 +133,7 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
     val chatUiState by chatViewModel.uiState.collectAsState()
     val isLoading by chatViewModel.isLoading.collectAsState()
     val quotaExceeded by chatViewModel.quotaExceeded.collectAsState()
+    val emailVerificationRequired by chatViewModel.emailVerificationRequired.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val messageCount = chatUiState.messages.size
@@ -197,6 +199,13 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
             )
         }
 
+        Text(
+            text = "Chef's recipes are AI-generated and may contain mistakes — " +
+                "always use your own judgment on cooking times and food safety.",
+            style = AppTypography.bodySmall.copy(color = TextSecondary, fontStyle = FontStyle.Italic),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+
         MessageInput(
             onSendMessage = { inputText ->
                 chatViewModel.sendMessage(inputText)
@@ -211,6 +220,11 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
 
     if (quotaExceeded) {
         BetaQuotaExceededDialog(onDismiss = chatViewModel::onQuotaExceededDialogDismissed)
+    }
+    if (emailVerificationRequired) {
+        EmailVerificationRequiredDialog(
+            onDismiss = chatViewModel::onEmailVerificationRequiredDialogDismissed
+        )
     }
 }
 

@@ -7,7 +7,12 @@ class BetaQuotaPolicyTest {
 
     @Test
     fun `anonymous session is blocked without checking uid`() {
-        val result = BetaQuotaPolicy.classify(anonymousSession = true, uid = null, email = null)
+        val result = BetaQuotaPolicy.classify(
+            anonymousSession = true,
+            uid = null,
+            email = null,
+            emailVerified = false
+        )
         assertEquals(BetaQuotaPolicy.Classification.BlockedNoQuota, result)
     }
 
@@ -16,27 +21,41 @@ class BetaQuotaPolicyTest {
         val result = BetaQuotaPolicy.classify(
             anonymousSession = false,
             uid = null,
-            email = "someone@example.com"
+            email = "someone@example.com",
+            emailVerified = true
         )
         assertEquals(BetaQuotaPolicy.Classification.BlockedNoQuota, result)
     }
 
     @Test
-    fun `admin email is allowed unlimited`() {
+    fun `admin email is allowed unlimited regardless of email verification`() {
         val result = BetaQuotaPolicy.classify(
             anonymousSession = false,
             uid = "uid-1",
-            email = "humlekottekonsult@gmail.com"
+            email = "humlekottekonsult@gmail.com",
+            emailVerified = false
         )
         assertEquals(BetaQuotaPolicy.Classification.AllowedUnlimited, result)
     }
 
     @Test
-    fun `non-admin signed-in user needs interaction count`() {
+    fun `non-admin unverified email needs verification`() {
         val result = BetaQuotaPolicy.classify(
             anonymousSession = false,
             uid = "uid-1",
-            email = "someone@example.com"
+            email = "someone@example.com",
+            emailVerified = false
+        )
+        assertEquals(BetaQuotaPolicy.Classification.NeedsEmailVerification, result)
+    }
+
+    @Test
+    fun `non-admin signed-in verified user needs interaction count`() {
+        val result = BetaQuotaPolicy.classify(
+            anonymousSession = false,
+            uid = "uid-1",
+            email = "someone@example.com",
+            emailVerified = true
         )
         assertEquals(BetaQuotaPolicy.Classification.NeedsInteractionCount, result)
     }

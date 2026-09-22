@@ -1,0 +1,43 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "recipes": {
+      ".indexOn": ["uid"],
+      ".read": "auth != null",
+      "$recipeId": {
+        ".write": "auth != null && (!data.exists() || auth.uid == data.child('uid').val()) && auth.uid == newData.child('uid').val()"
+      }
+    },
+
+    "recipe_of_the_month": {
+      ".read": true,
+      ".write": false
+    },
+
+    "video_generation_history": {
+      ".read": true,
+      ".write": false
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+
+        "chat_history": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "liked_messages": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "lists": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "betaInteractionCount": {
+          ".write": "auth != null && auth.uid == $uid && newData.isNumber() && (data.exists() ? newData.val() == data.val() + 1 : newData.val() == 1)"
+        }
+      }
+    }
+  }
+}

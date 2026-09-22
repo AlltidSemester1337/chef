@@ -90,6 +90,7 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
+import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
 import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.components.SegmentedTabRow
@@ -175,6 +176,7 @@ internal fun CollectionRoute(
         factory = remember { OverlayChatViewModelFactory(userSessionService) }
     )
     val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
+    val overlayEmailVerificationRequired by overlayViewModel.emailVerificationRequired.collectAsState()
     var showChefOverlay by remember { mutableStateOf(false) }
 
     val askChefVariantViewModel: AskChefVariantViewModel = viewModel(
@@ -194,6 +196,7 @@ internal fun CollectionRoute(
     }
 
     var showAskChefQuotaExceeded by remember { mutableStateOf(false) }
+    var showAskChefEmailVerificationRequired by remember { mutableStateOf(false) }
 
     LaunchedEffect(askChefState) {
         when (val s = askChefState) {
@@ -211,6 +214,10 @@ internal fun CollectionRoute(
             }
             is AskChefVariantViewModel.State.QuotaExceeded -> {
                 showAskChefQuotaExceeded = true
+                askChefVariantViewModel.reset()
+            }
+            is AskChefVariantViewModel.State.EmailVerificationRequired -> {
+                showAskChefEmailVerificationRequired = true
                 askChefVariantViewModel.reset()
             }
             else -> {}
@@ -315,9 +322,19 @@ internal fun CollectionRoute(
         if (overlayQuotaExceeded) {
             BetaQuotaExceededDialog(onDismiss = overlayViewModel::onQuotaExceededDialogDismissed)
         }
+        if (overlayEmailVerificationRequired) {
+            EmailVerificationRequiredDialog(
+                onDismiss = overlayViewModel::onEmailVerificationRequiredDialogDismissed
+            )
+        }
 
         if (showAskChefQuotaExceeded) {
             BetaQuotaExceededDialog(onDismiss = { showAskChefQuotaExceeded = false })
+        }
+        if (showAskChefEmailVerificationRequired) {
+            EmailVerificationRequiredDialog(
+                onDismiss = { showAskChefEmailVerificationRequired = false }
+            )
         }
     }
 }

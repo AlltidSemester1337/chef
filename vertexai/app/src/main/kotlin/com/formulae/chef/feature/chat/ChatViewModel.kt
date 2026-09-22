@@ -30,6 +30,8 @@ import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
 import com.formulae.chef.services.BetaQuotaService
+import com.formulae.chef.services.MAX_CHAT_INPUT_LENGTH
+import com.formulae.chef.services.MAX_IMAGES_PER_MESSAGE
 import com.formulae.chef.services.QuotaResult
 import com.formulae.chef.services.ai.BergetChatCompletionService
 import com.formulae.chef.services.ai.BergetModelConfig
@@ -105,6 +107,13 @@ class ChatViewModel(
 
     fun onQuotaExceededDialogDismissed() {
         _quotaExceeded.value = false
+    }
+
+    private val _emailVerificationRequired = MutableStateFlow(false)
+    val emailVerificationRequired: StateFlow<Boolean> = _emailVerificationRequired.asStateFlow()
+
+    fun onEmailVerificationRequiredDialogDismissed() {
+        _emailVerificationRequired.value = false
     }
 
     private val _chatHistory: MutableStateFlow<List<Content>> = MutableStateFlow(emptyList())
@@ -213,20 +222,29 @@ class ChatViewModel(
     }
 
     fun sendMessage(userMessage: String) {
-        val newUserContent = Content(role = "user", parts = listOf(Part(userMessage)))
+        val truncatedMessage = userMessage.take(MAX_CHAT_INPUT_LENGTH)
+        val newUserContent = Content(role = "user", parts = listOf(Part(truncatedMessage)))
         _uiState.value.addMessage(
             ChatMessage(
-                text = userMessage,
+                text = truncatedMessage,
                 participant = Participant.USER,
                 isPending = true
             )
         )
 
         viewModelScope.launch {
-            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
-                _uiState.value.replaceLastPendingMessage()
-                _quotaExceeded.value = true
-                return@launch
+            when (betaQuotaService.checkAndRecordInteraction()) {
+                QuotaResult.Blocked -> {
+                    _uiState.value.replaceLastPendingMessage()
+                    _quotaExceeded.value = true
+                    return@launch
+                }
+                QuotaResult.EmailVerificationRequired -> {
+                    _uiState.value.replaceLastPendingMessage()
+                    _emailVerificationRequired.value = true
+                    return@launch
+                }
+                QuotaResult.Allowed -> Unit
             }
             try {
                 val modelResponse = generateModelResponseInstrumented(
@@ -241,7 +259,7 @@ class ChatViewModel(
                 _chatHistory.value += newModelContent
                 _chatHistoryPersistenceImpl.saveNewEntries(listOf(newUserContent, newModelContent))
 
-                launch { detectAndSavePreferences(userMessage) }
+                launch { detectAndSavePreferences(truncatedMessage) }
 
                 val extractedRecipes = try {
                     extractRecipeDetailsFromMessage(modelResponse)
@@ -269,10 +287,11 @@ class ChatViewModel(
                     )
                 }
             } catch (e: Exception) {
+                Log.e("ChatViewModel", "Failed to generate chat response", e)
                 _uiState.value.replaceLastPendingMessage()
                 _uiState.value.addMessage(
                     ChatMessage(
-                        text = e.localizedMessage ?: e.message ?: "An error occurred",
+                        text = "Sorry, something went wrong. Please try again.",
                         participant = Participant.ERROR
                     )
                 )
@@ -398,7 +417,7 @@ class ChatViewModel(
 
     private suspend fun generateImagesForMessage(messageId: String, recipes: List<Recipe>) {
         coroutineScope {
-            recipes.map { recipe ->
+            recipes.take(MAX_IMAGES_PER_MESSAGE).map { recipe ->
                 async {
                     val recipeId = recipe.id ?: return@async
                     try {
@@ -463,7 +482,7 @@ class ChatViewModel(
                 Log.e("FirebaseSave", "Failed to update recipe", e)
                 Toast.makeText(
                     context,
-                    "Failed to update recipe: ${e.localizedMessage}",
+                    "Failed to update recipe. Please try again.",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -501,7 +520,7 @@ class ChatViewModel(
                 Log.e("FirebaseSave", "Failed to save recipe", e)
                 Toast.makeText(
                     context,
-                    "Failed to save recipe: ${e.localizedMessage}",
+                    "Failed to save recipe. Please try again.",
                     Toast.LENGTH_SHORT
                 ).show()
             }

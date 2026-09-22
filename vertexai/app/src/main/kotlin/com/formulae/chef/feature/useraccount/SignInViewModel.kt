@@ -29,6 +29,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class SignInViewModel(
@@ -100,7 +101,12 @@ class SignInViewModel(
                 val emailInput = email.value
                 val passwordInput = password.value
                 withContext(Dispatchers.IO) {
-                    userSessionService.createUser(emailInput.trim(), passwordInput.trim())
+                    val user = userSessionService.createUser(emailInput.trim(), passwordInput.trim())
+                    try {
+                        user.sendEmailVerification().await()
+                    } catch (e: Exception) {
+                        Log.w("SignInViewModel", "Failed to send verification email", e)
+                    }
                 }
                 navController.navigate("home")
             } catch (e: FirebaseAuthUserCollisionException) {
