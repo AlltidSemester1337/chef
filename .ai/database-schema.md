@@ -7,6 +7,7 @@ Derived from `vertexai/app/src/main/assets/idyllic-bloom-425307-r6-default-rtdb-
 ```
 ROOT
 ├── recipes                  — all recipe objects, keyed by Firebase push ID
+├── recipe_variants          — AI-adjusted recipe variants, keyed by {recipeId}/{variantId}
 ├── recipe_of_the_month      — monthly featured recipe entries, keyed by Firebase push ID
 ├── video_generation_history — permanent set of recipe IDs that have been featured; never deleted
 └── users                    — user profiles keyed by Firebase Auth UID
@@ -70,10 +71,12 @@ Each user is keyed by their Firebase Auth UID.
 
 ```
 User {
-  chat_history:    { [pushId]: ChatMessage }    // Map of chat messages keyed by Firebase push ID
-  liked_messages:  { [pushId]: LikedMessage }   // Map of liked AI responses keyed by Firebase push ID
-  lists:           { [pushId]: RecipeList }     // Map of user-created recipe lists keyed by Firebase push ID
-  betaInteractionCount: number                  // Lifetime count of costly AI interactions during open beta (CHE-39). Absent = 0.
+  chat_history:      { [pushId]: ChatMessage }    // Map of chat messages keyed by Firebase push ID
+  liked_messages:    { [pushId]: LikedMessage }   // Map of liked AI responses keyed by Firebase push ID
+  lists:             { [pushId]: RecipeList }     // Map of user-created recipe lists keyed by Firebase push ID
+  preferences:       UserPreferences?             // Detected chat preferences summary; absent until first detected
+  cooking_resources: CachedCookingResources?       // Cached home-screen "cooking resources" links; absent until first fetched
+  betaInteractionCount: number                    // Lifetime count of costly AI interactions during open beta (CHE-39). Absent = 0.
 }
 ```
 
@@ -120,6 +123,63 @@ RecipeList {
 }
 ```
 
+### `UserPreferences`
+
+**Path:** `users/{uid}/preferences`
+Single object (not push-ID keyed) holding the latest detected chat preferences summary.
+
+```
+UserPreferences {
+  summary:   string    // Free-text summary of detected preferences, injected into future chat prompts
+  updatedAt: string    // ISO 8601 timestamp
+}
+```
+
+### `CachedCookingResources`
+
+**Path:** `users/{uid}/cooking_resources`
+Single object (not push-ID keyed) caching the home-screen "cooking resources" links so they aren't refetched every load.
+
+```
+CachedCookingResources {
+  resources: CookingResource[]
+  updatedAt: string    // ISO 8601 timestamp
+}
+
+CookingResource {
+  title:       string
+  url:         string
+  type:        string
+  description: string
+}
+```
+
+---
+
+## `recipe_variants` Node
+
+**Path:** `recipe_variants/{recipeId}/{variantId}`
+AI-adjusted variants of a recipe (e.g. "make it vegan"), keyed by the parent recipe's push ID then a variant push ID. Unlike `recipes`, a variant has **no `uid`/owner field** — it belongs to the recipe, not to a user.
+
+```
+RecipeVariant {
+  id:                  string        // Firebase push ID (same as node key)
+  label:               string
+  createdAt:           string        // ISO 8601 timestamp
+  isPinned:            boolean
+  title:               string
+  summary:             string
+  servings:            string?
+  prepTime:            string?
+  cookingTime:         string?
+  nutrientsPerServing: Nutrient[]?
+  ingredients:         Ingredient[]
+  difficulty:          "EASY" | "MEDIUM"?
+  instructions:        string[]
+  tipsAndTricks:       string?
+}
+```
+
 ---
 
 ## Complete Tree
@@ -149,6 +209,27 @@ ROOT
 │       └── tags:               array (optional)
 │           └── [n]: string
 │
+├── recipe_variants (object)
+│   └── {recipeId} (object)
+│       └── {variantId} (object)
+│           ├── id:                  string
+│           ├── label:               string
+│           ├── createdAt:           string (ISO 8601)
+│           ├── isPinned:            boolean
+│           ├── title:               string
+│           ├── summary:             string
+│           ├── servings:            string (optional)
+│           ├── prepTime:            string (optional)
+│           ├── cookingTime:         string (optional)
+│           ├── nutrientsPerServing: array (optional)
+│           │   └── [n]: { name: string, quantity: string, unit: string }
+│           ├── ingredients:         array
+│           │   └── [n]: { name: string, quantity: string, unit: string }
+│           ├── difficulty:          "EASY" | "MEDIUM" (optional)
+│           ├── instructions:        array
+│           │   └── [n]: string
+│           └── tipsAndTricks:       string (optional)
+│
 └── users (object)
     └── {uid} (object)
         ├── chat_history (object)
@@ -166,6 +247,13 @@ ROOT
         │       ├── name:      string   // user-provided list name
         │       └── recipeIds: array
         │           └── [n]: string    // recipe push ID
+        ├── preferences (object, optional)
+        │   ├── summary:   string
+        │   └── updatedAt: string (ISO 8601)
+        ├── cooking_resources (object, optional)
+        │   ├── resources (array)
+        │   │   └── [n]: { title: string, url: string, type: string, description: string }
+        │   └── updatedAt: string (ISO 8601)
         └── betaInteractionCount: number    // lifetime AI-interaction count during open beta (CHE-39); absent = 0
 ```
 

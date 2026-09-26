@@ -5,9 +5,20 @@
 
     "recipes": {
       ".indexOn": ["uid"],
+      // Deliberately auth != null (not $uid-scoped): the community-browse tab lets any
+      // signed-in user read other users' favourited recipes.
       ".read": "auth != null",
       "$recipeId": {
-        ".write": "auth != null && (!data.exists() || auth.uid == data.child('uid').val()) && auth.uid == newData.child('uid').val()"
+        ".write": "auth != null && (!data.exists() || auth.uid == data.child('uid').val()) && (!newData.exists() || newData.child('uid').val() == null || auth.uid == newData.child('uid').val())"
+      }
+    },
+
+    // RecipeVariant has no owner/uid field (variants belong to a recipe, not a user), so this
+    // matches the recipes node's any-authenticated-user trust level.
+    "recipe_variants": {
+      "$recipeId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     },
 
@@ -32,6 +43,12 @@
           ".write": "auth != null && auth.uid == $uid"
         },
         "lists": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "preferences": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "cooking_resources": {
           ".write": "auth != null && auth.uid == $uid"
         },
         "betaInteractionCount": {

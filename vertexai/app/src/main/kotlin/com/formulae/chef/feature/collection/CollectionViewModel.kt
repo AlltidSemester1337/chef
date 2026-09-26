@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.collection
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
@@ -181,10 +182,14 @@ class CollectionViewModel(
 
         recipe.id?.let { recipeId ->
             viewModelScope.launch {
-                val loaded = variantRepository.loadVariantsForRecipe(recipeId)
-                _variants.value = loaded
-                if (isRecipeOwner) {
-                    _selectedVariantId.value = loaded.firstOrNull { it.isPinned }?.id
+                try {
+                    val loaded = variantRepository.loadVariantsForRecipe(recipeId)
+                    _variants.value = loaded
+                    if (isRecipeOwner) {
+                        _selectedVariantId.value = loaded.firstOrNull { it.isPinned }?.id
+                    }
+                } catch (e: Exception) {
+                    Log.e("CollectionViewModel", "Failed to load variants for $recipeId", e)
                 }
             }
         }
