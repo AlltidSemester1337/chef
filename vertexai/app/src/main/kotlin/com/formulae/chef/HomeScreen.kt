@@ -1,5 +1,7 @@
 package com.formulae.chef
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,11 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +58,8 @@ import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefFab
+import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
+import com.formulae.chef.ui.components.LegalInfoDialog
 import com.formulae.chef.ui.components.RecipeCard
 import com.formulae.chef.ui.components.SectionHeader
 import com.formulae.chef.ui.components.WaveDivider
@@ -59,7 +69,9 @@ import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.TextSecondary
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.UserInfo
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -132,6 +144,7 @@ fun HomeScreen(
                 viewModel = viewModel,
                 displayName = firstName,
                 userSessionService = userSessionService,
+                currentUserUid = currentUser?.uid,
                 onNavigateToCollection = onNavigateToCollection,
                 onNavigateToCommunity = onNavigateToCommunity,
                 onSignOut = onSignOut,
@@ -146,15 +159,21 @@ private fun HomeScreenContent(
     viewModel: HomeScreenViewModel,
     displayName: String,
     userSessionService: UserSessionService,
+    currentUserUid: String?,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onSignOut: () -> Unit,
     homeUiState: HomeUiState = HomeUiState()
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showLegalInfo by remember { mutableStateOf(false) }
+    var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     val overlayViewModel: OverlayChatViewModel = viewModel(
         factory = remember { OverlayChatViewModelFactory(userSessionService) }
     )
     val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
+    val overlayEmailVerificationRequired by overlayViewModel.emailVerificationRequired.collectAsState()
     var showChefOverlay by remember { mutableStateOf(false) }
 
     val userRecipes by viewModel.userRecipes.collectAsState()
@@ -182,12 +201,21 @@ private fun HomeScreenContent(
                     text = "Hi, $displayName!",
                     style = AppTypography.headlineLarge
                 )
-                IconButton(onClick = onSignOut) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                        contentDescription = "Sign out",
-                        tint = Terracotta600
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showLegalInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Privacy & Terms",
+                            tint = Terracotta600
+                        )
+                    }
+                    IconButton(onClick = onSignOut) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                            contentDescription = "Sign out",
+                            tint = Terracotta600
+                        )
+                    }
                 }
             }
             WaveDivider()
@@ -301,6 +329,16 @@ private fun HomeScreenContent(
                         }
                     }
 
+                    if (currentUserUid != null) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Delete account",
+                            style = AppTypography.bodySmall.copy(color = TextSecondary),
+                            modifier = Modifier.clickable { showDeleteAccountConfirm = true }
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
@@ -323,6 +361,61 @@ private fun HomeScreenContent(
 
         if (overlayQuotaExceeded) {
             BetaQuotaExceededDialog(onDismiss = overlayViewModel::onQuotaExceededDialogDismissed)
+        }
+        if (overlayEmailVerificationRequired) {
+            EmailVerificationRequiredDialog(
+                onDismiss = overlayViewModel::onEmailVerificationRequiredDialogDismissed
+            )
+        }
+
+        if (showLegalInfo) {
+            LegalInfoDialog(onDismiss = { showLegalInfo = false })
+        }
+
+        if (showDeleteAccountConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteAccountConfirm = false },
+                title = { Text("Delete account?") },
+                text = {
+                    Text(
+                        "This permanently deletes your account and cannot be undone. " +
+                            "Your saved recipes will remain, but you'll lose access to them."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDeleteAccountConfirm = false
+                        coroutineScope.launch {
+                            try {
+                                userSessionService.deleteUser(currentUserUid.orEmpty())
+                                onSignOut()
+                            } catch (e: FirebaseAuthRecentLoginRequiredException) {
+                                Log.w("HomeScreen", "Delete account requires a fresh sign-in", e)
+                                Toast.makeText(
+                                    context,
+                                    "For your security, please sign out and sign back in, " +
+                                        "then try deleting your account again.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } catch (e: Exception) {
+                                Log.e("HomeScreen", "Failed to delete account", e)
+                                Toast.makeText(
+                                    context,
+                                    "Failed to delete account. Please try again.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteAccountConfirm = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

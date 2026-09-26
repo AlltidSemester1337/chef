@@ -17,9 +17,17 @@ class BetaQuotaService(
         val anonymousSession = userSessionService.anonymousSession
         val user = if (anonymousSession) null else userSessionService.currentUser.first()
 
-        return when (BetaQuotaPolicy.classify(anonymousSession, user?.uid, user?.email)) {
+        val classification = BetaQuotaPolicy.classify(
+            anonymousSession,
+            user?.uid,
+            user?.email,
+            user?.isEmailVerified == true
+        )
+        return when (classification) {
             BetaQuotaPolicy.Classification.BlockedNoQuota -> QuotaResult.Blocked
             BetaQuotaPolicy.Classification.AllowedUnlimited -> QuotaResult.Allowed
+            BetaQuotaPolicy.Classification.NeedsEmailVerification ->
+                QuotaResult.EmailVerificationRequired
             BetaQuotaPolicy.Classification.NeedsInteractionCount -> {
                 val count = repositoryFactory(user!!.uid).incrementAndGet()
                 BetaQuotaPolicy.resultForInteractionCount(count)

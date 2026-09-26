@@ -7,6 +7,7 @@ const val BETA_INTERACTION_LIMIT = 20
 sealed class QuotaResult {
     object Allowed : QuotaResult()
     object Blocked : QuotaResult()
+    object EmailVerificationRequired : QuotaResult()
 }
 
 /**
@@ -18,13 +19,20 @@ object BetaQuotaPolicy {
     sealed class Classification {
         object BlockedNoQuota : Classification()
         object AllowedUnlimited : Classification()
+        object NeedsEmailVerification : Classification()
         object NeedsInteractionCount : Classification()
     }
 
-    fun classify(anonymousSession: Boolean, uid: String?, email: String?): Classification =
+    fun classify(
+        anonymousSession: Boolean,
+        uid: String?,
+        email: String?,
+        emailVerified: Boolean
+    ): Classification =
         when {
             anonymousSession || uid == null -> Classification.BlockedNoQuota
             AdminUsers.isAdmin(email) -> Classification.AllowedUnlimited
+            !emailVerified -> Classification.NeedsEmailVerification
             else -> Classification.NeedsInteractionCount
         }
 

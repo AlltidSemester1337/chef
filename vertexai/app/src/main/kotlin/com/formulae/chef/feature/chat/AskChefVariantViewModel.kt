@@ -37,6 +37,7 @@ class AskChefVariantViewModel(
         data class Success(val recipe: Recipe) : State()
         object Error : State()
         object QuotaExceeded : State()
+        object EmailVerificationRequired : State()
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -45,9 +46,16 @@ class AskChefVariantViewModel(
     fun adjustRecipe(recipe: Recipe, userRequest: String) {
         viewModelScope.launch {
             _state.value = State.Loading
-            if (betaQuotaService.checkAndRecordInteraction() == QuotaResult.Blocked) {
-                _state.value = State.QuotaExceeded
-                return@launch
+            when (betaQuotaService.checkAndRecordInteraction()) {
+                QuotaResult.Blocked -> {
+                    _state.value = State.QuotaExceeded
+                    return@launch
+                }
+                QuotaResult.EmailVerificationRequired -> {
+                    _state.value = State.EmailVerificationRequired
+                    return@launch
+                }
+                QuotaResult.Allowed -> Unit
             }
             try {
                 val resultRecipe = withParentSpan("adjustRecipeFlow") {

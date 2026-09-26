@@ -1,0 +1,62 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "recipes": {
+      ".indexOn": ["uid"],
+      // Deliberately auth != null (not $uid-scoped): the community-browse tab lets any
+      // signed-in user read other users' favourited recipes.
+      ".read": "auth != null",
+      "$recipeId": {
+        ".write": "auth != null && (!data.exists() || auth.uid == data.child('uid').val()) && (!newData.exists() || newData.child('uid').val() == null || auth.uid == newData.child('uid').val())"
+      }
+    },
+
+    // Read stays open for the community-browse tab (matches "recipes"), but writes (create/
+    // pin/delete) are restricted to the underlying recipe's owner, matching the client-side
+    // isRecipeOwner gating in CollectionViewModel/CollectionScreen — otherwise any signed-in
+    // user could tamper with or spam variants onto someone else's recipe.
+    "recipe_variants": {
+      "$recipeId": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('recipes').child($recipeId).child('uid').val() == auth.uid"
+      }
+    },
+
+    "recipe_of_the_month": {
+      ".read": true,
+      ".write": false
+    },
+
+    "video_generation_history": {
+      ".read": true,
+      ".write": false
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+
+        "chat_history": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "liked_messages": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "lists": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "preferences": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "cooking_resources": {
+          ".write": "auth != null && auth.uid == $uid"
+        },
+        "betaInteractionCount": {
+          ".write": "auth != null && auth.uid == $uid && newData.isNumber() && (data.exists() ? newData.val() == data.val() + 1 : newData.val() == 1)"
+        }
+      }
+    }
+  }
+}

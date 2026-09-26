@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.formulae.chef.feature.chat.OverlayChatViewModel
@@ -109,6 +110,13 @@ fun ChefOverlay(
                     }
                 }
             }
+
+            Text(
+                text = "AI-generated recipes may contain mistakes — use your own judgment on " +
+                    "cooking times and food safety.",
+                style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
 
             OverlayMessageInput(
                 onSendMessage = { text ->

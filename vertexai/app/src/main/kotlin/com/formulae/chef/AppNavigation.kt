@@ -80,6 +80,13 @@ fun AppNavigation(
                         navController.navigate("signIn") {
                             popUpTo("home") { inclusive = true }
                         }
+                        // Bottom-nav tab switches save ChatViewModel/CollectionViewModel state
+                        // (saveState = true below) so it survives tab switches. That saved state
+                        // is keyed independently of the back stack, so popping "home" alone does
+                        // not drop it — without this, a new sign-in would restore the previous
+                        // account's cached chat history and uid-bound Firebase repositories.
+                        navController.clearBackStack("generate")
+                        navController.clearBackStack("collection?tab={tab}")
                     }
                 )
             }
