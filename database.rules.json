@@ -13,12 +13,14 @@
       }
     },
 
-    // RecipeVariant has no owner/uid field (variants belong to a recipe, not a user), so this
-    // matches the recipes node's any-authenticated-user trust level.
+    // Read stays open for the community-browse tab (matches "recipes"), but writes (create/
+    // pin/delete) are restricted to the underlying recipe's owner, matching the client-side
+    // isRecipeOwner gating in CollectionViewModel/CollectionScreen — otherwise any signed-in
+    // user could tamper with or spam variants onto someone else's recipe.
     "recipe_variants": {
       "$recipeId": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && root.child('recipes').child($recipeId).child('uid').val() == auth.uid"
       }
     },
 
