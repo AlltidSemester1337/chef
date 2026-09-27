@@ -15,9 +15,10 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Regression tests for #56: exercises [navigateToTab] / [navigateToCollection] against a real
+ * Regression tests for #56: exercises the [ChefRoutes] navigation helpers against a real
  * NavHostController with the same route shapes as [AppNavigation], asserting the back stack stays
- * `[home]` or `[home, <tab>]` and that tapping Home always lands on Home.
+ * `[home]` or `[home, <tab>]`, that tapping Home always lands on Home, and that Back from a recipe
+ * opened on Home returns Home without touching the Collections tab's saved state.
  */
 class ChefNavigationTest {
 
@@ -32,7 +33,16 @@ class ChefNavigationTest {
             navController = rememberNavController()
             NavHost(navController = navController, startDestination = ChefRoutes.HOME) {
                 composable(ChefRoutes.HOME) { Text("home") }
-                composable(ChefRoutes.GENERATE) { Text("generate") }
+                composable(
+                    route = CHAT_ROUTE_PATTERN,
+                    arguments = listOf(
+                        navArgument(CHAT_RECIPE_ID_ARG) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { Text("generate") }
                 composable(
                     route = ChefRoutes.COLLECTION_PATTERN,
                     arguments = listOf(
@@ -65,6 +75,11 @@ class ChefNavigationTest {
         navController.currentBackStackEntry?.arguments?.getString(name)
     }
 
+    private fun assertAtHome() {
+        assertEquals(ChefRoutes.HOME, currentRoute())
+        assertNull(previousRoute())
+    }
+
     @Test
     fun tappingRecipeOnHomeOpensItInCollectionsTab() {
         act { navigateToCollection(recipeId = "r1") }
@@ -80,40 +95,76 @@ class ChefNavigationTest {
 
         act { navigateToTab(ChefRoutes.HOME) }
 
-        assertEquals(ChefRoutes.HOME, currentRoute())
-        assertNull(previousRoute())
+        assertAtHome()
+    }
+
+    @Test
+    fun backFromRecipeOpenedOnHomeReturnsHome() {
+        var closedInPlace = false
+        act { navigateToCollection(recipeId = "r1") }
+
+        act { navigateBackFromRecipe { closedInPlace = true } }
+
+        assertAtHome()
+        assertEquals(false, closedInPlace)
+    }
+
+    @Test
+    fun backFromRecipeOpenedInsideCollectionsClosesItInPlace() {
+        var closedInPlace = false
+        act { navigateToTab(ChefRoutes.COLLECTION) }
+
+        act { navigateBackFromRecipe { closedInPlace = true } }
+
+        assertEquals(true, closedInPlace)
+        assertEquals(ChefRoutes.COLLECTION_PATTERN, currentRoute())
+    }
+
+    @Test
+    fun recipeOpenedOnHomeDoesNotReplaceCollectionsTabState() {
+        // The user had the Community tab open in Collections, then went Home.
+        act { navigateToCollection(tab = "COMMUNITY") }
+        act { navigateToTab(ChefRoutes.HOME) }
+        // Open a recipe from Home and go back.
+        act { navigateToCollection(recipeId = "r1") }
+        act { navigateBackFromRecipe {} }
+
+        act { navigateToTab(ChefRoutes.COLLECTION) }
+
+        assertEquals(ChefRoutes.COLLECTION_PATTERN, currentRoute())
+        assertEquals("COMMUNITY", currentArg(ChefRoutes.ARG_TAB))
+        assertNull(currentArg(ChefRoutes.ARG_RECIPE_ID))
     }
 
     @Test
     fun tappingHomeFromChatOpenedViaRecipeReturnsHome() {
         act { navigateToCollection(recipeId = "r1") }
         // "Chat with Chef" on the recipe screen
-        act { navigateToTab(ChefRoutes.GENERATE) }
-        assertEquals(ChefRoutes.GENERATE, currentRoute())
+        act { navigateToChat(recipeId = "r1") }
+        assertEquals(CHAT_ROUTE_PATTERN, currentRoute())
+        assertEquals("r1", currentArg(CHAT_RECIPE_ID_ARG))
         assertEquals(ChefRoutes.HOME, previousRoute())
 
         act { navigateToTab(ChefRoutes.HOME) }
 
-        assertEquals(ChefRoutes.HOME, currentRoute())
-        assertNull(previousRoute())
+        assertAtHome()
     }
 
     @Test
-    fun collectionsTabRestoresRecipeNotChatAfterGoingHome() {
-        act { navigateToCollection(recipeId = "r1") }
-        act { navigateToTab(ChefRoutes.GENERATE) }
+    fun collectionsTabRestoresCollectionsNotChatAfterGoingHome() {
+        act { navigateToTab(ChefRoutes.COLLECTION) }
+        act { navigateToChat(recipeId = "r1") }
         act { navigateToTab(ChefRoutes.HOME) }
 
         act { navigateToTab(ChefRoutes.COLLECTION) }
 
         assertEquals(ChefRoutes.COLLECTION_PATTERN, currentRoute())
-        assertEquals("r1", currentArg(ChefRoutes.ARG_RECIPE_ID))
         assertEquals(ChefRoutes.HOME, previousRoute())
     }
 
     @Test
     fun homeLinkToCommunityReplacesSavedCollectionsState() {
-        act { navigateToCollection(recipeId = "r1") }
+        act { navigateToTab(ChefRoutes.COLLECTION) }
         act { navigateToTab(ChefRoutes.HOME) }
 
         act { navigateToCollection(tab = "COMMUNITY") }
@@ -130,8 +181,7 @@ class ChefNavigationTest {
             act { navigateToTab(ChefRoutes.COLLECTION) }
             act { navigateToTab(ChefRoutes.HOME) }
 
-            assertEquals(ChefRoutes.HOME, currentRoute())
-            assertNull(previousRoute())
+            assertAtHome()
         }
     }
 }
