@@ -363,7 +363,7 @@ fun ChatBubbleItem(
                             Icon(
                                 imageVector = Icons.Default.ThumbUp,
                                 contentDescription = if (chatMessage.isLiked) {
-                                    "Liked"
+                                    "Unlike response"
                                 } else {
                                     "Like response"
                                 },

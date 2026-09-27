@@ -25,7 +25,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
-import com.formulae.chef.feature.model.LikedMessage
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
@@ -39,7 +38,6 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.Content
-import com.formulae.chef.services.persistence.LikedMessagesRepository
 import com.formulae.chef.services.persistence.LikedMessagesRepositoryImpl
 import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
@@ -130,9 +128,8 @@ class ChatViewModel(
     private var _currentUser: UserInfo? = null
     private lateinit var _chatHistoryPersistenceImpl: ChatHistoryRepository
     private lateinit var _userPreferencesRepository: UserPreferencesRepository
-    private lateinit var _likedMessagesRepository: LikedMessagesRepository
+    private lateinit var _likedMessages: LikedMessagesStore
     private var _cachedPreferences: UserPreferences? = null
-    private var _cachedLikedMessages: List<Pair<String, LikedMessage>> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -146,7 +143,7 @@ class ChatViewModel(
             val uid = _currentUser!!.uid
             _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(uid)
             _userPreferencesRepository = UserPreferencesRepositoryImpl(uid)
-            _likedMessagesRepository = LikedMessagesRepositoryImpl(uid)
+            _likedMessages = LikedMessagesStore(LikedMessagesRepositoryImpl(uid))
 
             val historyDeferred = async { initializeChatHistory() }
             val prefsDeferred = async { loadUserPreferences() }
@@ -156,10 +153,9 @@ class ChatViewModel(
             val persistedHistory = historyDeferred.await()
             val prefs = prefsDeferred.await()
             val collectionTitles = collectionTitlesDeferred.await()
-            val likedMessages = likedMessagesDeferred.await()
+            likedMessagesDeferred.await()
 
             _cachedPreferences = prefs
-            _cachedLikedMessages = likedMessages
 
             val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs, collectionTitles)
             _chatHistory.value = fullHistory
@@ -197,17 +193,16 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun loadLikedMessages(): List<Pair<String, LikedMessage>> {
-        return try {
-            _likedMessagesRepository.loadLikedMessages()
+    private suspend fun loadLikedMessages() {
+        try {
+            _likedMessages.load()
         } catch (e: Exception) {
             Log.w("ChatViewModel", "Failed to load liked messages (non-critical)", e)
-            emptyList()
         }
     }
 
     private fun updateUiStateMessages(history: List<Content>) {
-        val likedTexts = _cachedLikedMessages.map { (_, msg) -> msg.text }.toSet()
+        val likedTexts = _likedMessages.likedTexts()
         _uiState.value = ChatUiState(
             history.map { content ->
                 val text = content.parts.firstOrNull()?.text ?: ""
@@ -299,15 +294,12 @@ class ChatViewModel(
         }
     }
 
+    /** Toggles the thumbs-up on a model response: likes it, or un-likes it if already liked. */
     fun onMessageLiked(message: ChatMessage) {
-        if (message.isLiked) return
-        _likedMessagesRepository.saveLikedMessage(message.text)
-        val liked = LikedMessage(
-            text = message.text,
-            likedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
-        )
-        _cachedLikedMessages = _cachedLikedMessages + Pair("", liked)
-        _uiState.value.updateMessageLiked(message.id, isLiked = true)
+        if (!::_likedMessages.isInitialized) return
+        val newLiked = !message.isLiked
+        _likedMessages.setLiked(message.text, newLiked)
+        _uiState.value.updateMessageLiked(message.id, isLiked = newLiked)
     }
 
     private suspend fun detectAndSavePreferences(userMessage: String) {
@@ -355,7 +347,7 @@ class ChatViewModel(
                 "${entryContent.role}: ${entryContent.parts.firstOrNull()?.text ?: ""}"
             }
             val currentPrefs = _cachedPreferences
-            val likedToCompact = _cachedLikedMessages
+            val likedToCompact = _likedMessages.entries
             val prompt = buildString {
                 if (currentPrefs?.summary?.isNotBlank() == true) {
                     append("Existing preferences: ${currentPrefs.summary}\n\n")
@@ -378,11 +370,7 @@ class ChatViewModel(
                 _userPreferencesRepository.savePreferences(updatedPrefs)
                 _cachedPreferences = updatedPrefs
                 _chatHistoryPersistenceImpl.deleteEntries(entriesToCompact.map { it.first })
-                val likedIdsToDelete = likedToCompact.map { it.first }.filter { it.isNotBlank() }
-                if (likedIdsToDelete.isNotEmpty()) {
-                    _likedMessagesRepository.deleteMessages(likedIdsToDelete)
-                }
-                _cachedLikedMessages = emptyList()
+                _likedMessages.deleteCompacted(likedToCompact)
                 Log.d("ChatViewModel", "Compacted ${entriesToCompact.size} entries into preferences")
             }
         } catch (e: Exception) {

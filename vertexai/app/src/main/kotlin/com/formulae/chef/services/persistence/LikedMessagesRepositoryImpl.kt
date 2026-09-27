@@ -24,15 +24,17 @@ class LikedMessagesRepositoryImpl(uid: String) : LikedMessagesRepository {
         }
     }
 
-    override fun saveLikedMessage(text: String) {
+    override fun saveLikedMessage(text: String): String? {
         val entry = LikedMessage(
             text = text,
             likedAt = ZonedDateTime.now(ZoneOffset.UTC).toString()
         )
-        likedMessagesRef.push().setValue(entry)
+        val ref = likedMessagesRef.push()
+        ref.setValue(entry)
             .addOnFailureListener { e ->
                 Log.e("LikedMessages", "Failed to save liked message", e)
             }
+        return ref.key
     }
 
     override fun deleteMessages(ids: List<String>) {
