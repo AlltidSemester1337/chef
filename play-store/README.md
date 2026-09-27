@@ -7,7 +7,7 @@ This folder holds everything needed to publish Chef on Google Play, starting wit
 | `listings/en-US/title.txt` | App name | 30 chars |
 | `listings/en-US/short_description.txt` | Short description | 80 chars |
 | `listings/en-US/full_description.txt` | Full description | 4000 chars |
-| `listings/en-US/video_url.txt` | YouTube video | public/unlisted, ads off, not age-restricted |
+| `listings/en-US/video_url.txt` | YouTube video | public/unlisted, ads off, not age-restricted. Use the `youtube.com/watch?v=<id>` form, not a `/shorts/` link |
 | `listings/en-US/images/icon.png` | App icon | 512×512 PNG, ≤1 MB |
 | `listings/en-US/images/featureGraphic.png` | Feature graphic | 1024×500 PNG/JPEG |
 | `listings/en-US/images/phoneScreenshots/*.png` | Phone screenshots | 2–8, 320–3840 px, max 2:1 ratio |

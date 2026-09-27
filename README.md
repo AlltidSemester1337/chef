@@ -59,7 +59,7 @@ Other features up next: Refer to Linear
 
 ## Demos
 
-[Demos](https://www.youtube.com/playlist?list=PL3z3ETRVg-c4teb_hZ8OzLwx7ySJKoB1Q)
+[Demos](https://www.youtube.com/playlist?list=PL3z3ETRVg-c4teb_hZ8OzLwx7ySJKoB1Q). Latest: [Chef 4.0 demo](https://www.youtube.com/watch?v=M8ywQQEteFQ)
 
 ## How to make contributions?
 
