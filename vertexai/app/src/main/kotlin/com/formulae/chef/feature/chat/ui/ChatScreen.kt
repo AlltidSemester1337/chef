@@ -185,13 +185,6 @@ private fun ChatContent(chatViewModel: ChatViewModel, onClose: () -> Unit) {
             )
         }
 
-        Text(
-            text = "Chef's recipes are AI-generated and may contain mistakes — " +
-                "always use your own judgment on cooking times and food safety.",
-            style = AppTypography.bodySmall.copy(color = TextSecondary, fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
-
         MessageInput(
             onSendMessage = { inputText ->
                 chatViewModel.sendMessage(inputText)
