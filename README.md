@@ -11,7 +11,7 @@ The following files are **gitignored** and must be obtained from the team before
 
 | File | Purpose |
 |------|---------|
-| `local.properties` | Must contain `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models) |
+| `local.properties` | Must contain `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models). Optional for Play releases: `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword` (upload-key signing — see [Release build](#release-build)) |
 | `vertexai/app/google-services.json` | Firebase / GCP service account credentials |
 | `vertexai/app/src/main/assets/gcp.json` | Vertex AI (Gemini) credentials |
 | `vertexai/app/src/main/assets/imagen-google-services.json` | Imagen image generation credentials |
@@ -24,6 +24,18 @@ Build and run the app from the `vertexai/app` module. JDK 17 is required — pre
 ```bash
 JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:assembleDebug
 ```
+
+### Release build
+
+Play releases are signed with an upload key (Play App Signing holds the app signing key). When the four `release*` keys are set in `local.properties`, `bundleRelease` signs the bundle. Without them, the bundle is left unsigned. See [`play-store/README.md`](play-store/README.md) for the keytool command and the full Play Console checklist.
+
+```bash
+JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:bundleRelease
+```
+
+## Google Play
+
+Store listing text, graphics, and Data safety answers are in [`play-store/`](play-store/). The [privacy policy](docs/privacy-policy.md) and [account deletion](docs/delete-account.md) pages are in `docs/`.
 
 Features:
 
@@ -40,8 +52,8 @@ Features:
 - 3.1.0 - Instrumentation via OTEL and Phoenix Arize (for use in model eval primarily)
 - 3.2.0 - Multiple recipe suggestions with card grid and images in chat, also major updates for Claude driven development
 - 3.3.0 - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
-- 3.4.0 (Current) - Voice latency improvements and add lists in collections view
-- 4.0.0 - Complete redesign of the app!
+- 3.4.0 - Voice latency improvements and add lists in collections view
+- 4.0.0 (Current) - Complete redesign of the app, open beta hardening and first Google Play (internal testing) release
 
 Other features up next: Refer to Linear
 
@@ -55,6 +67,5 @@ Fork or reach out to authors humlekottekonsult@gmail.com
 
 ## Support, feature request, question etc
 
-This project is currently in closed beta and owned as well as currently operated and maintained
-by Karl Enberg and Amanda Norell. Any questions reach out via email
-humlekottekonsult@gmail.com
+This project is currently in beta and is owned, operated and maintained by Karl Enberg as a
+private individual. For any questions, email humlekottekonsult@gmail.com

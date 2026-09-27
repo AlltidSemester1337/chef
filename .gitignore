@@ -17,3 +17,7 @@ assets/
 
 # Local database backups (may contain sensitive user data)
 db-backups/
+
+# Release signing keystores (upload key) — never commit
+*.jks
+*.keystore
