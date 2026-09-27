@@ -88,12 +88,15 @@ import androidx.media3.ui.PlayerView
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.BuildConfig
 import com.formulae.chef.R
+import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.collection.parseTips
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeVariant
+import com.formulae.chef.feature.model.parsedServingsCount
+import com.formulae.chef.feature.model.scaledToServings
 import com.formulae.chef.services.voice.AudioPlayer
 import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.buildTtsFlow
@@ -193,6 +196,11 @@ private fun CreateDetailScreen(
         onDispose { audioPlayer.release() }
     }
     val isSpeaking by audioPlayer.isSpeaking.collectAsState()
+
+    // Portion adjustment is display-only: scale a copy of the recipe, never the stored one (#58).
+    val originalServings = recipe.parsedServingsCount()
+    val displayServings = currentServings ?: originalServings
+    val scaledRecipe = remember(recipe, displayServings) { recipe.scaledToServings(displayServings) }
 
     Column(
         modifier = Modifier
@@ -331,18 +339,26 @@ private fun CreateDetailScreen(
                 onTabSelected = { index -> onTabChanged(index == 0) }
             )
 
-            // Voice playback button — just below tab toggle, aligned right
+            // Servings stepper (left, aligned with the ingredient list) + voice playback button (right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (showIngredients && displayServings != null) {
+                    ServingsStepper(
+                        servings = displayServings,
+                        maxServings = CollectionViewModel.MAX_SERVINGS,
+                        onServingsChanged = onServingsChanged
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
                 IconButton(
                     onClick = {
                         if (isSpeaking) {
                             audioPlayer.stop()
                         } else {
                             val sentences = if (showIngredients) {
-                                buildIngredientSentences(recipe)
+                                buildIngredientSentences(scaledRecipe)
                             } else {
                                 val stepText = buildInstructionStepText(recipe, checkedSteps)
                                 if (stepText.isNotBlank()) listOf(stepText) else emptyList()
@@ -366,17 +382,15 @@ private fun CreateDetailScreen(
 
             if (isCookingMode) {
                 CookingModeContent(
-                    recipe = recipe,
+                    recipe = scaledRecipe,
                     showIngredients = showIngredients,
                     checkedSteps = checkedSteps,
-                    currentServings = currentServings,
                     scrollState = scrollState,
                     onStepChecked = onStepChecked,
-                    onStepUnchecked = onStepUnchecked,
-                    onServingsChanged = onServingsChanged
+                    onStepUnchecked = onStepUnchecked
                 )
             } else if (showIngredients) {
-                IngredientsTabContent(recipe = recipe)
+                IngredientsTabContent(recipe = scaledRecipe)
             } else {
                 InstructionsTabContent(recipe = recipe)
             }

@@ -42,7 +42,6 @@ class CookingModeTest {
                     recipe = recipe,
                     showIngredients = false,
                     checkedSteps = checkedSteps,
-                    currentServings = null,
                     scrollState = scrollState,
                     onStepChecked = {
                         checkedEvents += it
@@ -51,8 +50,7 @@ class CookingModeTest {
                     onStepUnchecked = {
                         uncheckedEvents += it
                         checkedSteps = checkedSteps - it
-                    },
-                    onServingsChanged = {}
+                    }
                 )
             }
         }
