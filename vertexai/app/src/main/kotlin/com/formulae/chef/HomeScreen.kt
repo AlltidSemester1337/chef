@@ -34,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
-import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.collection.ui.RecipeVideoSection
 import com.formulae.chef.feature.home.HomeScreenViewModel
 import com.formulae.chef.feature.home.HomeUiState
@@ -77,9 +75,9 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     viewModel: HomeScreenViewModel,
     userSessionService: UserSessionService,
-    onNavigateToChat: () -> Unit = {},
     onNavigateToCollection: () -> Unit = {},
     onNavigateToCommunity: () -> Unit = {},
+    onOpenRecipe: (recipeId: String) -> Unit = {},
     onSignOut: () -> Unit = {}
 ) {
     var isLoading by remember { mutableStateOf(true) }
@@ -102,12 +100,6 @@ fun HomeScreen(
         }
     }
 
-    val selectedRecipe by viewModel.selectedRecipe.collectAsState()
-    var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
-    val isCookingMode by viewModel.isCookingMode.collectAsState()
-    val checkedSteps by viewModel.checkedSteps.collectAsState()
-    val currentServings by viewModel.currentServings.collectAsState()
-
     val cookingViewModel: HomeViewModel = viewModel(
         factory = remember { HomeViewModelFactory(userSessionService) }
     )
@@ -120,37 +112,21 @@ fun HomeScreen(
             onSignOut()
         }
         val signedIn = !userSessionService.anonymousSession && currentUser != null
-        if (selectedRecipe != null) {
-            DetailRoute(
-                recipe = selectedRecipe!!,
-                onBack = { viewModel.clearSelectedRecipe() },
-                isCookingMode = isCookingMode,
-                showIngredients = showIngredients,
-                checkedSteps = checkedSteps,
-                currentServings = currentServings,
-                onToggleCookingMode = viewModel::onToggleCookingMode,
-                onTabChanged = { showIngredients = it },
-                onStepChecked = viewModel::onStepChecked,
-                onStepUnchecked = viewModel::onStepUnchecked,
-                onServingsChanged = viewModel::onServingsChanged,
-                isOwner = currentUser?.uid == selectedRecipe?.uid,
-                onNavigateToChat = onNavigateToChat
-            )
-        } else {
-            val firstName = remember(currentUser) {
-                resolveDisplayName(currentUser?.displayName, currentUser?.email)
-            }
-            HomeScreenContent(
-                viewModel = viewModel,
-                displayName = firstName,
-                userSessionService = userSessionService,
-                currentUserUid = currentUser?.uid,
-                onNavigateToCollection = onNavigateToCollection,
-                onNavigateToCommunity = onNavigateToCommunity,
-                onSignOut = onSignOut,
-                homeUiState = if (signedIn) cookingUiState else HomeUiState()
-            )
+        // Recipe details are shown in the Collections tab (#56), not on top of Home.
+        val firstName = remember(currentUser) {
+            resolveDisplayName(currentUser?.displayName, currentUser?.email)
         }
+        HomeScreenContent(
+            viewModel = viewModel,
+            displayName = firstName,
+            userSessionService = userSessionService,
+            currentUserUid = currentUser?.uid,
+            onNavigateToCollection = onNavigateToCollection,
+            onNavigateToCommunity = onNavigateToCommunity,
+            onOpenRecipe = onOpenRecipe,
+            onSignOut = onSignOut,
+            homeUiState = if (signedIn) cookingUiState else HomeUiState()
+        )
     }
 }
 
@@ -162,9 +138,11 @@ private fun HomeScreenContent(
     currentUserUid: String?,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
+    onOpenRecipe: (recipeId: String) -> Unit,
     onSignOut: () -> Unit,
     homeUiState: HomeUiState = HomeUiState()
 ) {
+    val onRecipeClick: (Recipe) -> Unit = { recipe -> recipe.id?.let(onOpenRecipe) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showLegalInfo by remember { mutableStateOf(false) }
@@ -256,7 +234,7 @@ private fun HomeScreenContent(
                     } else {
                         RecipeCardGrid(
                             recipes = userRecipes,
-                            onRecipeClick = viewModel::onRecipeSelected
+                            onRecipeClick = onRecipeClick
                         )
                     }
 
@@ -279,7 +257,7 @@ private fun HomeScreenContent(
                     } else {
                         RecipeCardGrid(
                             recipes = communityRecipes,
-                            onRecipeClick = viewModel::onRecipeSelected
+                            onRecipeClick = onRecipeClick
                         )
                     }
 
@@ -288,7 +266,7 @@ private fun HomeScreenContent(
 
                         RecipeOfTheMonthSection(
                             rotw = rotw,
-                            onViewRecipe = { viewModel.onRecipeOfTheMonthClicked(rotw) }
+                            onViewRecipe = { onOpenRecipe(rotw.recipeId) }
                         )
                     }
 

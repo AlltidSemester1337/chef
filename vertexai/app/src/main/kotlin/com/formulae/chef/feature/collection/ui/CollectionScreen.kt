@@ -79,6 +79,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.AskChefVariantViewModelFactory
+import com.formulae.chef.ChefRoutes
 import com.formulae.chef.OverlayChatViewModelFactory
 import com.formulae.chef.feature.chat.AskChefVariantViewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
@@ -86,6 +87,7 @@ import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeList
+import com.formulae.chef.navigateToTab
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
@@ -108,6 +110,18 @@ enum class RecipeSource {
     COMMUNITY
 }
 
+/**
+ * The Collections tab a recipe belongs to: the user's own saved (favourite) recipes live under
+ * Saved, everything else under Community. Used when Collections is opened directly on a recipe so
+ * backing out of it lands on the list that contains it.
+ */
+internal fun collectionTabFor(recipe: Recipe, currentUid: String?): RecipeSource =
+    if (currentUid != null && recipe.uid == currentUid && recipe.isFavourite) {
+        RecipeSource.SAVED
+    } else {
+        RecipeSource.COMMUNITY
+    }
+
 @Composable
 internal fun CollectionRoute(
     repository: RecipeRepository,
@@ -115,7 +129,8 @@ internal fun CollectionRoute(
     collectionViewModel: CollectionViewModel,
     navController: NavController,
     userSessionService: UserSessionService,
-    initialRecipeSource: RecipeSource = RecipeSource.SAVED
+    initialRecipeSource: RecipeSource = RecipeSource.SAVED,
+    initialRecipeId: String? = null
 ) {
     val collectionUiState by collectionViewModel.uiState.collectAsState()
     val isLoading by collectionViewModel.isLoading.collectAsState()
@@ -145,9 +160,27 @@ internal fun CollectionRoute(
 
     var recipesSource by rememberSaveable { mutableStateOf(initialRecipeSource) }
 
+    // When opened with a recipe (e.g. tapped on Home, #56) the tab is derived from the recipe instead.
     LaunchedEffect(signedIn) {
-        if (initialRecipeSource == RecipeSource.SAVED) {
+        if (initialRecipeId == null && initialRecipeSource == RecipeSource.SAVED) {
             recipesSource = if (signedIn) RecipeSource.SAVED else RecipeSource.COMMUNITY
+        }
+    }
+
+    // Open the recipe passed as a navigation argument exactly once. rememberSaveable survives the
+    // tab's saveState/restoreState, so coming back to Collections after backing out of the recipe
+    // does not re-open it. Waits until the user is resolved so ownership (pinned variant, Saved vs
+    // Community tab) is evaluated against the right uid.
+    var handledInitialRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
+    val userResolved = userSessionService.anonymousSession || currentUser != null
+    LaunchedEffect(initialRecipeId, userResolved) {
+        if (initialRecipeId == null || !userResolved || handledInitialRecipeId == initialRecipeId) {
+            return@LaunchedEffect
+        }
+        handledInitialRecipeId = initialRecipeId
+        collectionViewModel.setCurrentUser(currentUser?.uid)
+        collectionViewModel.openRecipeById(initialRecipeId)?.let { recipe ->
+            recipesSource = collectionTabFor(recipe, currentUser?.uid)
         }
     }
 
@@ -225,7 +258,7 @@ internal fun CollectionRoute(
     }
 
     BackHandler(enabled = selectedRecipe == null) {
-        navController.navigate("home")
+        navController.navigateToTab(ChefRoutes.HOME)
     }
 
     Scaffold(
@@ -306,7 +339,7 @@ internal fun CollectionRoute(
                     onPinVariant = collectionViewModel::onPinVariant,
                     onDeleteVariant = collectionViewModel::onDeleteVariant,
                     onStartCreateVariant = collectionViewModel::onStartCreateVariant,
-                    onNavigateToChat = { navController.navigate("generate") }
+                    onNavigateToChat = { navController.navigateToTab(ChefRoutes.GENERATE) }
                 )
             }
         }
