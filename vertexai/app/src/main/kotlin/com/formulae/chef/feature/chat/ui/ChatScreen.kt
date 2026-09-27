@@ -84,6 +84,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
 import com.formulae.chef.feature.chat.ChatViewModel
+import com.formulae.chef.feature.chat.parseRecipeText
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
@@ -320,23 +321,32 @@ fun ChatBubbleItem(
             }
 
             else -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (chatMessage.isPending) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .padding(end = 8.dp),
-                            strokeWidth = 2.dp
+                // Recipes sent as plain text (restored history, or failed structured extraction)
+                // are shown as a compact, expandable card instead of a long text block (#65).
+                val recipePreview = remember(chatMessage.text, chatMessage.isPending) {
+                    if (chatMessage.isPending) null else parseRecipeText(chatMessage.text)
+                }
+                if (recipePreview != null) {
+                    ChatRecipeTextCard(preview = recipePreview, messageId = chatMessage.id)
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (chatMessage.isPending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        Text(
+                            text = chatMessage.text.sanitizeMarkdown(),
+                            style = AppTypography.bodyLarge.copy(color = TextPrimary),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    Text(
-                        text = chatMessage.text.sanitizeMarkdown(),
-                        style = AppTypography.bodyLarge.copy(color = TextPrimary),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
                 if (!chatMessage.isPending) {
                     Row {
