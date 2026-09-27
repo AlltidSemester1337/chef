@@ -23,6 +23,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -222,6 +223,10 @@ fun ChatList(
     LazyColumn(
         reverseLayout = true,
         state = listState,
+        // Clear separation between user and Chef messages (#64); bottom-aligned like the
+        // default for reverseLayout so a short conversation sits just above the input.
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
+        contentPadding = PaddingValues(vertical = 16.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         items(chatMessages.reversed(), key = { it.id }) { message ->
@@ -256,7 +261,7 @@ fun ChatBubbleItem(
     Column(
         horizontalAlignment = horizontalAlignment,
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
     ) {
         when {
