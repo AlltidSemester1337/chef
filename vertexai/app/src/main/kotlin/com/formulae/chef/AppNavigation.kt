@@ -4,9 +4,14 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,19 +41,17 @@ fun AppNavigation(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentBaseRoute = (navBackStackEntry?.destination?.route ?: "home").substringBefore("?")
+    var routeBeforeChat by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentBaseRoute) {
+        routeBeforeChat = nextRouteBeforeChat(currentBaseRoute, routeBeforeChat)
+    }
 
     Scaffold(
         bottomBar = {
             if (currentBaseRoute in bottomBarRoutes) {
                 ChefNavigationBar(
                     currentRoute = currentBaseRoute,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo("home") { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onNavigate = { route -> navController.navigateToTab(route) }
                 )
             }
         }
@@ -91,7 +94,17 @@ fun AppNavigation(
                 )
             }
             composable("generate") {
-                ChatRoute(userSessionService = userSessionService)
+                ChatRoute(
+                    userSessionService = userSessionService,
+                    onClose = {
+                        val previousBaseRoute = navController.previousBackStackEntry
+                            ?.destination?.route?.substringBefore("?")
+                        when (val action = resolveChatCloseAction(routeBeforeChat, previousBaseRoute)) {
+                            ChatCloseAction.PopBackStack -> navController.popBackStack()
+                            is ChatCloseAction.SwitchToTab -> navController.navigateToTab(action.route)
+                        }
+                    }
+                )
             }
             composable(
                 route = "collection?tab={tab}",
@@ -124,5 +137,14 @@ fun AppNavigation(
                 SignInRoute(userSessionService, navController)
             }
         }
+    }
+}
+
+/** Top-level (bottom-bar) navigation: keeps one entry per tab and saves/restores each tab's state. */
+private fun NavController.navigateToTab(route: String) {
+    navigate(route) {
+        popUpTo("home") { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }

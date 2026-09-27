@@ -37,7 +37,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -72,7 +71,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -90,7 +88,6 @@ import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.voice.sanitizeMarkdown
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
-import com.formulae.chef.ui.components.ChefTopBar
 import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
@@ -104,6 +101,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ChatRoute(
     userSessionService: UserSessionService,
+    onClose: () -> Unit = {},
     chatViewModel: ChatViewModel = viewModel(
         factory = remember { GenerativeViewModelFactory(userSessionService) }
     )
@@ -124,12 +122,12 @@ internal fun ChatRoute(
             onTabChanged = { showIngredients = it }
         )
     } else {
-        ChatContent(chatViewModel)
+        ChatContent(chatViewModel, onClose)
     }
 }
 
 @Composable
-private fun ChatContent(chatViewModel: ChatViewModel) {
+private fun ChatContent(chatViewModel: ChatViewModel, onClose: () -> Unit) {
     val chatUiState by chatViewModel.uiState.collectAsState()
     val isLoading by chatViewModel.isLoading.collectAsState()
     val quotaExceeded by chatViewModel.quotaExceeded.collectAsState()
@@ -160,19 +158,7 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
             .fillMaxSize()
             .imePadding()
     ) {
-        ChefTopBar(
-            title = "Chat with Chef",
-            navigationIcon = {
-                Image(
-                    painter = painterResource(R.drawable.logo),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                )
-            }
-        )
+        ChatTopBar(onClose = onClose)
 
         if (isLoading) {
             Box(
