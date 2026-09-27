@@ -132,7 +132,7 @@ internal fun DetailRoute(
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
     onDeleteVariant: (String) -> Unit = {},
-    onStartCreateVariant: () -> Unit = {},
+    onStartCreateVariant: (() -> Unit)? = null,
     onNavigateToChat: () -> Unit = {}
 ) {
     BackHandler { onBack() }
@@ -180,7 +180,7 @@ private fun CreateDetailScreen(
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
     onDeleteVariant: (String) -> Unit = {},
-    onStartCreateVariant: () -> Unit = {},
+    onStartCreateVariant: (() -> Unit)? = null,
     onNavigateToChat: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -286,8 +286,13 @@ private fun CreateDetailScreen(
                 RecipeVideoSection(videoUrl = videoUrl)
             }
 
-            // Variants are an owner-only feature (#54): non-owners never see the picker.
-            if (isOwner) {
+            if (
+                shouldShowVariantPicker(
+                    isOwner = isOwner,
+                    hasVariants = variants.isNotEmpty(),
+                    canCreateVariant = onStartCreateVariant != null
+                )
+            ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 VariantPickerRow(
                     variants = variants,
