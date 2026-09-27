@@ -359,6 +359,43 @@ class CollectionViewModelTest {
         assertEquals(8, viewModel.currentServings.value)
     }
 
+    // --- Ownership tests (#54: variant actions are owner-only) ---
+
+    @Test
+    fun `isRecipeOwner is true when selected recipe belongs to current user`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.setCurrentUser("user-1")
+
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        advanceUntilIdle()
+
+        assertTrue(viewModel.isRecipeOwner)
+    }
+
+    @Test
+    fun `isRecipeOwner is false when selected recipe belongs to another user`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.setCurrentUser("user-1")
+
+        viewModel.onRecipeSelected(sampleRecipes[2])
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isRecipeOwner)
+    }
+
+    @Test
+    fun `isRecipeOwner is false when no user is signed in`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        viewModel.onRecipeSelected(Recipe(id = "9", uid = "", title = "Ownerless"))
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isRecipeOwner)
+    }
+
     // --- List management tests ---
 
     @Test

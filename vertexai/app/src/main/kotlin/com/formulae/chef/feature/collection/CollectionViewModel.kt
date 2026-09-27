@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeList
 import com.formulae.chef.feature.model.RecipeVariant
+import com.formulae.chef.feature.model.isOwnedBy
 import com.formulae.chef.feature.model.parsedServingsCount
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
@@ -88,7 +89,7 @@ class CollectionViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val isRecipeOwner: Boolean get() = _selectedRecipe.value?.uid == currentUid
+    val isRecipeOwner: Boolean get() = _selectedRecipe.value?.isOwnedBy(currentUid) == true
 
     private var recipes: List<Recipe> = emptyList()
     private var cookingRecipeId: String? = null

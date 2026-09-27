@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,7 +54,9 @@ import com.formulae.chef.feature.home.HomeViewModel
 import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeOfTheMonth
+import com.formulae.chef.feature.model.isOwnedBy
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.components.AccountMenu
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefFab
 import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
@@ -133,7 +134,7 @@ fun HomeScreen(
                 onStepChecked = viewModel::onStepChecked,
                 onStepUnchecked = viewModel::onStepUnchecked,
                 onServingsChanged = viewModel::onServingsChanged,
-                isOwner = currentUser?.uid == selectedRecipe?.uid,
+                isOwner = selectedRecipe?.isOwnedBy(currentUser?.uid) == true,
                 onNavigateToChat = onNavigateToChat
             )
         } else {
@@ -209,13 +210,14 @@ private fun HomeScreenContent(
                             tint = Terracotta600
                         )
                     }
-                    IconButton(onClick = onSignOut) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                            contentDescription = "Sign out",
-                            tint = Terracotta600
-                        )
-                    }
+                    AccountMenu(
+                        onSignOut = onSignOut,
+                        onDeleteAccount = if (currentUserUid != null) {
+                            { showDeleteAccountConfirm = true }
+                        } else {
+                            null
+                        }
+                    )
                 }
             }
             WaveDivider()
@@ -329,16 +331,6 @@ private fun HomeScreenContent(
                         }
                     }
 
-                    if (currentUserUid != null) {
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "Delete account",
-                            style = AppTypography.bodySmall.copy(color = TextSecondary),
-                            modifier = Modifier.clickable { showDeleteAccountConfirm = true }
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
@@ -421,7 +413,7 @@ private fun HomeScreenContent(
 }
 
 @Composable
-private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
+internal fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
     SectionHeader(
         title = "Recipe of the Month",
         linkText = "View recipe",
@@ -439,10 +431,14 @@ private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> 
     ) {
         Text(
             text = rotw.recipeTitle,
-            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary)
+            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClickLabel = "View recipe", onClick = onViewRecipe)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        RecipeVideoSection(videoUrl = rotw.videoUrl)
+        // The section header above already reads "Recipe of the Month", so hide the video's own label.
+        RecipeVideoSection(videoUrl = rotw.videoUrl, showLabel = false)
     }
 }
 

@@ -35,6 +35,8 @@ import com.formulae.chef.ui.theme.Terracotta100
 import com.formulae.chef.ui.theme.TextPrimary
 import com.formulae.chef.ui.theme.White
 
+private const val TITLE_MAX_LINES = 3
+
 @Composable
 fun RecipeCard(
     title: String,
@@ -122,7 +124,11 @@ fun RecipeCard(
                     fontStyle = FontStyle.Italic,
                     color = TextPrimary
                 ),
-                maxLines = 3,
+                // minLines == maxLines reserves exactly three lines of height, so the
+                // title background is the same height for every card (#51) while
+                // still scaling with the user's font size.
+                minLines = TITLE_MAX_LINES,
+                maxLines = TITLE_MAX_LINES,
                 overflow = TextOverflow.Ellipsis
             )
         }
