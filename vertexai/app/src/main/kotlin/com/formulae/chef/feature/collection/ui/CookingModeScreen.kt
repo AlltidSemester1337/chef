@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -17,6 +18,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateMapOf
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -122,26 +125,34 @@ internal fun CookingModeContent(
         Spacer(modifier = Modifier.height(8.dp))
         recipe.instructions.forEachIndexed { index, step ->
             val isChecked = index in checkedSteps
+            // The whole row (checkbox + step text) is one toggle target, so tapping
+            // the step text marks the step complete just like tapping the checkbox.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onSizeChanged { size -> stepHeights[index] = size.height },
+                    .onSizeChanged { size -> stepHeights[index] = size.height }
+                    .toggleable(
+                        value = isChecked,
+                        role = Role.Checkbox,
+                        onValueChange = { checked ->
+                            if (checked) {
+                                onStepChecked(index)
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo(
+                                        scrollState.value + (stepHeights[index] ?: 0)
+                                    )
+                                }
+                            } else {
+                                onStepUnchecked(index)
+                            }
+                        }
+                    ),
                 verticalAlignment = Alignment.Top
             ) {
                 Checkbox(
                     checked = isChecked,
-                    onCheckedChange = { checked ->
-                        if (checked) {
-                            onStepChecked(index)
-                            coroutineScope.launch {
-                                scrollState.animateScrollTo(
-                                    scrollState.value + (stepHeights[index] ?: 0)
-                                )
-                            }
-                        } else {
-                            onStepUnchecked(index)
-                        }
-                    }
+                    onCheckedChange = null,
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
                 Column(
                     modifier = Modifier

@@ -87,6 +87,8 @@ import com.formulae.chef.feature.chat.ui.ChefOverlay
 import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeList
+import com.formulae.chef.navigateBackFromRecipe
+import com.formulae.chef.navigateToChat
 import com.formulae.chef.navigateToTab
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.persistence.RecipeListRepository
@@ -321,7 +323,8 @@ internal fun CollectionRoute(
             } else {
                 DetailRoute(
                     recipe = displayedRecipe ?: selectedRecipe!!,
-                    onBack = { collectionViewModel.clearSelectedRecipe() },
+                    // Recipe opened from Home (#56): Back returns to Home, else to the list.
+                    onBack = { navController.navigateBackFromRecipe(collectionViewModel::clearSelectedRecipe) },
                     isCookingMode = isCookingMode,
                     showIngredients = showIngredients,
                     checkedSteps = checkedSteps,
@@ -339,7 +342,7 @@ internal fun CollectionRoute(
                     onPinVariant = collectionViewModel::onPinVariant,
                     onDeleteVariant = collectionViewModel::onDeleteVariant,
                     onStartCreateVariant = collectionViewModel::onStartCreateVariant,
-                    onNavigateToChat = { navController.navigateToTab(ChefRoutes.GENERATE) }
+                    onNavigateToChat = { navController.navigateToChat(selectedRecipe?.id) }
                 )
             }
         }

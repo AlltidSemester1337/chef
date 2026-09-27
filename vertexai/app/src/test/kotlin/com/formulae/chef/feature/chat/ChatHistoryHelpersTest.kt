@@ -1,5 +1,7 @@
 package com.formulae.chef.feature.chat
 
+import com.formulae.chef.feature.model.Ingredient
+import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.UserPreferences
 import com.formulae.chef.services.persistence.Content
 import com.formulae.chef.services.persistence.Part
@@ -119,5 +121,44 @@ class ChatHistoryHelpersTest {
         val entries = (1..40).map { Pair("id$it", makeContent("user", "msg$it")) }
         val result = ChatViewModel.selectEntriesToCompact(entries)
         assertEquals(20, result.size)
+    }
+
+    // --- recipe context priming (issue #60) ---
+
+    private val recipe = Recipe(
+        id = "-Nabc123",
+        title = "Healthier Moussaka",
+        summary = "A lighter take on the Greek classic.",
+        ingredients = listOf(Ingredient(name = "ground lamb", quantity = "500", unit = "g")),
+        instructions = listOf("Brown the lamb.", "Layer and bake.")
+    )
+
+    @Test
+    fun recipeContextGreeting_includesRecipeTitle() {
+        val greeting = ChatViewModel.recipeContextGreeting("  Healthier Moussaka ")
+        assertEquals("Ask me about or adjust something in the recipe \"Healthier Moussaka\".", greeting)
+    }
+
+    @Test
+    fun buildRecipeContextEntries_returnsUserThenModelPair() {
+        val entries = ChatViewModel.buildRecipeContextEntries(recipe)
+        assertEquals(2, entries.size)
+        assertEquals("user", entries[0].role)
+        assertEquals("model", entries[1].role)
+    }
+
+    @Test
+    fun buildRecipeContextEntries_userTurnContainsRecipeDetails() {
+        val contextText = ChatViewModel.buildRecipeContextEntries(recipe)[0].parts.first().text
+        assertTrue(contextText.contains("Recipe: Healthier Moussaka"))
+        assertTrue(contextText.contains("500 g ground lamb"))
+        assertTrue(contextText.contains("1. Brown the lamb."))
+        assertTrue(contextText.contains("2. Layer and bake."))
+    }
+
+    @Test
+    fun buildRecipeContextEntries_modelTurnMatchesShownGreeting() {
+        val modelText = ChatViewModel.buildRecipeContextEntries(recipe)[1].parts.first().text
+        assertEquals(ChatViewModel.recipeContextGreeting("Healthier Moussaka"), modelText)
     }
 }

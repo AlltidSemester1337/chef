@@ -43,7 +43,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.BarChart
@@ -132,7 +131,7 @@ internal fun DetailRoute(
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
     onDeleteVariant: (String) -> Unit = {},
-    onStartCreateVariant: () -> Unit = {},
+    onStartCreateVariant: (() -> Unit)? = null,
     onNavigateToChat: () -> Unit = {}
 ) {
     BackHandler { onBack() }
@@ -180,7 +179,7 @@ private fun CreateDetailScreen(
     onVariantSelected: (String?) -> Unit = {},
     onPinVariant: (String?) -> Unit = {},
     onDeleteVariant: (String) -> Unit = {},
-    onStartCreateVariant: () -> Unit = {},
+    onStartCreateVariant: (() -> Unit)? = null,
     onNavigateToChat: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -286,7 +285,13 @@ private fun CreateDetailScreen(
                 RecipeVideoSection(videoUrl = videoUrl)
             }
 
-            if (isOwner || variants.isNotEmpty()) {
+            if (
+                shouldShowVariantPicker(
+                    isOwner = isOwner,
+                    hasVariants = variants.isNotEmpty(),
+                    canCreateVariant = onStartCreateVariant != null
+                )
+            ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 VariantPickerRow(
                     variants = variants,
@@ -312,12 +317,10 @@ private fun CreateDetailScreen(
                     Text("Let's cook!", style = AppTypography.labelLarge)
                 }
             } else {
-                IconButton(
-                    onClick = onToggleCookingMode,
+                CookingModeCloseButton(
+                    onClose = onToggleCookingMode,
                     modifier = Modifier.align(Alignment.End)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Exit cooking mode", tint = TextPrimary)
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -681,7 +684,11 @@ private fun TipsSection(tipsAndTricks: String) {
 }
 
 @Composable
-internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier) {
+internal fun RecipeVideoSection(
+    videoUrl: String,
+    modifier: Modifier = Modifier,
+    showLabel: Boolean = true
+) {
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     val player = remember {
@@ -706,12 +713,14 @@ internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier)
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "🎬 Recipe of the Month",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
+        if (showLabel) {
+            Text(
+                text = "🎬 Recipe of the Month",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
