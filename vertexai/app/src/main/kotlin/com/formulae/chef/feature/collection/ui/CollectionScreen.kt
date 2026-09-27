@@ -80,6 +80,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.AskChefVariantViewModelFactory
 import com.formulae.chef.OverlayChatViewModelFactory
+import com.formulae.chef.chatRouteForRecipe
 import com.formulae.chef.feature.chat.AskChefVariantViewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
@@ -306,7 +307,12 @@ internal fun CollectionRoute(
                     onPinVariant = collectionViewModel::onPinVariant,
                     onDeleteVariant = collectionViewModel::onDeleteVariant,
                     onStartCreateVariant = collectionViewModel::onStartCreateVariant,
-                    onNavigateToChat = { navController.navigate("generate") }
+                    onNavigateToChat = {
+                        val recipeId = selectedRecipe?.id
+                        navController.navigate(
+                            if (recipeId.isNullOrBlank()) "generate" else chatRouteForRecipe(recipeId)
+                        )
+                    }
                 )
             }
         }

@@ -23,8 +23,21 @@ import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 import com.formulae.chef.services.persistence.RecipeVariantRepository
 import com.formulae.chef.ui.components.ChefNavigationBar
+import java.net.URLEncoder
 
 private val bottomBarRoutes = setOf("home", "generate", "collection")
+
+internal const val CHAT_RECIPE_ID_ARG = "recipeId"
+
+/** Route pattern for the chat destination; [CHAT_RECIPE_ID_ARG] is optional (issue #60). */
+internal const val CHAT_ROUTE_PATTERN = "generate?$CHAT_RECIPE_ID_ARG={$CHAT_RECIPE_ID_ARG}"
+
+/**
+ * Chat route that primes the conversation with the given recipe's context, used when opening
+ * chat from the Recipe screen's "Chat with Chef anytime!" link (issue #60).
+ */
+fun chatRouteForRecipe(recipeId: String): String =
+    "generate?$CHAT_RECIPE_ID_ARG=${URLEncoder.encode(recipeId, Charsets.UTF_8.name())}"
 
 @Composable
 fun AppNavigation(
@@ -85,13 +98,25 @@ fun AppNavigation(
                         // is keyed independently of the back stack, so popping "home" alone does
                         // not drop it — without this, a new sign-in would restore the previous
                         // account's cached chat history and uid-bound Firebase repositories.
-                        navController.clearBackStack("generate")
+                        navController.clearBackStack(CHAT_ROUTE_PATTERN)
                         navController.clearBackStack("collection?tab={tab}")
                     }
                 )
             }
-            composable("generate") {
-                ChatRoute(userSessionService = userSessionService)
+            composable(
+                route = CHAT_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument(CHAT_RECIPE_ID_ARG) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                ChatRoute(
+                    userSessionService = userSessionService,
+                    recipeContextId = backStackEntry.arguments?.getString(CHAT_RECIPE_ID_ARG)
+                )
             }
             composable(
                 route = "collection?tab={tab}",
