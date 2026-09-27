@@ -35,6 +35,11 @@ val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
 val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
 val bergetApiKey: String = localProperties.getProperty("bergetApiKey", "")
 
+// Upload-key signing for Play releases. Optional: when any key is missing, release builds are left
+// unsigned so debug builds and CI keep working without the keystore.
+val releaseSigningKeys = listOf("releaseStoreFile", "releaseStorePassword", "releaseKeyAlias", "releaseKeyPassword")
+val hasReleaseSigning = releaseSigningKeys.all { !localProperties.getProperty(it).isNullOrBlank() }
+
 android {
     namespace = "com.formulae.chef"
     compileSdk = 36
@@ -66,9 +71,9 @@ android {
 
         applicationId = "com.formulae.chef"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "4.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -88,8 +93,24 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(localProperties.getProperty("releaseStoreFile"))
+                storePassword = localProperties.getProperty("releaseStorePassword")
+                keyAlias = localProperties.getProperty("releaseKeyAlias")
+                keyPassword = localProperties.getProperty("releaseKeyPassword")
+            }
+        } else {
+            logger.info("Release signing not configured; set $releaseSigningKeys in local.properties")
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false

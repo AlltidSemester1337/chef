@@ -18,6 +18,9 @@ The project requires JDK 17 and Android SDK with platform 36. Four properties mu
 # Build the main Chef app
 ./gradlew :vertexai:app:assembleDebug
 
+# Build the Play upload bundle (signed when release* keys are in local.properties — see play-store/README.md)
+./gradlew :vertexai:app:bundleRelease
+
 # Run unit tests for the main app
 ./gradlew :vertexai:app:testDebugUnitTest
 
