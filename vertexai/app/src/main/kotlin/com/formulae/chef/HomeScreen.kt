@@ -55,6 +55,7 @@ import com.formulae.chef.feature.home.HomeViewModel
 import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeOfTheMonth
+import com.formulae.chef.feature.model.isOwnedBy
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefFab
@@ -133,7 +134,7 @@ fun HomeScreen(
                 onStepChecked = viewModel::onStepChecked,
                 onStepUnchecked = viewModel::onStepUnchecked,
                 onServingsChanged = viewModel::onServingsChanged,
-                isOwner = currentUser?.uid == selectedRecipe?.uid,
+                isOwner = selectedRecipe?.isOwnedBy(currentUser?.uid) == true,
                 onNavigateToChat = onNavigateToChat
             )
         } else {

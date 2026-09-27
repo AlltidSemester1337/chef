@@ -286,7 +286,8 @@ private fun CreateDetailScreen(
                 RecipeVideoSection(videoUrl = videoUrl)
             }
 
-            if (isOwner || variants.isNotEmpty()) {
+            // Variants are an owner-only feature (#54): non-owners never see the picker.
+            if (isOwner) {
                 Spacer(modifier = Modifier.height(16.dp))
                 VariantPickerRow(
                     variants = variants,
