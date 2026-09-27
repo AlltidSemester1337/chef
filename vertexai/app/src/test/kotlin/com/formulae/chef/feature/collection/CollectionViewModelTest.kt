@@ -155,7 +155,7 @@ class CollectionViewModelTest {
     }
 
     @Test
-    fun `onToggleCookingMode disables cooking mode and clears state`() = runTest(testDispatcher) {
+    fun `onToggleCookingMode disables cooking mode and clears steps but keeps servings`() = runTest(testDispatcher) {
         val (viewModel, _) = makeViewModel()
         advanceUntilIdle()
         viewModel.onRecipeSelected(sampleRecipes[0])
@@ -167,6 +167,33 @@ class CollectionViewModelTest {
 
         assertFalse(viewModel.isCookingMode.value)
         assertTrue(viewModel.checkedSteps.value.isEmpty())
+        assertEquals(8, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `servings adjusted on ingredients tab carry over into cooking mode`() = runTest(testDispatcher) {
+        val recipeWithServings = Recipe(id = "4", uid = "user-1", title = "Soup", servings = "4 servings")
+        val (viewModel, _) = makeViewModel(recipes = listOf(recipeWithServings))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(recipeWithServings)
+        advanceUntilIdle()
+        viewModel.onServingsChanged(6)
+
+        viewModel.onToggleCookingMode()
+
+        assertTrue(viewModel.isCookingMode.value)
+        assertEquals(6, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `servings adjusted outside cooking mode reset when selecting a different recipe`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onServingsChanged(6)
+
+        viewModel.onRecipeSelected(sampleRecipes[1])
+
         assertNull(viewModel.currentServings.value)
     }
 

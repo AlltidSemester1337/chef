@@ -80,12 +80,12 @@ class HomeScreenViewModel(
         _isCookingMode.value = entering
         if (entering) {
             cookingRecipeId = _selectedRecipe.value?.id
-            _currentServings.value = _selectedRecipe.value?.parsedServingsCount()
+            // Keep a portion count the user already picked on the Ingredients tab (#58).
+            _currentServings.value = _currentServings.value ?: _selectedRecipe.value?.parsedServingsCount()
             _checkedSteps.value = emptySet()
         } else {
             cookingRecipeId = null
             _checkedSteps.value = emptySet()
-            _currentServings.value = null
         }
     }
 
