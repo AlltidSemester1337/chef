@@ -421,7 +421,7 @@ private fun HomeScreenContent(
 }
 
 @Composable
-private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
+internal fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
     SectionHeader(
         title = "Recipe of the Month",
         linkText = "View recipe",
@@ -439,10 +439,14 @@ private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> 
     ) {
         Text(
             text = rotw.recipeTitle,
-            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary)
+            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClickLabel = "View recipe", onClick = onViewRecipe)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        RecipeVideoSection(videoUrl = rotw.videoUrl)
+        // The section header above already reads "Recipe of the Month", so hide the video's own label.
+        RecipeVideoSection(videoUrl = rotw.videoUrl, showLabel = false)
     }
 }
 

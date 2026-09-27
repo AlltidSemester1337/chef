@@ -681,7 +681,11 @@ private fun TipsSection(tipsAndTricks: String) {
 }
 
 @Composable
-internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier) {
+internal fun RecipeVideoSection(
+    videoUrl: String,
+    modifier: Modifier = Modifier,
+    showLabel: Boolean = true
+) {
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     val player = remember {
@@ -706,12 +710,14 @@ internal fun RecipeVideoSection(videoUrl: String, modifier: Modifier = Modifier)
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "🎬 Recipe of the Month",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
+        if (showLabel) {
+            Text(
+                text = "🎬 Recipe of the Month",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
