@@ -43,7 +43,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.BarChart
@@ -318,12 +317,10 @@ private fun CreateDetailScreen(
                     Text("Let's cook!", style = AppTypography.labelLarge)
                 }
             } else {
-                IconButton(
-                    onClick = onToggleCookingMode,
+                CookingModeCloseButton(
+                    onClose = onToggleCookingMode,
                     modifier = Modifier.align(Alignment.End)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Exit cooking mode", tint = TextPrimary)
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
