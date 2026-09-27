@@ -28,6 +28,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.formulae.chef.feature.model.RecipeVariant
 
+/**
+ * Whether the recipe detail screen should show the variant picker (#54):
+ * - anyone may browse existing variants read-only (pin/delete/create are gated on [isOwner]
+ *   inside [VariantPickerRow]);
+ * - with no variants yet, only an owner on a screen that can open the variant editor
+ *   ([canCreateVariant]) gets the picker, so it is never shown with only a dead "+" button.
+ */
+internal fun shouldShowVariantPicker(isOwner: Boolean, hasVariants: Boolean, canCreateVariant: Boolean): Boolean =
+    hasVariants || (isOwner && canCreateVariant)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VariantPickerRow(
@@ -37,7 +47,7 @@ internal fun VariantPickerRow(
     onVariantSelected: (String?) -> Unit,
     onPinVariant: (String?) -> Unit,
     onDeleteVariant: (String) -> Unit,
-    onCreateVariant: () -> Unit
+    onCreateVariant: (() -> Unit)?
 ) {
     val sortedVariants = variants.sortedBy { it.label }
     val selectedLabel = if (selectedVariantId == null) {
@@ -154,7 +164,7 @@ internal fun VariantPickerRow(
             }
         }
 
-        if (isOwner) {
+        if (isOwner && onCreateVariant != null) {
             IconButton(
                 onClick = onCreateVariant,
                 modifier = Modifier.padding(start = 4.dp)
