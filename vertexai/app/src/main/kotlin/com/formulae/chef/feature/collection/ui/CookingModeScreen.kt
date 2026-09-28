@@ -3,7 +3,6 @@ package com.formulae.chef.feature.collection.ui
 import android.app.Activity
 import android.view.WindowManager
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,12 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -32,15 +26,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.formulae.chef.feature.collection.CollectionViewModel
 import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
-import com.formulae.chef.feature.model.parsedServingsCount
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.TextPrimary
-import kotlin.math.floor
 import kotlinx.coroutines.launch
 
 @Composable
@@ -48,11 +39,9 @@ internal fun CookingModeContent(
     recipe: Recipe,
     showIngredients: Boolean,
     checkedSteps: Set<Int>,
-    currentServings: Int?,
     scrollState: ScrollState,
     onStepChecked: (Int) -> Unit,
-    onStepUnchecked: (Int) -> Unit,
-    onServingsChanged: (Int) -> Unit
+    onStepUnchecked: (Int) -> Unit
 ) {
     val activity = LocalContext.current as? Activity
     DisposableEffect(Unit) {
@@ -65,56 +54,14 @@ internal fun CookingModeContent(
     val coroutineScope = rememberCoroutineScope()
     val stepHeights = remember { mutableStateMapOf<Int, Int>() }
 
-    val originalServings = recipe.parsedServingsCount()
-    val displayServings = currentServings ?: originalServings ?: 1
-
-    val canScale = remember(recipe.ingredients) {
-        recipe.ingredients.all { ingredient ->
-            ingredient.quantity.isNullOrBlank() ||
-                ingredient.quantity!!.trim().toDoubleOrNull() != null ||
-                Regex("""^\d+/\d+$""").matches(ingredient.quantity!!.trim())
-        }
-    }
-    val multiplier = if (canScale) {
-        displayServings.toDouble() / (originalServings?.toDouble() ?: 1.0)
-    } else {
-        1.0
-    }
-
-    // Servings stepper — only shown when scaling is supported
-    if (canScale) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            IconButton(onClick = { onServingsChanged(displayServings - 1) }) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease servings")
-            }
-            Text(
-                text = "$displayServings servings",
-                style = AppTypography.bodyLarge.copy(color = TextPrimary),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            IconButton(
-                onClick = { onServingsChanged(displayServings + 1) },
-                enabled = displayServings < CollectionViewModel.MAX_SERVINGS
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Increase servings")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-
     if (showIngredients) {
-        // Ingredients with scaled quantities
+        // Ingredient quantities arrive already scaled to the selected servings (see DetailScreen)
         Text(text = "Ingredients", style = AppTypography.labelLarge.copy(color = TextPrimary))
         Spacer(modifier = Modifier.height(8.dp))
         recipe.ingredients.forEach { ingredient ->
-            val scaledQty = scaleQuantity(ingredient.quantity, multiplier)
             val unit = ingredient.unit?.takeIf { it.isNotBlank() }?.let { "$it " } ?: ""
             Text(
-                text = "• $scaledQty $unit${ingredient.name}",
+                text = "• ${ingredient.quantity.orEmpty()} $unit${ingredient.name}",
                 style = AppTypography.bodyLarge.copy(color = TextPrimary),
                 modifier = Modifier.padding(vertical = 2.dp)
             )
@@ -171,24 +118,6 @@ internal fun CookingModeContent(
     }
 }
 
-private fun scaleQuantity(quantity: String?, multiplier: Double): String {
-    if (quantity.isNullOrBlank() || multiplier == 1.0) return quantity ?: ""
-    quantity.toDoubleOrNull()?.let { return formatScaled(it * multiplier) }
-    Regex("""^(\d+)/(\d+)$""").matchEntire(quantity.trim())?.let { m ->
-        val num = m.groupValues[1].toDouble()
-        val den = m.groupValues[2].toDouble()
-        return formatScaled(num / den * multiplier)
-    }
-    return quantity
-}
-
-private fun formatScaled(value: Double): String =
-    if (value == floor(value)) {
-        value.toLong().toString()
-    } else {
-        "%.2f".format(value).trimEnd('0').trimEnd('.')
-    }
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewCookingModeContent() {
@@ -213,11 +142,9 @@ fun PreviewCookingModeContent() {
             ),
             showIngredients = false,
             checkedSteps = setOf(0),
-            currentServings = 4,
             scrollState = androidx.compose.foundation.rememberScrollState(),
             onStepChecked = {},
-            onStepUnchecked = {},
-            onServingsChanged = {}
+            onStepUnchecked = {}
         )
     }
 }
