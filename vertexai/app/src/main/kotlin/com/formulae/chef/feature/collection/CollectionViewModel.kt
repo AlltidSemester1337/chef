@@ -196,6 +196,23 @@ class CollectionViewModel(
         }
     }
 
+    /**
+     * Selects the recipe with [recipeId], e.g. when Collections is opened from a recipe tapped on
+     * Home (#56). Uses the already-loaded recipes when available, otherwise fetches it.
+     * Returns the selected recipe, or null when it could not be found.
+     */
+    suspend fun openRecipeById(recipeId: String): Recipe? {
+        val recipe = recipes.find { it.id == recipeId }
+            ?: try {
+                repository.getRecipeById(recipeId)
+            } catch (e: Exception) {
+                Log.e("CollectionViewModel", "Failed to load recipe $recipeId", e)
+                null
+            }
+        recipe?.let { onRecipeSelected(it) }
+        return recipe
+    }
+
     fun onRecipeRemove(recipe: Recipe) {
         val recipeId = recipe.id!!
         if (recipe.copyId != null) {

@@ -94,6 +94,39 @@ class CollectionViewModelTest {
     }
 
     @Test
+    fun `openRecipeById selects the matching loaded recipe`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        val opened = viewModel.openRecipeById("2")
+
+        assertEquals(sampleRecipes[1], opened)
+        assertEquals(sampleRecipes[1], viewModel.selectedRecipe.value)
+    }
+
+    @Test
+    fun `openRecipeById falls back to the repository before recipes have loaded`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+
+        // No advanceUntilIdle(): the init fetch has not completed yet (deep link from Home, #56).
+        val opened = viewModel.openRecipeById("1")
+
+        assertEquals("1", opened?.id)
+        assertEquals("1", viewModel.selectedRecipe.value?.id)
+    }
+
+    @Test
+    fun `openRecipeById with unknown id leaves selection empty`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        val opened = viewModel.openRecipeById("missing")
+
+        assertNull(opened)
+        assertNull(viewModel.selectedRecipe.value)
+    }
+
+    @Test
     fun `onRecipeRemove with copyId calls removeRecipe`() = runTest(testDispatcher) {
         val repository = FakeRecipeRepository(sampleRecipes)
         val viewModel = CollectionViewModel(repository, FakeRecipeListRepository(), FakeRecipeVariantRepository())
