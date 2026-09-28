@@ -194,7 +194,7 @@ private fun HomeScreenContent(
                     .fillMaxWidth()
                     .background(BackgroundColor)
                     .padding(horizontal = 16.dp)
-                    .padding(top = 48.dp, bottom = 16.dp),
+                    .padding(top = HomeHeaderTopSpacing, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -262,7 +262,7 @@ private fun HomeScreenContent(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                     SectionHeader(
                         title = "What's cooking?",
@@ -286,7 +286,7 @@ private fun HomeScreenContent(
                     }
 
                     recipeOfTheMonth?.takeIf { it.videoUrl.isNotEmpty() }?.let { rotw ->
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         RecipeOfTheMonthSection(
                             rotw = rotw,
@@ -294,7 +294,7 @@ private fun HomeScreenContent(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                     Text(
                         text = "Chat with Chef, your personal cooking assistant, to generate recipes, " +
@@ -307,7 +307,7 @@ private fun HomeScreenContent(
                     )
 
                     if (homeUiState.isLoading) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         Box(
                             modifier = Modifier
@@ -318,7 +318,7 @@ private fun HomeScreenContent(
                             CircularProgressIndicator()
                         }
                     } else if (homeUiState.resources.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         SectionHeader(title = "Cooking resources")
 
@@ -411,6 +411,12 @@ private fun HomeScreenContent(
         }
     }
 }
+
+// Space above the greeting title at the top of the Home screen (#48).
+private val HomeHeaderTopSpacing = 24.dp
+
+// Vertical gap between Home screen sections, e.g. "Recipe of the month" and "Cooking resources" (#48).
+private val HomeSectionSpacing = 40.dp
 
 @Composable
 internal fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
