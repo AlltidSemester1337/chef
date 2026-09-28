@@ -273,7 +273,7 @@ private fun CreateDetailScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     prepCookText?.let {
                         InfoIconText(icon = Icons.Outlined.Schedule, text = it, modifier = Modifier.weight(1f))
@@ -396,34 +396,39 @@ private fun CreateDetailScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SectionSpacing))
         WaveDivider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SectionSpacing))
 
+        // Each section is a single child so spacedBy gives a uniform 24dp gap between
+        // whichever sections are present (no stray leading gap when one is missing).
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(SectionSpacing)
         ) {
             if (listNames.isNotEmpty()) {
-                SectionHeader(title = "Featured in lists")
-                Spacer(modifier = Modifier.height(12.dp))
-                ChipFlowRow(items = listNames)
+                Column {
+                    SectionHeader(title = "Featured in lists")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ChipFlowRow(items = listNames)
+                }
             }
 
             if (recipe.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                SectionHeader(title = "Tags")
-                Spacer(modifier = Modifier.height(12.dp))
-                TagFlowRow(tags = recipe.tags)
+                Column {
+                    SectionHeader(title = "Tags")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TagFlowRow(tags = recipe.tags)
+                }
             }
 
-            recipe.tipsAndTricks?.takeIf { it.isNotBlank() }?.let { tips ->
-                Spacer(modifier = Modifier.height(24.dp))
-                TipsSection(tipsAndTricks = tips)
+            val tips = recipe.tipsAndTricks?.let { parseTips(it) }.orEmpty()
+            if (tips.isNotEmpty()) {
+                TipsSection(tips = tips)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = buildAnnotatedString {
                     append("Got a question or want to change something in this recipe? ")
@@ -440,6 +445,9 @@ private fun CreateDetailScreen(
         }
     }
 }
+
+/** Vertical gap between top-level sections on the recipe screen (#53). */
+private val SectionSpacing = 24.dp
 
 @Composable
 private fun HeaderIconButton(
@@ -470,15 +478,14 @@ private fun HeaderIconButton(
 private fun InfoIconText(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = TextPrimary,
-            modifier = Modifier
-                .padding(top = 2.dp)
-                .size(16.dp)
+            modifier = Modifier.size(16.dp)
         )
         Text(text = text, style = AppTypography.bodyMedium.copy(color = TextPrimary))
     }
@@ -673,25 +680,25 @@ fun PreviewCreateDetailScreen() {
 }
 
 @Composable
-private fun TipsSection(tipsAndTricks: String) {
-    val tips = parseTips(tipsAndTricks)
-    if (tips.isEmpty()) return
-    SectionHeader(title = "Tips & tricks")
-    Spacer(modifier = Modifier.height(12.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        tips.forEach { tip ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(
-                    imageVector = Icons.Outlined.TipsAndUpdates,
-                    contentDescription = null,
-                    tint = Terracotta600,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = tip,
-                    style = AppTypography.bodyLarge.copy(color = TextPrimary),
-                    modifier = Modifier.weight(1f)
-                )
+private fun TipsSection(tips: List<String>) {
+    Column {
+        SectionHeader(title = "Tips & tricks")
+        Spacer(modifier = Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            tips.forEach { tip ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.TipsAndUpdates,
+                        contentDescription = null,
+                        tint = Terracotta600,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = tip,
+                        style = AppTypography.bodyLarge.copy(color = TextPrimary),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
