@@ -1,49 +1,77 @@
 package com.formulae.chef
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ChatCloseNavigationTest {
 
-    @Test
-    fun `route before chat follows non-chat destinations`() {
-        assertEquals("collection", nextRouteBeforeChat("collection", "home"))
-        assertEquals("home", nextRouteBeforeChat("home", null))
-    }
+    // --- nextChatOrigin ---
 
     @Test
-    fun `route before chat is kept while chat is shown`() {
-        assertEquals("collection", nextRouteBeforeChat(CHAT_ROUTE, "collection"))
-        assertEquals(null, nextRouteBeforeChat(CHAT_ROUTE, null))
-    }
-
-    @Test
-    fun `opened from home pops back to home`() {
-        assertEquals(ChatCloseAction.PopBackStack, resolveChatCloseAction("home", "home"))
-    }
-
-    @Test
-    fun `opened from a recipe in collection pops back to it`() {
-        assertEquals(ChatCloseAction.PopBackStack, resolveChatCloseAction("collection", "collection"))
-    }
-
-    @Test
-    fun `opened via bottom bar from collection switches back to collection tab`() {
-        // Tab switch pops up to home, so home is under chat on the back stack.
+    fun `origin follows the tab destinations`() {
+        assertEquals(ChatOrigin(ChefRoutes.HOME), nextChatOrigin(ChefRoutes.HOME, null, null))
         assertEquals(
-            ChatCloseAction.SwitchToTab("collection"),
-            resolveChatCloseAction("collection", "home")
+            ChatOrigin(ChefRoutes.COLLECTION),
+            nextChatOrigin(ChefRoutes.COLLECTION, null, ChatOrigin(ChefRoutes.HOME))
         )
     }
 
     @Test
-    fun `unknown origin with a back stack pops`() {
-        assertEquals(ChatCloseAction.PopBackStack, resolveChatCloseAction(null, "home"))
+    fun `origin records a recipe opened from Home`() {
+        assertEquals(
+            ChatOrigin(ChefRoutes.COLLECTION, recipeFromHomeId = "r1"),
+            nextChatOrigin(ChefRoutes.COLLECTION, "r1", ChatOrigin(ChefRoutes.HOME))
+        )
     }
 
     @Test
-    fun `no back stack falls back to the tracked tab or home`() {
-        assertEquals(ChatCloseAction.SwitchToTab("collection"), resolveChatCloseAction("collection", null))
-        assertEquals(ChatCloseAction.SwitchToTab("home"), resolveChatCloseAction(null, null))
+    fun `blank recipe id is not a recipe from Home`() {
+        assertEquals(ChatOrigin(ChefRoutes.COLLECTION), nextChatOrigin(ChefRoutes.COLLECTION, "", null))
+    }
+
+    @Test
+    fun `origin is kept while chat is shown`() {
+        val origin = ChatOrigin(ChefRoutes.COLLECTION, recipeFromHomeId = "r1")
+        assertEquals(origin, nextChatOrigin(ChefRoutes.GENERATE, null, origin))
+        assertNull(nextChatOrigin(ChefRoutes.GENERATE, null, null))
+    }
+
+    @Test
+    fun `non-tab destinations clear the origin`() {
+        assertNull(nextChatOrigin(ChefRoutes.SIGN_IN, null, ChatOrigin(ChefRoutes.COLLECTION)))
+    }
+
+    // --- resolveChatCloseAction ---
+
+    @Test
+    fun `chat opened from Home tab returns to Home`() {
+        assertEquals(
+            ChatCloseAction.SwitchToTab(ChefRoutes.HOME),
+            resolveChatCloseAction(ChatOrigin(ChefRoutes.HOME))
+        )
+    }
+
+    @Test
+    fun `chat opened from Collections (bottom bar or a Collections recipe) switches back to Collections`() {
+        // The Collections tab's saved state (list or open recipe) is restored by navigateToTab.
+        assertEquals(
+            ChatCloseAction.SwitchToTab(ChefRoutes.COLLECTION),
+            resolveChatCloseAction(ChatOrigin(ChefRoutes.COLLECTION))
+        )
+    }
+
+    @Test
+    fun `chat opened from a recipe opened on Home re-opens that recipe`() {
+        // That entry is discarded (not saved) when leaving it, so it can't be restored as a tab.
+        assertEquals(
+            ChatCloseAction.ReopenRecipeFromHome("r1"),
+            resolveChatCloseAction(ChatOrigin(ChefRoutes.COLLECTION, recipeFromHomeId = "r1"))
+        )
+    }
+
+    @Test
+    fun `unknown origin falls back to Home`() {
+        assertEquals(ChatCloseAction.SwitchToTab(ChefRoutes.HOME), resolveChatCloseAction(null))
     }
 }

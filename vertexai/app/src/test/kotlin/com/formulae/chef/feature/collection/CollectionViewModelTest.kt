@@ -94,6 +94,39 @@ class CollectionViewModelTest {
     }
 
     @Test
+    fun `openRecipeById selects the matching loaded recipe`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        val opened = viewModel.openRecipeById("2")
+
+        assertEquals(sampleRecipes[1], opened)
+        assertEquals(sampleRecipes[1], viewModel.selectedRecipe.value)
+    }
+
+    @Test
+    fun `openRecipeById falls back to the repository before recipes have loaded`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+
+        // No advanceUntilIdle(): the init fetch has not completed yet (deep link from Home, #56).
+        val opened = viewModel.openRecipeById("1")
+
+        assertEquals("1", opened?.id)
+        assertEquals("1", viewModel.selectedRecipe.value?.id)
+    }
+
+    @Test
+    fun `openRecipeById with unknown id leaves selection empty`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        val opened = viewModel.openRecipeById("missing")
+
+        assertNull(opened)
+        assertNull(viewModel.selectedRecipe.value)
+    }
+
+    @Test
     fun `onRecipeRemove with copyId calls removeRecipe`() = runTest(testDispatcher) {
         val repository = FakeRecipeRepository(sampleRecipes)
         val viewModel = CollectionViewModel(repository, FakeRecipeListRepository(), FakeRecipeVariantRepository())
@@ -155,7 +188,7 @@ class CollectionViewModelTest {
     }
 
     @Test
-    fun `onToggleCookingMode disables cooking mode and clears state`() = runTest(testDispatcher) {
+    fun `onToggleCookingMode disables cooking mode and clears steps but keeps servings`() = runTest(testDispatcher) {
         val (viewModel, _) = makeViewModel()
         advanceUntilIdle()
         viewModel.onRecipeSelected(sampleRecipes[0])
@@ -167,6 +200,33 @@ class CollectionViewModelTest {
 
         assertFalse(viewModel.isCookingMode.value)
         assertTrue(viewModel.checkedSteps.value.isEmpty())
+        assertEquals(8, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `servings adjusted on ingredients tab carry over into cooking mode`() = runTest(testDispatcher) {
+        val recipeWithServings = Recipe(id = "4", uid = "user-1", title = "Soup", servings = "4 servings")
+        val (viewModel, _) = makeViewModel(recipes = listOf(recipeWithServings))
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(recipeWithServings)
+        advanceUntilIdle()
+        viewModel.onServingsChanged(6)
+
+        viewModel.onToggleCookingMode()
+
+        assertTrue(viewModel.isCookingMode.value)
+        assertEquals(6, viewModel.currentServings.value)
+    }
+
+    @Test
+    fun `servings adjusted outside cooking mode reset when selecting a different recipe`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        viewModel.onServingsChanged(6)
+
+        viewModel.onRecipeSelected(sampleRecipes[1])
+
         assertNull(viewModel.currentServings.value)
     }
 
@@ -330,6 +390,43 @@ class CollectionViewModelTest {
         assertTrue(viewModel.isCookingMode.value)
         assertTrue(viewModel.checkedSteps.value.contains(0))
         assertEquals(8, viewModel.currentServings.value)
+    }
+
+    // --- Ownership tests (#54: variant actions are owner-only) ---
+
+    @Test
+    fun `isRecipeOwner is true when selected recipe belongs to current user`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.setCurrentUser("user-1")
+
+        viewModel.onRecipeSelected(sampleRecipes[0])
+        advanceUntilIdle()
+
+        assertTrue(viewModel.isRecipeOwner)
+    }
+
+    @Test
+    fun `isRecipeOwner is false when selected recipe belongs to another user`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+        viewModel.setCurrentUser("user-1")
+
+        viewModel.onRecipeSelected(sampleRecipes[2])
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isRecipeOwner)
+    }
+
+    @Test
+    fun `isRecipeOwner is false when no user is signed in`() = runTest(testDispatcher) {
+        val (viewModel, _) = makeViewModel()
+        advanceUntilIdle()
+
+        viewModel.onRecipeSelected(Recipe(id = "9", uid = "", title = "Ownerless"))
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isRecipeOwner)
     }
 
     // --- List management tests ---

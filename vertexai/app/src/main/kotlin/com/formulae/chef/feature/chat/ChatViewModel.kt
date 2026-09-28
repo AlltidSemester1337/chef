@@ -23,6 +23,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.chat.ui.ChatMessage
 import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
@@ -62,6 +63,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -131,36 +133,66 @@ class ChatViewModel(
     private lateinit var _likedMessages: LikedMessagesStore
     private var _cachedPreferences: UserPreferences? = null
 
-    init {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _currentUser = _userSessionService.currentUser.first()
-            if (_currentUser == null) {
-                Log.e("ChatViewModel", "No authenticated user, aborting chat init")
-                _isLoading.value = false
-                return@launch
-            }
-            val uid = _currentUser!!.uid
-            _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(uid)
-            _userPreferencesRepository = UserPreferencesRepositoryImpl(uid)
-            _likedMessages = LikedMessagesStore(LikedMessagesRepositoryImpl(uid))
+    private var _primedRecipeId: String? = null
 
-            val historyDeferred = async { initializeChatHistory() }
-            val prefsDeferred = async { loadUserPreferences() }
-            val collectionTitlesDeferred = async { loadCollectionTitles(uid) }
-            val likedMessagesDeferred = async { loadLikedMessages() }
-
-            val persistedHistory = historyDeferred.await()
-            val prefs = prefsDeferred.await()
-            val collectionTitles = collectionTitlesDeferred.await()
-            likedMessagesDeferred.await()
-
-            _cachedPreferences = prefs
-
-            val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs, collectionTitles)
-            _chatHistory.value = fullHistory
+    private val _initJob: Job = viewModelScope.launch {
+        _isLoading.value = true
+        _currentUser = _userSessionService.currentUser.first()
+        if (_currentUser == null) {
+            Log.e("ChatViewModel", "No authenticated user, aborting chat init")
             _isLoading.value = false
-            updateUiStateMessages(persistedHistory)
+            return@launch
+        }
+        val uid = _currentUser!!.uid
+        _chatHistoryPersistenceImpl = ChatHistoryRepositoryImpl(uid)
+        _userPreferencesRepository = UserPreferencesRepositoryImpl(uid)
+        _likedMessages = LikedMessagesStore(LikedMessagesRepositoryImpl(uid))
+
+        val historyDeferred = async { initializeChatHistory() }
+        val prefsDeferred = async { loadUserPreferences() }
+        val collectionTitlesDeferred = async { loadCollectionTitles(uid) }
+        val likedMessagesDeferred = async { loadLikedMessages() }
+
+        val persistedHistory = historyDeferred.await()
+        val prefs = prefsDeferred.await()
+        val collectionTitles = collectionTitlesDeferred.await()
+        likedMessagesDeferred.await()
+
+        _cachedPreferences = prefs
+
+        val fullHistory = buildChatHistoryWithPreferences(persistedHistory, prefs, collectionTitles)
+        _chatHistory.value = fullHistory
+        _isLoading.value = false
+        updateUiStateMessages(persistedHistory)
+    }
+
+    /**
+     * Primes the conversation with the recipe the user was viewing (issue #60): injects the recipe
+     * details as silent context for the model and shows Chef's greeting naming the recipe, so the
+     * user doesn't have to restate it. Idempotent per recipe, so recomposition / configuration
+     * changes don't add duplicate greetings. The priming entries are not persisted to chat history.
+     */
+    fun primeWithRecipeContext(recipeId: String) {
+        if (recipeId.isBlank() || _primedRecipeId == recipeId) return
+        _primedRecipeId = recipeId
+        viewModelScope.launch {
+            // Wait for persisted history to load so the priming lands after it, not before
+            // (updateUiStateMessages replaces the whole UI message list).
+            _initJob.join()
+            if (_currentUser == null) return@launch
+            val recipe = try {
+                _recipeRepositoryImpl.getRecipeById(recipeId)
+            } catch (e: Exception) {
+                Log.w("ChatViewModel", "Failed to load recipe for chat context (non-critical)", e)
+                null
+            } ?: return@launch
+            _chatHistory.value += buildRecipeContextEntries(recipe)
+            _uiState.value.addMessage(
+                ChatMessage(
+                    text = recipeContextGreeting(recipe.title),
+                    participant = Participant.MODEL
+                )
+            )
         }
     }
 
@@ -604,6 +636,24 @@ class ChatViewModel(
     }
 
     companion object {
+        fun recipeContextGreeting(recipeTitle: String): String =
+            "Ask me about or adjust something in the recipe \"${recipeTitle.trim()}\"."
+
+        /**
+         * Silent user/model pair giving the chat model the full details of the recipe the user
+         * came from. The model turn is the same greeting shown in the UI, so the model's view of
+         * the conversation matches what the user sees.
+         */
+        fun buildRecipeContextEntries(recipe: Recipe): List<Content> {
+            val contextText = "I'm looking at this recipe and probably want to ask about it or " +
+                "adjust something in it. Assume my next messages are about this recipe unless " +
+                "I say otherwise.\n\n" + buildRecipeContextText(recipe)
+            return listOf(
+                Content(role = "user", parts = listOf(Part(contextText))),
+                Content(role = "model", parts = listOf(Part(recipeContextGreeting(recipe.title))))
+            )
+        }
+
         fun buildChatHistoryWithPreferences(
             history: List<Content>,
             prefs: UserPreferences?,

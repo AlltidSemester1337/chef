@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.formulae.chef.feature.chat.OverlayChatViewModel
 import com.formulae.chef.feature.chat.ui.ChefOverlay
-import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.collection.ui.RecipeVideoSection
 import com.formulae.chef.feature.home.HomeScreenViewModel
 import com.formulae.chef.feature.home.HomeUiState
@@ -56,6 +53,7 @@ import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.ui.components.AccountMenu
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
 import com.formulae.chef.ui.components.ChefFab
 import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
@@ -77,9 +75,9 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     viewModel: HomeScreenViewModel,
     userSessionService: UserSessionService,
-    onNavigateToChat: () -> Unit = {},
     onNavigateToCollection: () -> Unit = {},
     onNavigateToCommunity: () -> Unit = {},
+    onOpenRecipe: (recipeId: String) -> Unit = {},
     onSignOut: () -> Unit = {}
 ) {
     var isLoading by remember { mutableStateOf(true) }
@@ -102,12 +100,6 @@ fun HomeScreen(
         }
     }
 
-    val selectedRecipe by viewModel.selectedRecipe.collectAsState()
-    var showIngredients by rememberSaveable(selectedRecipe?.id) { mutableStateOf(true) }
-    val isCookingMode by viewModel.isCookingMode.collectAsState()
-    val checkedSteps by viewModel.checkedSteps.collectAsState()
-    val currentServings by viewModel.currentServings.collectAsState()
-
     val cookingViewModel: HomeViewModel = viewModel(
         factory = remember { HomeViewModelFactory(userSessionService) }
     )
@@ -120,37 +112,21 @@ fun HomeScreen(
             onSignOut()
         }
         val signedIn = !userSessionService.anonymousSession && currentUser != null
-        if (selectedRecipe != null) {
-            DetailRoute(
-                recipe = selectedRecipe!!,
-                onBack = { viewModel.clearSelectedRecipe() },
-                isCookingMode = isCookingMode,
-                showIngredients = showIngredients,
-                checkedSteps = checkedSteps,
-                currentServings = currentServings,
-                onToggleCookingMode = viewModel::onToggleCookingMode,
-                onTabChanged = { showIngredients = it },
-                onStepChecked = viewModel::onStepChecked,
-                onStepUnchecked = viewModel::onStepUnchecked,
-                onServingsChanged = viewModel::onServingsChanged,
-                isOwner = currentUser?.uid == selectedRecipe?.uid,
-                onNavigateToChat = onNavigateToChat
-            )
-        } else {
-            val firstName = remember(currentUser) {
-                resolveDisplayName(currentUser?.displayName, currentUser?.email)
-            }
-            HomeScreenContent(
-                viewModel = viewModel,
-                displayName = firstName,
-                userSessionService = userSessionService,
-                currentUserUid = currentUser?.uid,
-                onNavigateToCollection = onNavigateToCollection,
-                onNavigateToCommunity = onNavigateToCommunity,
-                onSignOut = onSignOut,
-                homeUiState = if (signedIn) cookingUiState else HomeUiState()
-            )
+        // Recipe details are shown in the Collections tab (#56), not on top of Home.
+        val firstName = remember(currentUser) {
+            resolveDisplayName(currentUser?.displayName, currentUser?.email)
         }
+        HomeScreenContent(
+            viewModel = viewModel,
+            displayName = firstName,
+            userSessionService = userSessionService,
+            currentUserUid = currentUser?.uid,
+            onNavigateToCollection = onNavigateToCollection,
+            onNavigateToCommunity = onNavigateToCommunity,
+            onOpenRecipe = onOpenRecipe,
+            onSignOut = onSignOut,
+            homeUiState = if (signedIn) cookingUiState else HomeUiState()
+        )
     }
 }
 
@@ -162,9 +138,11 @@ private fun HomeScreenContent(
     currentUserUid: String?,
     onNavigateToCollection: () -> Unit,
     onNavigateToCommunity: () -> Unit,
+    onOpenRecipe: (recipeId: String) -> Unit,
     onSignOut: () -> Unit,
     homeUiState: HomeUiState = HomeUiState()
 ) {
+    val onRecipeClick: (Recipe) -> Unit = { recipe -> recipe.id?.let(onOpenRecipe) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showLegalInfo by remember { mutableStateOf(false) }
@@ -193,7 +171,7 @@ private fun HomeScreenContent(
                     .fillMaxWidth()
                     .background(BackgroundColor)
                     .padding(horizontal = 16.dp)
-                    .padding(top = 48.dp, bottom = 16.dp),
+                    .padding(top = HomeHeaderTopSpacing, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -209,13 +187,14 @@ private fun HomeScreenContent(
                             tint = Terracotta600
                         )
                     }
-                    IconButton(onClick = onSignOut) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                            contentDescription = "Sign out",
-                            tint = Terracotta600
-                        )
-                    }
+                    AccountMenu(
+                        onSignOut = onSignOut,
+                        onDeleteAccount = if (currentUserUid != null) {
+                            { showDeleteAccountConfirm = true }
+                        } else {
+                            null
+                        }
+                    )
                 }
             }
             WaveDivider()
@@ -256,11 +235,11 @@ private fun HomeScreenContent(
                     } else {
                         RecipeCardGrid(
                             recipes = userRecipes,
-                            onRecipeClick = viewModel::onRecipeSelected
+                            onRecipeClick = onRecipeClick
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                     SectionHeader(
                         title = "What's cooking?",
@@ -279,20 +258,20 @@ private fun HomeScreenContent(
                     } else {
                         RecipeCardGrid(
                             recipes = communityRecipes,
-                            onRecipeClick = viewModel::onRecipeSelected
+                            onRecipeClick = onRecipeClick
                         )
                     }
 
                     recipeOfTheMonth?.takeIf { it.videoUrl.isNotEmpty() }?.let { rotw ->
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         RecipeOfTheMonthSection(
                             rotw = rotw,
-                            onViewRecipe = { viewModel.onRecipeOfTheMonthClicked(rotw) }
+                            onViewRecipe = { onOpenRecipe(rotw.recipeId) }
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                     Text(
                         text = "Chat with Chef, your personal cooking assistant, to generate recipes, " +
@@ -305,7 +284,7 @@ private fun HomeScreenContent(
                     )
 
                     if (homeUiState.isLoading) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         Box(
                             modifier = Modifier
@@ -316,7 +295,7 @@ private fun HomeScreenContent(
                             CircularProgressIndicator()
                         }
                     } else if (homeUiState.resources.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(HomeSectionSpacing))
 
                         SectionHeader(title = "Cooking resources")
 
@@ -327,16 +306,6 @@ private fun HomeScreenContent(
                                 CookingResourceCard(resource = resource)
                             }
                         }
-                    }
-
-                    if (currentUserUid != null) {
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "Delete account",
-                            style = AppTypography.bodySmall.copy(color = TextSecondary),
-                            modifier = Modifier.clickable { showDeleteAccountConfirm = true }
-                        )
                     }
 
                     Spacer(modifier = Modifier.height(80.dp))
@@ -420,8 +389,14 @@ private fun HomeScreenContent(
     }
 }
 
+// Space above the greeting title at the top of the Home screen (#48).
+private val HomeHeaderTopSpacing = 24.dp
+
+// Vertical gap between Home screen sections, e.g. "Recipe of the month" and "Cooking resources" (#48).
+private val HomeSectionSpacing = 40.dp
+
 @Composable
-private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
+internal fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> Unit) {
     SectionHeader(
         title = "Recipe of the Month",
         linkText = "View recipe",
@@ -439,10 +414,14 @@ private fun RecipeOfTheMonthSection(rotw: RecipeOfTheMonth, onViewRecipe: () -> 
     ) {
         Text(
             text = rotw.recipeTitle,
-            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary)
+            style = AppTypography.labelMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClickLabel = "View recipe", onClick = onViewRecipe)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        RecipeVideoSection(videoUrl = rotw.videoUrl)
+        // The section header above already reads "Recipe of the Month", so hide the video's own label.
+        RecipeVideoSection(videoUrl = rotw.videoUrl, showLabel = false)
     }
 }
 

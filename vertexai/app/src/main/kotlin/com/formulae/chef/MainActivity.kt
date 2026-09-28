@@ -16,8 +16,10 @@
 
 package com.formulae.chef
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,7 +57,15 @@ class MainActivity : ComponentActivity() {
         // Let the app own window-inset handling (status/nav bars and the IME) instead of the
         // decor view panning or resizing the window. Combined with adjustResize in the manifest,
         // this is what makes Modifier.imePadding() report real keyboard insets to Compose.
-        enableEdgeToEdge()
+        //
+        // The app only ships a light colour scheme, so the system bars must always use dark
+        // icons. The default SystemBarStyle.auto() follows the *system* dark-mode setting, which
+        // renders white status bar icons on the app's near-white background when the device is in
+        // dark mode — making the status bar effectively invisible on every screen (#52).
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(LIGHT_NAV_BAR_SCRIM, DARK_NAV_BAR_SCRIM)
+        )
         val recipeRepository = RecipeRepositoryImpl()
         val recipeListRepository = RecipeListRepositoryImpl()
         val recipeVariantRepository = RecipeVariantRepositoryImpl()
@@ -86,5 +96,11 @@ class MainActivity : ComponentActivity() {
         // Force-export any buffered spans instead of relying on the batch timer, since the
         // process may be killed while backgrounded before the default 5s delay fires.
         ChefTelemetry.flush()
+    }
+
+    private companion object {
+        // Same scrims androidx.activity uses by default for the 3-button navigation bar.
+        val LIGHT_NAV_BAR_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_NAV_BAR_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 }

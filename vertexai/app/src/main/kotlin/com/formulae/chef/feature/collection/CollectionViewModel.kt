@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeList
 import com.formulae.chef.feature.model.RecipeVariant
+import com.formulae.chef.feature.model.isOwnedBy
 import com.formulae.chef.feature.model.parsedServingsCount
 import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
@@ -88,7 +89,7 @@ class CollectionViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val isRecipeOwner: Boolean get() = _selectedRecipe.value?.uid == currentUid
+    val isRecipeOwner: Boolean get() = _selectedRecipe.value?.isOwnedBy(currentUid) == true
 
     private var recipes: List<Recipe> = emptyList()
     private var cookingRecipeId: String? = null
@@ -195,6 +196,23 @@ class CollectionViewModel(
         }
     }
 
+    /**
+     * Selects the recipe with [recipeId], e.g. when Collections is opened from a recipe tapped on
+     * Home (#56). Uses the already-loaded recipes when available, otherwise fetches it.
+     * Returns the selected recipe, or null when it could not be found.
+     */
+    suspend fun openRecipeById(recipeId: String): Recipe? {
+        val recipe = recipes.find { it.id == recipeId }
+            ?: try {
+                repository.getRecipeById(recipeId)
+            } catch (e: Exception) {
+                Log.e("CollectionViewModel", "Failed to load recipe $recipeId", e)
+                null
+            }
+        recipe?.let { onRecipeSelected(it) }
+        return recipe
+    }
+
     fun onRecipeRemove(recipe: Recipe) {
         val recipeId = recipe.id!!
         if (recipe.copyId != null) {
@@ -213,12 +231,12 @@ class CollectionViewModel(
         _isCookingMode.value = entering
         if (entering) {
             cookingRecipeId = _selectedRecipe.value?.id
-            _currentServings.value = displayedRecipe.value?.parsedServingsCount()
+            // Keep a portion count the user already picked on the Ingredients tab (#58).
+            _currentServings.value = _currentServings.value ?: displayedRecipe.value?.parsedServingsCount()
             _checkedSteps.value = emptySet()
         } else {
             cookingRecipeId = null
             _checkedSteps.value = emptySet()
-            _currentServings.value = null
         }
     }
 

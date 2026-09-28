@@ -103,12 +103,17 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ChatRoute(
     userSessionService: UserSessionService,
+    recipeContextId: String? = null,
     onClose: () -> Unit = {},
     chatViewModel: ChatViewModel = viewModel(
         factory = remember { GenerativeViewModelFactory(userSessionService) }
     )
 ) {
     val selectedRecipe by chatViewModel.selectedRecipeFromChat.collectAsState()
+
+    LaunchedEffect(recipeContextId) {
+        recipeContextId?.let(chatViewModel::primeWithRecipeContext)
+    }
 
     DisposableEffect(Unit) {
         onDispose { chatViewModel.onNavigateAway() }

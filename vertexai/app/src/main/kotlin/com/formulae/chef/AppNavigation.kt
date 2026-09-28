@@ -11,7 +11,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,8 +27,21 @@ import com.formulae.chef.services.persistence.RecipeListRepository
 import com.formulae.chef.services.persistence.RecipeRepository
 import com.formulae.chef.services.persistence.RecipeVariantRepository
 import com.formulae.chef.ui.components.ChefNavigationBar
+import java.net.URLEncoder
 
-private val bottomBarRoutes = setOf("home", "generate", "collection")
+private val bottomBarRoutes = setOf(ChefRoutes.HOME, ChefRoutes.GENERATE, ChefRoutes.COLLECTION)
+
+internal const val CHAT_RECIPE_ID_ARG = "recipeId"
+
+/** Route pattern for the chat destination; [CHAT_RECIPE_ID_ARG] is optional (issue #60). */
+internal const val CHAT_ROUTE_PATTERN = "generate?$CHAT_RECIPE_ID_ARG={$CHAT_RECIPE_ID_ARG}"
+
+/**
+ * Chat route that primes the conversation with the given recipe's context, used when opening
+ * chat from the Recipe screen's "Chat with Chef anytime!" link (issue #60).
+ */
+fun chatRouteForRecipe(recipeId: String): String =
+    "generate?$CHAT_RECIPE_ID_ARG=${URLEncoder.encode(recipeId, Charsets.UTF_8.name())}"
 
 @Composable
 fun AppNavigation(
@@ -40,10 +52,22 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentBaseRoute = (navBackStackEntry?.destination?.route ?: "home").substringBefore("?")
-    var routeBeforeChat by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(currentBaseRoute) {
-        routeBeforeChat = nextRouteBeforeChat(currentBaseRoute, routeBeforeChat)
+    val currentBaseRoute = (navBackStackEntry?.destination?.route ?: ChefRoutes.HOME).substringBefore("?")
+
+    // Where the user was before chat, so the chat's close (X) can return there (#61). Stored as two
+    // saveable strings (ChatOrigin isn't Parcelable).
+    var chatOriginRoute by rememberSaveable { mutableStateOf<String?>(null) }
+    var chatOriginRecipeFromHomeId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(navBackStackEntry) {
+        val entry = navBackStackEntry ?: return@LaunchedEffect
+        val recipeIdArg = entry.arguments?.getString(ChefRoutes.ARG_RECIPE_ID)
+        val recipeFromHomeId = recipeIdArg.takeIf {
+            ChefRoutes.isRecipeOpenedFromHome(entry.destination.route, recipeIdArg)
+        }
+        val previous = chatOriginRoute?.let { ChatOrigin(it, chatOriginRecipeFromHomeId) }
+        val next = nextChatOrigin(currentBaseRoute, recipeFromHomeId, previous)
+        chatOriginRoute = next?.route
+        chatOriginRecipeFromHomeId = next?.recipeFromHomeId
     }
 
     Scaffold(
@@ -58,7 +82,7 @@ fun AppNavigation(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = ChefRoutes.HOME,
             // consumeWindowInsets tells descendants that the Scaffold already accounted for these
             // insets (bottom bar + system bars), so a screen-level Modifier.imePadding() only adds
             // the keyboard height *beyond* what is already reserved instead of stacking on top.
@@ -66,58 +90,78 @@ fun AppNavigation(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
         ) {
-            composable("home") {
+            composable(ChefRoutes.HOME) {
                 val homeViewModel: HomeScreenViewModel = viewModel(
                     factory = HomeScreenViewModelFactory(recipeRepository)
                 )
                 HomeScreen(
                     viewModel = homeViewModel,
                     userSessionService = userSessionService,
-                    onNavigateToChat = { navController.navigate("generate") },
-                    onNavigateToCollection = { navController.navigate("collection") },
-                    onNavigateToCommunity = {
-                        navController.navigate("collection?tab=${RecipeSource.COMMUNITY.name}")
+                    onNavigateToCollection = {
+                        navController.navigateToCollection(tab = RecipeSource.SAVED.name)
                     },
+                    onNavigateToCommunity = {
+                        navController.navigateToCollection(tab = RecipeSource.COMMUNITY.name)
+                    },
+                    // Recipes live in the Collections tab: open the detail there instead of on
+                    // top of Home, so the bottom bar reflects where the user is (#56).
+                    onOpenRecipe = { recipeId -> navController.navigateToCollection(recipeId = recipeId) },
                     onSignOut = {
                         userSessionService.signOut()
-                        navController.navigate("signIn") {
-                            popUpTo("home") { inclusive = true }
+                        navController.navigate(ChefRoutes.SIGN_IN) {
+                            popUpTo(ChefRoutes.HOME) { inclusive = true }
                         }
                         // Bottom-nav tab switches save ChatViewModel/CollectionViewModel state
                         // (saveState = true below) so it survives tab switches. That saved state
                         // is keyed independently of the back stack, so popping "home" alone does
                         // not drop it — without this, a new sign-in would restore the previous
                         // account's cached chat history and uid-bound Firebase repositories.
-                        navController.clearBackStack("generate")
-                        navController.clearBackStack("collection?tab={tab}")
+                        navController.clearBackStack(CHAT_ROUTE_PATTERN)
+                        navController.clearBackStack(ChefRoutes.COLLECTION_PATTERN)
                     }
                 )
             }
-            composable("generate") {
+            composable(
+                route = CHAT_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument(CHAT_RECIPE_ID_ARG) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
                 ChatRoute(
                     userSessionService = userSessionService,
+                    recipeContextId = backStackEntry.arguments?.getString(CHAT_RECIPE_ID_ARG),
                     onClose = {
-                        val previousBaseRoute = navController.previousBackStackEntry
-                            ?.destination?.route?.substringBefore("?")
-                        when (val action = resolveChatCloseAction(routeBeforeChat, previousBaseRoute)) {
-                            ChatCloseAction.PopBackStack -> navController.popBackStack()
+                        val origin = chatOriginRoute?.let { ChatOrigin(it, chatOriginRecipeFromHomeId) }
+                        when (val action = resolveChatCloseAction(origin)) {
                             is ChatCloseAction.SwitchToTab -> navController.navigateToTab(action.route)
+                            is ChatCloseAction.ReopenRecipeFromHome ->
+                                navController.navigateToCollection(recipeId = action.recipeId)
                         }
                     }
                 )
             }
             composable(
-                route = "collection?tab={tab}",
+                route = ChefRoutes.COLLECTION_PATTERN,
                 arguments = listOf(
-                    navArgument("tab") {
+                    navArgument(ChefRoutes.ARG_TAB) {
                         type = NavType.StringType
                         defaultValue = RecipeSource.SAVED.name
+                    },
+                    navArgument(ChefRoutes.ARG_RECIPE_ID) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 )
             ) { backStackEntry ->
                 val tab = RecipeSource.valueOf(
-                    backStackEntry.arguments?.getString("tab") ?: RecipeSource.SAVED.name
+                    backStackEntry.arguments?.getString(ChefRoutes.ARG_TAB) ?: RecipeSource.SAVED.name
                 )
+                val initialRecipeId = backStackEntry.arguments?.getString(ChefRoutes.ARG_RECIPE_ID)
                 CollectionRoute(
                     repository = recipeRepository,
                     listRepository = recipeListRepository,
@@ -130,21 +174,13 @@ fun AppNavigation(
                     ),
                     navController = navController,
                     userSessionService = userSessionService,
-                    initialRecipeSource = tab
+                    initialRecipeSource = tab,
+                    initialRecipeId = initialRecipeId
                 )
             }
-            composable("signIn") {
+            composable(ChefRoutes.SIGN_IN) {
                 SignInRoute(userSessionService, navController)
             }
         }
-    }
-}
-
-/** Top-level (bottom-bar) navigation: keeps one entry per tab and saves/restores each tab's state. */
-private fun NavController.navigateToTab(route: String) {
-    navigate(route) {
-        popUpTo("home") { saveState = true }
-        launchSingleTop = true
-        restoreState = true
     }
 }
