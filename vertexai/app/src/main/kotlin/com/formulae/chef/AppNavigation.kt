@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -49,6 +53,22 @@ fun AppNavigation(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentBaseRoute = (navBackStackEntry?.destination?.route ?: ChefRoutes.HOME).substringBefore("?")
+
+    // Where the user was before chat, so the chat's close (X) can return there (#61). Stored as two
+    // saveable strings (ChatOrigin isn't Parcelable).
+    var chatOriginRoute by rememberSaveable { mutableStateOf<String?>(null) }
+    var chatOriginRecipeFromHomeId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(navBackStackEntry) {
+        val entry = navBackStackEntry ?: return@LaunchedEffect
+        val recipeIdArg = entry.arguments?.getString(ChefRoutes.ARG_RECIPE_ID)
+        val recipeFromHomeId = recipeIdArg.takeIf {
+            ChefRoutes.isRecipeOpenedFromHome(entry.destination.route, recipeIdArg)
+        }
+        val previous = chatOriginRoute?.let { ChatOrigin(it, chatOriginRecipeFromHomeId) }
+        val next = nextChatOrigin(currentBaseRoute, recipeFromHomeId, previous)
+        chatOriginRoute = next?.route
+        chatOriginRecipeFromHomeId = next?.recipeFromHomeId
+    }
 
     Scaffold(
         bottomBar = {
@@ -113,7 +133,15 @@ fun AppNavigation(
             ) { backStackEntry ->
                 ChatRoute(
                     userSessionService = userSessionService,
-                    recipeContextId = backStackEntry.arguments?.getString(CHAT_RECIPE_ID_ARG)
+                    recipeContextId = backStackEntry.arguments?.getString(CHAT_RECIPE_ID_ARG),
+                    onClose = {
+                        val origin = chatOriginRoute?.let { ChatOrigin(it, chatOriginRecipeFromHomeId) }
+                        when (val action = resolveChatCloseAction(origin)) {
+                            is ChatCloseAction.SwitchToTab -> navController.navigateToTab(action.route)
+                            is ChatCloseAction.ReopenRecipeFromHome ->
+                                navController.navigateToCollection(recipeId = action.recipeId)
+                        }
+                    }
                 )
             }
             composable(

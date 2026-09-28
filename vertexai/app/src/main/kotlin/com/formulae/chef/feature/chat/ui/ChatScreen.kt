@@ -23,6 +23,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -37,7 +38,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -72,7 +72,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -85,12 +84,12 @@ import coil.compose.rememberAsyncImagePainter
 import com.formulae.chef.GenerativeViewModelFactory
 import com.formulae.chef.R
 import com.formulae.chef.feature.chat.ChatViewModel
+import com.formulae.chef.feature.chat.parseRecipeText
 import com.formulae.chef.feature.collection.ui.DetailRoute
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.voice.sanitizeMarkdown
 import com.formulae.chef.ui.components.BetaQuotaExceededDialog
-import com.formulae.chef.ui.components.ChefTopBar
 import com.formulae.chef.ui.components.EmailVerificationRequiredDialog
 import com.formulae.chef.ui.theme.AppTypography
 import com.formulae.chef.ui.theme.BackgroundColor
@@ -105,6 +104,7 @@ import kotlinx.coroutines.launch
 internal fun ChatRoute(
     userSessionService: UserSessionService,
     recipeContextId: String? = null,
+    onClose: () -> Unit = {},
     chatViewModel: ChatViewModel = viewModel(
         factory = remember { GenerativeViewModelFactory(userSessionService) }
     )
@@ -129,12 +129,12 @@ internal fun ChatRoute(
             onTabChanged = { showIngredients = it }
         )
     } else {
-        ChatContent(chatViewModel)
+        ChatContent(chatViewModel, onClose)
     }
 }
 
 @Composable
-private fun ChatContent(chatViewModel: ChatViewModel) {
+private fun ChatContent(chatViewModel: ChatViewModel, onClose: () -> Unit) {
     val chatUiState by chatViewModel.uiState.collectAsState()
     val isLoading by chatViewModel.isLoading.collectAsState()
     val quotaExceeded by chatViewModel.quotaExceeded.collectAsState()
@@ -165,19 +165,7 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
             .fillMaxSize()
             .imePadding()
     ) {
-        ChefTopBar(
-            title = "Chat with Chef",
-            navigationIcon = {
-                Image(
-                    painter = painterResource(R.drawable.logo),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                )
-            }
-        )
+        ChatTopBar(onClose = onClose)
 
         if (isLoading) {
             Box(
@@ -203,13 +191,6 @@ private fun ChatContent(chatViewModel: ChatViewModel) {
                 modifier = Modifier.weight(1f)
             )
         }
-
-        Text(
-            text = "Chef's recipes are AI-generated and may contain mistakes — " +
-                "always use your own judgment on cooking times and food safety.",
-            style = AppTypography.bodySmall.copy(color = TextSecondary, fontStyle = FontStyle.Italic),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
 
         MessageInput(
             onSendMessage = { inputText ->
@@ -248,6 +229,10 @@ fun ChatList(
     LazyColumn(
         reverseLayout = true,
         state = listState,
+        // Clear separation between user and Chef messages (#64); bottom-aligned like the
+        // default for reverseLayout so a short conversation sits just above the input.
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
+        contentPadding = PaddingValues(vertical = 16.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         items(chatMessages.reversed(), key = { it.id }) { message ->
@@ -282,7 +267,7 @@ fun ChatBubbleItem(
     Column(
         horizontalAlignment = horizontalAlignment,
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
     ) {
         when {
@@ -341,23 +326,32 @@ fun ChatBubbleItem(
             }
 
             else -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (chatMessage.isPending) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .padding(end = 8.dp),
-                            strokeWidth = 2.dp
+                // Recipes sent as plain text (restored history, or failed structured extraction)
+                // are shown as a compact, expandable card instead of a long text block (#65).
+                val recipePreview = remember(chatMessage.text, chatMessage.isPending) {
+                    if (chatMessage.isPending) null else parseRecipeText(chatMessage.text)
+                }
+                if (recipePreview != null) {
+                    ChatRecipeTextCard(preview = recipePreview, messageId = chatMessage.id)
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (chatMessage.isPending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        Text(
+                            text = chatMessage.text.sanitizeMarkdown(),
+                            style = AppTypography.bodyLarge.copy(color = TextPrimary),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    Text(
-                        text = chatMessage.text.sanitizeMarkdown(),
-                        style = AppTypography.bodyLarge.copy(color = TextPrimary),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
                 if (!chatMessage.isPending) {
                     Row {
@@ -368,7 +362,7 @@ fun ChatBubbleItem(
                             Icon(
                                 imageVector = Icons.Default.ThumbUp,
                                 contentDescription = if (chatMessage.isLiked) {
-                                    "Liked"
+                                    "Unlike response"
                                 } else {
                                     "Like response"
                                 },
