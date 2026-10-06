@@ -16,6 +16,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,6 +33,8 @@ import com.formulae.chef.ui.theme.BackgroundColor
 import com.formulae.chef.ui.theme.GenerativeAISample
 import com.formulae.chef.ui.theme.Terracotta600
 import com.formulae.chef.ui.theme.TextPrimary
+
+private val HeaderShadowHeight = 4.dp
 
 internal const val CHAT_AI_DISCLAIMER =
     "Chef's recipes are AI-generated and may contain mistakes — " +
@@ -46,12 +53,27 @@ fun ChatTopBar(
 ) {
     var showDisclaimer by rememberSaveable { mutableStateOf(false) }
 
-    // Shadow at the bottom edge separates the sticky header from the scrolling messages (#62).
-    // zIndex keeps the shadow drawn above the message list that follows in the Column.
+    // Shadow below the bottom edge only separates the sticky header from the scrolling messages
+    // (#62). Surface's shadowElevation would also draw a shadow along the top edge, so the
+    // gradient is drawn outside the header's bounds instead. zIndex keeps it above the message
+    // list that follows in the Column.
     Surface(
         color = BackgroundColor,
-        shadowElevation = 4.dp,
-        modifier = modifier.zIndex(1f)
+        modifier = modifier
+            .zIndex(1f)
+            .drawWithContent {
+                drawContent()
+                val shadowHeight = HeaderShadowHeight.toPx()
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(TextPrimary.copy(alpha = 0.12f), Color.Transparent),
+                        startY = size.height,
+                        endY = size.height + shadowHeight
+                    ),
+                    topLeft = Offset(0f, size.height),
+                    size = Size(size.width, shadowHeight)
+                )
+            }
     ) {
         ChefTopBar(
             title = "Chat with Chef",
