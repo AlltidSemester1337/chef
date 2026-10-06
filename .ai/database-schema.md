@@ -1,6 +1,6 @@
 # Firebase Realtime Database Schema
 
-Derived from `vertexai/app/src/main/assets/idyllic-bloom-425307-r6-default-rtdb-export.json`.
+Derived from a Firebase RTDB export (take a fresh one with `firebase database:get /` into `db-backups/` when needed — never into `assets/`).
 
 ## Root Structure
 

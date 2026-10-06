@@ -31,7 +31,7 @@ This is the issue-driven sibling of `/implement-feature` (which works from Linea
 
 - If the session is already in a harness-provided worktree (`.claude/worktrees/<name>`, see the environment note), work there — **do not** create a nested `.trees/` worktree.
 - Otherwise create one: `git worktree add .trees/<branch> -b fix/issue-<N>-<slug>` from an up-to-date `main`.
-- Copy the gitignored files needed to build from the main checkout (`/home/kalle/code/chef`): `local.properties`, `vertexai/app/google-services.json`, and `vertexai/app/src/main/assets/{gcp.json,imagen-google-services.json,chat_system_prompt.txt}`. Verify `chat_system_prompt.txt` exists — the app crashes on launch without it. Never commit these files.
+- Copy the gitignored files needed to build from the main checkout (`/home/kalle/code/chef`): `local.properties`, `vertexai/app/google-services.json`, and `vertexai/app/src/main/assets/chat_system_prompt.txt` (nothing else belongs in assets — see `verifyAssets`). Verify `chat_system_prompt.txt` exists — the app crashes on launch without it. Never commit these files.
 
 ## 5. Tests first, then fix
 

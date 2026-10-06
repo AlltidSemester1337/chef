@@ -9,12 +9,12 @@ This file documents schema migrations applied to the Chef Firebase Realtime Data
 The database has no formal migration framework. The standard process is:
 
 1. **Backup first** — export the full database before any changes (see CLAUDE.md for the `firebase database:get` command). Backups go in `db-backups/` (gitignored).
-2. **Prepare a migration file** — edit a copy of the backup JSON to apply the schema change. Store migration files in `vertexai/app/src/main/assets/dbbackup/` (tracked in git, **no PII**).
+2. **Prepare a migration file** — edit a copy of the backup JSON to apply the schema change. Store migration files in `db-backups/` next to the backup (gitignored, never committed). **Never** put them under `vertexai/app/src/main/assets/` — assets are shipped verbatim in the APK/AAB, and the `verifyAssets` Gradle task fails the build if anything but `chat_system_prompt.txt` is there (CHE-49).
 3. **Validate locally** — review the diff between the backup and the migration file to confirm only intended changes are present.
 4. **Upload manually** — the user imports the migration file via the Firebase Console (`Import JSON` on the Realtime Database page). This overwrites the entire database, so the backup in step 1 is critical.
 5. **Document here** — add an entry below describing what changed, why, and the file used.
 
-> **Note:** The migration file written to `dbbackup/` contains the full database snapshot with changes applied. It does not contain user PII beyond recipe data (no auth records, no chat history unless explicitly included). Confirm scope before committing.
+> **Note:** Backup and migration files are full database snapshots and contain user data (`users/{uid}` incl. `chat_history` and `preferences`). Keep them local, and delete them once the migration is verified.
 
 ---
 
@@ -22,7 +22,7 @@ The database has no formal migration framework. The standard process is:
 
 ### 2026-04 — Add `tags` to all existing recipes (CHE-12)
 
-**File:** `vertexai/app/src/main/assets/dbbackup/chef-db-backup-04-2026.json`
+**File:** `chef-db-backup-04-2026.json` (deleted 2026-10-06 in CHE-49; it had been packaged into the APK by mistake)
 **Scope:** All 49 recipes in the `recipes` node.
 **Change:** Added a `tags: string[]` field to every recipe. New recipes going forward have tags generated automatically by the Gemini JSON extraction model at save time (see `DERIVE_RECIPE_JSON_SYSTEM_INSTRUCTIONS` in `GenerativeAiViewModelFactory.kt`).
 

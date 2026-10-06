@@ -83,7 +83,7 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 - `services/persistence/` — `RecipeRepository` interface with `RecipeRepositoryImpl` (Firebase Realtime Database). `ChatHistoryRepository` interface with `ChatHistoryRepositoryImpl` (persists chat to Firebase under `users/{uid}/chat_history`). `FirebaseInstance` singleton for DB access.
 - `services/voice/` — `SpeechInputManager` (wraps Android `SpeechRecognizer`), `GcpTextToSpeechService` (GCP Cloud TTS REST, Chirp 3 HD), `AudioPlayer` (in-memory MP3 via `MediaPlayer`). All three are instantiated at the composable layer via `rememberVoiceController()` in `feature/chat/ui/VoiceController.kt`.
 
-**ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. The `GenerativeAiViewModelFactory` reads `gcp.json` and `imagen-google-services.json` from assets to configure the Vertex AI Prediction client.
+**ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. Assets are shipped verbatim in the APK, so `src/main/assets/` may only hold `chat_system_prompt.txt` (enforced by the `verifyAssets` Gradle task) — never credentials or DB exports.
 
 ### Key Design Decisions
 

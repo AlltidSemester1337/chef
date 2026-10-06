@@ -31,7 +31,7 @@ Usage: /implement-feature <linear-issue-id>  (e.g. /implement-feature CHE-10)
 - Copy all required gitignored files into the new worktree:
   - `local.properties` (without any secrets no longer needed by this branch)
   - `vertexai/app/google-services.json`
-  - `vertexai/app/src/main/assets/` contents: `gcp.json`, `imagen-google-services.json`, `chat_system_prompt.txt`, and the DB export JSON
+  - `vertexai/app/src/main/assets/chat_system_prompt.txt` (nothing else — assets ship in the APK; `verifyAssets` fails the build otherwise)
   - Verify `chat_system_prompt.txt` is present — the app crashes on launch without it. If missing from the main tree, check other worktrees under `.trees/`.
 
 ## 5. Implement
