@@ -132,6 +132,29 @@ android {
     }
 }
 
+// Everything under src/*/assets is shipped verbatim in the APK/AAB and is readable by anyone with
+// the app (CHE-49). Fail the build if anything other than allowlisted files lands there, so DB
+// exports, service-account keys and other local-only files can never be packaged again.
+val allowedAssets = setOf("chat_system_prompt.txt")
+val assetDirs = fileTree("src") { include("*/assets/**") }
+val verifyAssets by tasks.registering {
+    description = "Fails if non-allowlisted files or credentials are present in asset directories."
+    inputs.files(assetDirs)
+    doLast {
+        val offending = assetDirs.files.filter { file ->
+            file.name !in allowedAssets || file.readText().contains("\"private_key\"")
+        }
+        if (offending.isNotEmpty()) {
+            throw GradleException(
+                "Files in assets are packaged into the APK and must not contain secrets or data dumps. " +
+                    "Move these out of src/*/assets (DB exports belong in db-backups/):\n" +
+                    offending.joinToString("\n") { "  - ${it.relativeTo(projectDir)}" }
+            )
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(verifyAssets) }
+
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
