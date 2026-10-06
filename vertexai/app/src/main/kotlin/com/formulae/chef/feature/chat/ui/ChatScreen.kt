@@ -231,7 +231,7 @@ fun ChatList(
         state = listState,
         // Clear separation between user and Chef messages (#64); bottom-aligned like the
         // default for reverseLayout so a short conversation sits just above the input.
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
+        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.Bottom),
         contentPadding = PaddingValues(vertical = 16.dp),
         modifier = modifier.fillMaxWidth()
     ) {
