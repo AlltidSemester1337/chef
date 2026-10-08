@@ -2,58 +2,55 @@ package com.formulae.chef.services.persistence
 
 import android.util.Log
 import com.formulae.chef.feature.model.RecipeList
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
+private const val RECIPE_IDS = "recipeIds"
+private const val CREATED_AT = "createdAt"
+
 class RecipeListRepositoryImpl(
-    private val database: FirebaseDatabase = FirebaseInstance.database
+    private val firestore: FirebaseFirestore = FirebaseInstance.firestore
 ) : RecipeListRepository {
 
-    private fun listsRef(uid: String) = database.getReference("users/$uid/lists")
+    private fun lists(uid: String) = firestore.userCollection(uid, FirestorePaths.LISTS)
 
     override suspend fun loadUserLists(uid: String): List<RecipeList> {
-        return listsRef(uid).get().await().children.mapNotNull { snapshot ->
-            snapshot.getValue(RecipeList::class.java)?.also { list ->
-                if (list.id == null) list.id = snapshot.key
+        // Ordered by creation (createdAt is storage-only; RecipeList has no such field).
+        return lists(uid).get().await().documents
+            .sortedBy { it.getTimestamp(CREATED_AT) }
+            .mapNotNull { doc ->
+                doc.toObject(RecipeList::class.java)?.also { list ->
+                    if (list.id == null) list.id = doc.id
+                }
             }
-        }
     }
 
     override fun createList(uid: String, name: String): RecipeList {
-        val ref = listsRef(uid)
-        val newRef = ref.push()
-        val list = RecipeList(id = newRef.key, name = name)
-        newRef.setValue(list)
+        val newRef = lists(uid).document()
+        val list = RecipeList(id = newRef.id, name = name)
+        val data = mapOf("id" to list.id, "name" to list.name, RECIPE_IDS to list.recipeIds, CREATED_AT to Timestamp.now())
+        newRef.set(data)
             .addOnSuccessListener { Log.d("RecipeListRepo", "List '${list.name}' created") }
             .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to create list", e) }
         return list
     }
 
     override fun deleteList(uid: String, listId: String) {
-        listsRef(uid).child(listId).removeValue()
+        lists(uid).document(listId).delete()
             .addOnSuccessListener { Log.d("RecipeListRepo", "List $listId deleted") }
             .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to delete list", e) }
     }
 
+    // arrayUnion/arrayRemove are atomic server-side and skip duplicates, so no read-modify-write.
     override fun addRecipeToList(uid: String, listId: String, recipeId: String) {
-        val listRef = listsRef(uid).child(listId)
-        listRef.get().addOnSuccessListener { snapshot ->
-            val list = snapshot.getValue(RecipeList::class.java) ?: return@addOnSuccessListener
-            if (!list.recipeIds.contains(recipeId)) {
-                val updated = list.recipeIds + recipeId
-                listRef.child("recipeIds").setValue(updated)
-                    .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to add recipe to list", e) }
-            }
-        }.addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to read list for add", e) }
+        lists(uid).document(listId).update(RECIPE_IDS, FieldValue.arrayUnion(recipeId))
+            .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to add recipe to list", e) }
     }
 
     override fun removeRecipeFromList(uid: String, listId: String, recipeId: String) {
-        val listRef = listsRef(uid).child(listId)
-        listRef.get().addOnSuccessListener { snapshot ->
-            val list = snapshot.getValue(RecipeList::class.java) ?: return@addOnSuccessListener
-            val updated = list.recipeIds.filter { it != recipeId }
-            listRef.child("recipeIds").setValue(updated)
-                .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to remove recipe from list", e) }
-        }.addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to read list for remove", e) }
+        lists(uid).document(listId).update(RECIPE_IDS, FieldValue.arrayRemove(recipeId))
+            .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to remove recipe from list", e) }
     }
 }

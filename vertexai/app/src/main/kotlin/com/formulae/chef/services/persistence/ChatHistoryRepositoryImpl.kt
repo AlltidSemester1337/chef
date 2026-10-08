@@ -1,68 +1,77 @@
 package com.formulae.chef.services.persistence
 
 import android.util.Log
-import com.google.firebase.database.FirebaseDatabase
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import java.time.Instant
 import kotlinx.coroutines.tasks.await
+
+private const val CREATED_AT = "createdAt"
 
 class ChatHistoryRepositoryImpl(
     override val uid: String,
-    private val database: FirebaseDatabase = FirebaseInstance.database
+    private val firestore: FirebaseFirestore = FirebaseInstance.firestore
 ) : ChatHistoryRepository {
-    private val _chatHistoryKey = "users/$uid/chat_history"
+    private val chatHistory get() = firestore.userCollection(uid, FirestorePaths.CHAT_HISTORY)
 
+    // Firestore IDs are random, so order comes from createdAt. Entries saved together get
+    // microsecond-spaced times to keep their relative order.
     override fun saveNewEntries(newEntries: List<Content>) {
-        val reference = database.getReference(_chatHistoryKey)
-        for (entry in newEntries) {
-            reference.push().setValue(entry).addOnCompleteListener { task ->
+        val now = Instant.now()
+        newEntries.forEachIndexed { index, entry ->
+            val createdAt = now.plusNanos(index * 1_000L)
+            val data = mapOf(
+                "role" to entry.role,
+                "parts" to entry.parts.map { mapOf("text" to it.text) },
+                CREATED_AT to Timestamp(createdAt.epochSecond, createdAt.nano)
+            )
+            chatHistory.document().set(data).addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Log.d("FirebaseDB", "entry saved successfully!")
+                    Log.d("Firestore", "entry saved successfully!")
                 } else {
-                    Log.e("FirebaseDB", "Failed to add new entry: ", task.exception)
+                    Log.e("Firestore", "Failed to add new entry: ", task.exception)
                 }
             }
         }
     }
 
     override suspend fun loadChatHistoryLastTwentyEntries(): List<Content> {
-        return suspendCancellableCoroutine { continuation ->
-            database.getReference(_chatHistoryKey).get()
-                .addOnSuccessListener { dataSnapshot ->
-                    val contentList = dataSnapshot.children.mapNotNull { child ->
-                        child.getValue(Content::class.java)
-                    }.takeLast(20)
-                    continuation.resume(contentList)
-                }.addOnFailureListener { exception ->
-                    Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting data", exception)
-                    continuation.resumeWithException(exception)
-                }
+        return try {
+            chatHistory.orderBy(CREATED_AT, Query.Direction.ASCENDING)
+                .limitToLast(20)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { it.toObject(Content::class.java) }
+        } catch (e: Exception) {
+            Log.d("ChatHistoryRepository", "Error getting data", e)
+            throw e
         }
     }
 
     override suspend fun loadAllEntries(): List<Pair<String, Content>> {
-        return suspendCancellableCoroutine { continuation ->
-            database.getReference(_chatHistoryKey).get()
-                .addOnSuccessListener { dataSnapshot ->
-                    val entries = dataSnapshot.children.mapNotNull { child ->
-                        val content = child.getValue(Content::class.java) ?: return@mapNotNull null
-                        val key = child.key ?: return@mapNotNull null
-                        Pair(key, content)
-                    }
-                    continuation.resume(entries)
-                }
-                .addOnFailureListener { exception ->
-                    Log.d("ChatHistoryRealtimeDatabasePersistence", "Error getting all data", exception)
-                    continuation.resumeWithException(exception)
-                }
+        return try {
+            chatHistory.orderBy(CREATED_AT, Query.Direction.ASCENDING)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { doc -> doc.toObject(Content::class.java)?.let { doc.id to it } }
+        } catch (e: Exception) {
+            Log.d("ChatHistoryRepository", "Error getting all data", e)
+            throw e
         }
     }
 
     override suspend fun deleteEntries(pushIds: List<String>) {
-        val reference = database.getReference(_chatHistoryKey)
-        for (pushId in pushIds) {
-            reference.child(pushId).removeValue().await()
+        pushIds.chunked(MAX_BATCH_WRITES).forEach { ids ->
+            val batch = firestore.batch()
+            ids.forEach { batch.delete(chatHistory.document(it)) }
+            batch.commit().await()
         }
+    }
+
+    private companion object {
+        const val MAX_BATCH_WRITES = 500
     }
 }

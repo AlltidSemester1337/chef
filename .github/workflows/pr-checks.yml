@@ -33,17 +33,13 @@ jobs:
       # local.properties is gitignored; reconstruct it from repository secrets.
       #
       # Secret formats expected (set under repo Settings → Secrets → Actions):
-      #   FIREBASE_DB_URL              — raw URL, e.g. https://my-project-default-rtdb.firebaseio.com
       #   PHOENIX_API_KEY              — raw key value (quotes added by this step)
       #   CHEF_MAIN_CHAT_PROMPT_TEMPLATE — raw prompt text (quotes added by this step)
       #
-      # Note: firebaseDbUrl is quoted in build.gradle.kts ("\"${value}\""), so the
-      # secret must be the raw URL without surrounding quotes. phoenixApiKey and
-      # chefMainChatPromptTemplate are inserted as-is into buildConfigField, so this
+      # Note: phoenixApiKey and chefMainChatPromptTemplate are inserted as-is into buildConfigField, so this
       # step wraps them in double quotes to produce valid Java string literals.
       - name: Create local.properties
         run: |
-          echo "firebaseDbUrl=${{ secrets.FIREBASE_DB_URL }}" >> local.properties
           echo 'phoenixApiKey="${{ secrets.PHOENIX_API_KEY }}"' >> local.properties
           echo 'chefMainChatPromptTemplate="${{ secrets.CHEF_MAIN_CHAT_PROMPT_TEMPLATE }}"' >> local.properties
 

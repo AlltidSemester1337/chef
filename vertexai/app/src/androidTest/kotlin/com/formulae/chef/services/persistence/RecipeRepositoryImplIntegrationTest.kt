@@ -5,176 +5,123 @@ import com.formulae.chef.feature.model.Difficulty
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Nutrient
 import com.formulae.chef.feature.model.Recipe
-import com.google.firebase.database.FirebaseDatabase
+import com.formulae.chef.services.persistence.FirestoreEmulator.awaitCondition
+import com.formulae.chef.services.persistence.FirestoreEmulator.signInAsNewUser
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Integration tests for [RecipeRepositoryImpl] against the Firebase Realtime Database emulator.
- *
- * Prerequisites:
- *   - Firebase Emulator Suite running: `firebase emulators:start --only database`
- *   - An Android emulator or connected device
- *
- * The tests use a dedicated emulator namespace (`chef-integration-test`) and clean up after
- * each test, so they are safe to run against the local emulator without touching production data.
- */
+/** [RecipeRepositoryImpl] against the Firestore emulator with production rules. See [FirestoreEmulator]. */
 @RunWith(AndroidJUnit4::class)
 class RecipeRepositoryImplIntegrationTest {
 
-    private lateinit var testDatabase: FirebaseDatabase
     private lateinit var repository: RecipeRepositoryImpl
-
-    private val testUid = "test-user-1"
-    private val otherUid = "test-user-2"
 
     @Before
     fun setup() {
-        testDatabase = FirebaseDatabase.getInstance("http://10.0.2.2:9000?ns=chef-integration-test")
-        testDatabase.useEmulator("10.0.2.2", 9000)
-        repository = RecipeRepositoryImpl(database = testDatabase)
+        repository = RecipeRepositoryImpl(firestore = FirestoreEmulator.firestore)
     }
 
-    @After
-    fun tearDown() = runBlocking {
-        testDatabase.getReference("/").removeValue().await()
-    }
+    private suspend fun awaitRecipe(id: String) = awaitCondition({ repository.getRecipeById(id) }) { it != null }
 
     @Test
-    fun saveRecipe_assignsIdAndPersistsRecipe() = runBlocking {
+    fun saveRecipe_assignsIdAndPersistsAllFields() = runBlocking {
+        val uid = signInAsNewUser()
         val recipe = Recipe(
-            uid = testUid,
+            id = "recipe-$uid",
+            uid = uid,
             title = "Pasta Carbonara",
             summary = "Classic Italian pasta",
-            difficulty = Difficulty.MEDIUM
-        )
-
-        repository.saveRecipe(recipe)
-
-        val loaded = repository.loadAllRecipes()
-        assertEquals(1, loaded.size)
-        assertNotNull(loaded[0].id)
-        assertEquals("Pasta Carbonara", loaded[0].title)
-        assertEquals(testUid, loaded[0].uid)
-    }
-
-    @Test
-    fun saveRecipe_withExistingId_persistsUnderThatIdWithoutCreatingDuplicate() = runBlocking {
-        val recipe = Recipe(
-            id = "client-generated-id",
-            uid = testUid,
-            title = "Chat Derived Recipe",
-            summary = "From chat extraction",
-            difficulty = Difficulty.MEDIUM
-        )
-
-        repository.saveRecipe(recipe)
-        val loaded = waitForRecipes(count = 1)
-        assertEquals("client-generated-id", loaded[0].id)
-
-        repository.removeRecipe("client-generated-id")
-        val remaining = waitForRecipes(count = 0)
-        assertTrue(remaining.isEmpty())
-    }
-
-    @Test
-    fun loadAllRecipes_returnsAllSavedRecipes() = runBlocking {
-        repository.saveRecipe(Recipe(uid = testUid, title = "Recipe A", summary = "A"))
-        repository.saveRecipe(Recipe(uid = testUid, title = "Recipe B", summary = "B"))
-        repository.saveRecipe(Recipe(uid = otherUid, title = "Recipe C", summary = "C"))
-
-        val loaded = waitForRecipes(count = 3)
-        assertEquals(3, loaded.size)
-    }
-
-    @Test
-    fun loadUserRecipes_returnsOnlyRecipesForThatUser() = runBlocking {
-        repository.saveRecipe(Recipe(uid = testUid, title = "My Recipe", summary = "mine"))
-        repository.saveRecipe(Recipe(uid = otherUid, title = "Other Recipe", summary = "other"))
-
-        waitForRecipes(count = 2)
-
-        val userRecipes = repository.loadUserRecipes(testUid)
-        assertEquals(1, userRecipes.size)
-        assertEquals("My Recipe", userRecipes[0].title)
-        assertEquals(testUid, userRecipes[0].uid)
-    }
-
-    @Test
-    fun loadAllRecipes_preservesIsFavouriteField() = runBlocking {
-        repository.saveRecipe(Recipe(uid = testUid, title = "Favourite", summary = "fav", isFavourite = true))
-
-        val loaded = waitForRecipes(count = 1)
-        assertTrue(loaded[0].isFavourite)
-    }
-
-    @Test
-    fun loadAllRecipes_preservesIngredientsAndInstructions() = runBlocking {
-        val recipe = Recipe(
-            uid = testUid,
-            title = "Full Recipe",
-            summary = "Complete",
-            ingredients = listOf(Ingredient(name = "Flour", quantity = "200", unit = "g")),
+            difficulty = Difficulty.MEDIUM,
+            isFavourite = true,
+            updatedAt = "2025-02-12T13:58:18.650Z",
+            ingredients = listOf(Ingredient(name = "Flour", quantity = "1/2", unit = "g")),
             instructions = listOf("Mix", "Bake"),
-            nutrientsPerServing = listOf(Nutrient(name = "Calories", quantity = "300", unit = "kcal"))
+            nutrientsPerServing = listOf(Nutrient(name = "Calories", quantity = "300", unit = "kcal")),
+            tags = listOf("italian", "weeknight")
         )
+
         repository.saveRecipe(recipe)
+        val loaded = awaitRecipe("recipe-$uid")!!
 
-        val loaded = waitForRecipes(count = 1)
-        assertEquals(1, loaded[0].ingredients.size)
-        assertEquals("Flour", loaded[0].ingredients[0].name)
-        assertEquals(2, loaded[0].instructions.size)
-        assertEquals("Mix", loaded[0].instructions[0])
-        assertEquals(1, loaded[0].nutrientsPerServing?.size)
+        assertEquals("recipe-$uid", loaded.id)
+        assertEquals(uid, loaded.uid)
+        assertEquals("Pasta Carbonara", loaded.title)
+        assertEquals(Difficulty.MEDIUM, loaded.difficulty)
+        assertTrue(loaded.isFavourite)
+        assertEquals("2025-02-12T13:58:18.650Z", loaded.updatedAt)
+        assertEquals("1/2", loaded.ingredients[0].quantity)
+        assertEquals(listOf("Mix", "Bake"), loaded.instructions)
+        assertEquals("kcal", loaded.nutrientsPerServing!![0].unit)
+        assertEquals(listOf("italian", "weeknight"), loaded.tags)
     }
 
     @Test
-    fun removeRecipe_deletesRecipeFromDatabase() = runBlocking {
-        repository.saveRecipe(Recipe(uid = testUid, title = "To Delete", summary = "delete me"))
-        val savedId = waitForRecipes(count = 1)[0].id!!
+    fun saveRecipe_withoutId_generatesOne() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(uid = uid, title = "No id"))
 
-        repository.removeRecipe(savedId)
-
-        val remaining = waitForRecipes(count = 0)
-        assertTrue(remaining.isEmpty())
+        val mine = awaitCondition({ repository.loadUserRecipes(uid) }) { it.size == 1 }
+        assertNotNull(mine.single().id)
     }
 
     @Test
-    fun removeRecipeUid_setsUidToNull() = runBlocking {
-        repository.saveRecipe(Recipe(uid = testUid, title = "Shared Recipe", summary = "shared"))
-        val savedId = waitForRecipes(count = 1)[0].id!!
+    fun saveRecipe_withExistingId_overwritesWithoutDuplicate_andRemoveDeletes() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "fixed-$uid", uid = uid, title = "v1"))
+        awaitRecipe("fixed-$uid")
+        repository.saveRecipe(Recipe(id = "fixed-$uid", uid = uid, title = "v2"))
 
-        repository.removeRecipeUid(savedId)
+        val mine = awaitCondition({ repository.loadUserRecipes(uid) }) { it.singleOrNull()?.title == "v2" }
+        assertEquals(1, mine.size)
 
-        // After uid is set to null, it should not appear in user-specific queries
-        waitForRecipes(count = 1) // still exists in DB
-        val userRecipes = repository.loadUserRecipes(testUid)
-        assertTrue(userRecipes.none { it.id == savedId })
+        repository.removeRecipe("fixed-$uid")
+        assertNull(awaitCondition({ repository.getRecipeById("fixed-$uid") }) { it == null })
     }
 
     @Test
-    fun loadUserRecipes_returnsEmptyListWhenNoRecipesForUser() = runBlocking {
-        repository.saveRecipe(Recipe(uid = otherUid, title = "Not Mine", summary = "other"))
-        waitForRecipes(count = 1)
+    fun loadUserRecipes_returnsOnlyThatUsersRecipes_andAllRecipesIncludesOthers() = runBlocking {
+        val alice = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "a1-$alice", uid = alice, title = "Alice 1"))
+        repository.saveRecipe(Recipe(id = "a2-$alice", uid = alice, title = "Alice 2"))
+        awaitRecipe("a2-$alice")
 
-        val userRecipes = repository.loadUserRecipes(testUid)
-        assertTrue(userRecipes.isEmpty())
+        val bob = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "b1-$bob", uid = bob, title = "Bob 1"))
+        awaitRecipe("b1-$bob")
+
+        assertEquals(listOf("Alice 1", "Alice 2"), repository.loadUserRecipes(alice).map { it.title }.sorted())
+        val allIds = repository.loadAllRecipes().map { it.id }
+        assertTrue(allIds.containsAll(listOf("a1-$alice", "a2-$alice", "b1-$bob")))
     }
 
-    /** Polls until [count] recipes are visible in the DB, to account for async writes. */
-    private suspend fun waitForRecipes(count: Int): List<Recipe> {
-        repeat(10) {
-            val recipes = repository.loadAllRecipes()
-            if (recipes.size == count) return recipes
-            kotlinx.coroutines.delay(200)
-        }
-        return repository.loadAllRecipes()
+    @Test
+    fun removeRecipeUid_orphansRecipe_whichStillLoadsWithoutCrashing() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "orphan-$uid", uid = uid, title = "Shared"))
+        awaitRecipe("orphan-$uid")
+
+        repository.removeRecipeUid("orphan-$uid")
+
+        val orphan = awaitCondition({ repository.getRecipeById("orphan-$uid") }) { it?.uid == "" }!!
+        assertEquals("", orphan.uid)
+        assertTrue(repository.loadUserRecipes(uid).none { it.id == "orphan-$uid" })
+        // Regression: an explicit `uid: null` would make toObject() throw for the whole query.
+        assertTrue(repository.loadAllRecipes().any { it.id == "orphan-$uid" })
+    }
+
+    @Test
+    fun loadAllRecipes_isSortedByUpdatedAt() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "late-$uid", uid = uid, title = "late", updatedAt = "2026-02-01T00:00:00Z"))
+        repository.saveRecipe(Recipe(id = "early-$uid", uid = uid, title = "early", updatedAt = "2026-01-01T00:00:00Z"))
+
+        val mine = awaitCondition({ repository.loadUserRecipes(uid) }) { it.size == 2 }
+        assertEquals(listOf("early", "late"), mine.map { it.title })
     }
 }

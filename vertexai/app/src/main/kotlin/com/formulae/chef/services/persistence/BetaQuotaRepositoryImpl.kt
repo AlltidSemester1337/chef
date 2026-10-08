@@ -1,43 +1,23 @@
 package com.formulae.chef.services.persistence
 
-import android.util.Log
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.MutableData
-import com.google.firebase.database.Transaction
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.tasks.await
 
 class BetaQuotaRepositoryImpl(
     override val uid: String,
-    private val database: FirebaseDatabase = FirebaseInstance.database
+    private val firestore: FirebaseFirestore = FirebaseInstance.firestore
 ) : BetaQuotaRepository {
-    private val _quotaKey = "users/$uid/betaInteractionCount"
 
+    // Transaction (not FieldValue.increment) so the new value is returned atomically.
+    // Rules only accept an unchanged count or exactly +1; merge keeps the other user fields.
     override suspend fun incrementAndGet(): Int {
-        return suspendCancellableCoroutine { continuation ->
-            database.getReference(_quotaKey).runTransaction(object : Transaction.Handler {
-                override fun doTransaction(currentData: MutableData): Transaction.Result {
-                    val currentCount = currentData.getValue(Int::class.java) ?: 0
-                    currentData.value = currentCount + 1
-                    return Transaction.success(currentData)
-                }
-
-                override fun onComplete(
-                    error: DatabaseError?,
-                    committed: Boolean,
-                    currentData: DataSnapshot?
-                ) {
-                    if (error != null) {
-                        Log.e("BetaQuotaRepo", "Error incrementing beta interaction count", error.toException())
-                        continuation.resumeWithException(error.toException())
-                        return
-                    }
-                    continuation.resume(currentData?.getValue(Int::class.java) ?: 0)
-                }
-            })
-        }
+        val userRef = firestore.userDoc(uid)
+        return firestore.runTransaction { transaction ->
+            val current = transaction.get(userRef).getLong(FirestorePaths.BETA_INTERACTION_COUNT) ?: 0L
+            val next = current + 1
+            transaction.set(userRef, mapOf(FirestorePaths.BETA_INTERACTION_COUNT to next), SetOptions.merge())
+            next.toInt()
+        }.await()
     }
 }

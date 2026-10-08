@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.model
 
+import com.google.firebase.Timestamp
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -334,5 +335,28 @@ class DifficultyTest {
         assertEquals(Difficulty.EASY, Difficulty.valueOf("EASY"))
         assertEquals(Difficulty.MEDIUM, Difficulty.valueOf("MEDIUM"))
         assertEquals(Difficulty.HARD, Difficulty.valueOf("HARD"))
+    }
+
+    @Test
+    fun `updatedAtTimestamp maps updatedAt for Firestore`() {
+        val recipe = Recipe(updatedAt = "2025-02-12T13:58:18.650875+00:00")
+        assertEquals(1_739_368_698L, recipe.updatedAtTimestamp!!.seconds)
+
+        recipe.updatedAtTimestamp = Timestamp(1_739_368_698L, 0)
+        assertEquals("2025-02-12T13:58:18Z", recipe.updatedAt)
+    }
+
+    @Test
+    fun `updatedAtTimestamp setter with null clears updatedAt`() {
+        val recipe = Recipe(updatedAt = "2025-02-12T13:58:18Z")
+        recipe.updatedAtTimestamp = null
+        assertEquals("", recipe.updatedAt)
+    }
+
+    @Test
+    fun `Gson serialization ignores the Firestore-only timestamp accessor`() {
+        val json = Gson().toJson(Recipe(title = "Soppa", updatedAt = "2025-02-12T13:58:18Z"))
+        assertTrue(json.contains("\"updatedAt\":\"2025-02-12T13:58:18Z\""))
+        assertFalse(json.contains("updatedAtTimestamp"))
     }
 }

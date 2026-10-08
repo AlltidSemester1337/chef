@@ -7,7 +7,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, increment, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, getDoc, increment, setDoc, updateDoc } from 'firebase/firestore';
 
 const ALICE = 'alice';
 const BOB = 'bob';
@@ -49,6 +49,8 @@ describe('recipes', () => {
   it('denies non-owner update', () => assertFails(updateDoc(doc(db(BOB), 'recipes/r1'), { title: 'Gryta' })));
   it('allows owner to orphan (uid -> null)', () =>
     assertSucceeds(updateDoc(doc(db(ALICE), 'recipes/r1'), { uid: null })));
+  it('allows owner to orphan by deleting the uid field', () =>
+    assertSucceeds(updateDoc(doc(db(ALICE), 'recipes/r1'), { uid: deleteField() })));
   it('denies owner transferring to another uid', () =>
     assertFails(updateDoc(doc(db(ALICE), 'recipes/r1'), { uid: BOB })));
 
@@ -56,7 +58,8 @@ describe('recipes', () => {
   it('denies non-owner delete', () => assertFails(deleteDoc(doc(db(BOB), 'recipes/r1'))));
 
   it('denies everyone writing an orphaned recipe', async () => {
-    await seed('recipes/orphan', recipe(null));
+    const { uid, ...orphan } = recipe(ALICE);
+    await seed('recipes/orphan', orphan);
     await assertFails(updateDoc(doc(db(ALICE), 'recipes/orphan'), { title: 'x' }));
     await assertFails(updateDoc(doc(db(BOB), 'recipes/orphan'), { uid: BOB }));
   });

@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Before any actions are taken in new sessions, all documentation and instructions in ./.ai/ folder MUST be read.
 No files in this directory are allowed to edit unless explicitly instructed in prompt.
 
-- `.ai/database-schema.md` — Firebase Realtime Database schema (derived from the DB export). Reference this whenever working with data models, Firebase persistence, or the structure of `recipes` / `users` nodes.
+- `.ai/firestore-schema.md` — Firestore data model (collections, Timestamp/ordering conventions, security semantics). Reference this whenever working with data models or Firebase persistence. The app moved from Realtime Database to Firestore in CHE-50.
+- `.ai/database-schema.md` — legacy Firebase Realtime Database schema. Only relevant for the RTDB export that feeds the migration (`firestore-tools/`) and for `backend/rotw-job` until it is migrated.
 
 ## Project Overview
 
@@ -12,7 +13,7 @@ Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that g
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. Four properties must be set in `local.properties`: `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey`, `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON-extraction/preference/compaction text models). A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
+The project requires JDK 17 and Android SDK with platform 36. Three properties must be set in `local.properties`: `phoenixApiKey`, `gcpTtsApiKey`, `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON-extraction/preference/compaction text models). A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
 
 ```bash
 # Build the main Chef app
@@ -36,17 +37,29 @@ The project requires JDK 17 and Android SDK with platform 36. Four properties mu
 
 ## Database Schema Changes
 
-**Before making any changes to the Firebase Realtime Database schema, a backup of the current database state MUST be created first.**
+**Before making any changes to the database schema or migrating data, a backup of the current database state MUST be created first.**
 
-Run the following Firebase CLI command to export the full database to a timestamped local backup file:
+Backups contain user data and **must be stored outside the repository** (e.g. `~/chef-backups/` or `~/Downloads/`) — never in the working tree, not even in gitignored folders, so they can never end up in a commit or be packaged into the APK (see CHE-49). Always verify the file is non-empty: `firebase database:get / > file` creates the file even when the command fails.
+
+Realtime Database (until it is deleted after the CHE-50 cut-over):
 
 ```bash
-firebase database:get / --project $PROJECT_ID > db-backups/backup-$(date +%Y%m%d-%H%M%S).json
+cd firestore-tools && F=~/chef-backups/rtdb-backup-$(date +%Y%m%d-%H%M%S).json && npx firebase database:get / --project $PROJECT_ID > "$F" && ls -lh "$F"
 ```
 
-Backup files are stored in `db-backups/` (gitignored — never committed). Verify the backup file is non-empty before proceeding with any schema changes.
+Firestore: `gcloud firestore export gs://<bucket>/<prefix> --project $PROJECT_ID` (needs a Cloud Storage bucket — ask before creating one, it incurs a small storage cost).
 
 **This step is mandatory — no schema changes may proceed without a confirmed backup.**
+
+### Firestore tooling (`firestore-tools/`)
+
+Node package with the security-rule tests (`firestore.rules` at the repo root) and the RTDB → Firestore migration script. See `firestore-tools/README.md`.
+
+```bash
+cd firestore-tools && npm install && npm test   # rules + migration tests in the Firestore emulator
+```
+
+Any change to `firestore.rules` must come with a rule test in `firestore-tools/test/rules.test.js`.
 
 ## Development Practices
 
@@ -80,7 +93,7 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 
 **Services layer:**
 - `services/authentication/` — `UserSessionService` interface with `UserSessionServiceFirebaseImpl` (Firebase Auth with `callbackFlow` for auth state).
-- `services/persistence/` — `RecipeRepository` interface with `RecipeRepositoryImpl` (Firebase Realtime Database). `ChatHistoryRepository` interface with `ChatHistoryRepositoryImpl` (persists chat to Firebase under `users/{uid}/chat_history`). `FirebaseInstance` singleton for DB access.
+- `services/persistence/` — repository interfaces with Firestore implementations (`RecipeRepositoryImpl`, `RecipeVariantRepositoryImpl`, `RecipeListRepositoryImpl`, `ChatHistoryRepositoryImpl`, `LikedMessagesRepositoryImpl`, `UserPreferencesRepositoryImpl`, `CookingResourcesRepositoryImpl`, `BetaQuotaRepositoryImpl`). `FirebaseInstance` holds the Firestore instance; `FirestorePaths` the collection/field names. Writes to the `users/{uid}` document must use `SetOptions.merge()`/`update()` — a plain `set()` would drop `betaInteractionCount`, which the rules reject.
 - `services/voice/` — `SpeechInputManager` (wraps Android `SpeechRecognizer`), `GcpTextToSpeechService` (GCP Cloud TTS REST, Chirp 3 HD), `AudioPlayer` (in-memory MP3 via `MediaPlayer`). All three are instantiated at the composable layer via `rememberVoiceController()` in `feature/chat/ui/VoiceController.kt`.
 
 **ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. Assets are shipped verbatim in the APK, so `src/main/assets/` may only hold `chat_system_prompt.txt` (enforced by the `verifyAssets` Gradle task) — never credentials or DB exports.
@@ -88,6 +101,7 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 ### Key Design Decisions
 
 - `Recipe.copyOf()` is a custom copy method (not the data class `copy()`) because Firebase deserialization requires mutable `var` fields with `@PropertyName` annotations that don't work correctly with Kotlin's generated `copy()`.
+- Domain models keep timestamps as ISO-8601 `String`s; Firestore stores them as `Timestamp`. Each model has an `@Exclude`d string field plus a `…Timestamp` accessor annotated `@PropertyName("<field>")` that converts via `FirestoreTime`. Firestore auto-IDs are random, so ordering always comes from a timestamp field, never from document IDs. Orphaned recipes have the `uid` field absent (not `null`) because `Recipe.uid` is non-null.
 - Chat history persistence uses a custom `Content`/`Part` data class pair in `ChatHistoryRepositoryImpl` as an intermediary for Firebase serialization, then maps to `com.google.firebase.vertexai.type.Content`.
 - OpenTelemetry spans wrap all generative AI calls (`generateChatModelResponse`, `generateJsonModelResponse`, `generateImage`) with LLM-specific attributes for Phoenix Arize eval.
 - Voice I/O (mic input, TTS playback) is wired at the composable layer, not the ViewModel layer — `OverlayChatViewModel` has no Application context, and audio I/O is transient UI state. The shared `rememberVoiceController()` composable in `VoiceController.kt` encapsulates all voice lifecycle management for both chat interfaces.
@@ -142,19 +156,19 @@ Use `/adb-troubleshoot` to run a guided troubleshooting session against the conn
 
 ## Integration Tests
 
-Integration tests for Firebase services (Realtime Database, Authentication) live in `vertexai/app/src/androidTest/`. They require the **Firebase Emulator Suite** to be running locally.
+Integration tests for the Firestore repositories live in `vertexai/app/src/androidTest/.../persistence/`. They run against the **Firestore + Auth emulators with the production `firestore.rules`**, signing in as fresh anonymous users (see `FirestoreEmulator.kt`).
 
 ### Setup
 
 ```bash
-# Install Firebase CLI (if not installed)
-npm install -g firebase-tools
+# Firebase CLI is a local devDependency of firestore-tools/ (Node 18 compatible)
+cd firestore-tools && npm install
 
-# Start emulators (from project root)
-firebase emulators:start --only database,auth
+# Use the project_id from google-services.json — the emulators reject other project IDs (nothing reaches production)
+npx firebase emulators:start --only firestore,auth --project $PROJECT_ID
 ```
 
-Default emulator ports: `9000` (Realtime Database), `9099` (Authentication).
+Default emulator ports: `8080` (Firestore), `9099` (Authentication). Tests reach the host via `10.0.2.2`, so they need an Android **emulator** (not a physical device).
 
 ### Running
 

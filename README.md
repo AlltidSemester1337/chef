@@ -11,11 +11,11 @@ The following files are **gitignored** and must be obtained from the team before
 
 | File | Purpose |
 |------|---------|
-| `local.properties` | Must contain `firebaseDbUrl`, `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models). Optional for Play releases: `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword` (upload-key signing — see [Release build](#release-build)) |
+| `local.properties` | Must contain `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models). Optional for Play releases: `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword` (upload-key signing — see [Release build](#release-build)) |
 | `vertexai/app/google-services.json` | Firebase / GCP service account credentials |
 | `vertexai/app/src/main/assets/chat_system_prompt.txt` | Main chat system prompt — **required at runtime; app crashes on launch without it** |
 
-> **Never put credentials or data exports in `src/*/assets/`.** Assets are shipped verbatim in the APK/AAB and anyone with the app can read them. The `verifyAssets` task (runs before every build) fails if anything other than `chat_system_prompt.txt` is there. DB exports belong in `db-backups/`.
+> **Never put credentials or data exports in `src/*/assets/`.** Assets are shipped verbatim in the APK/AAB and anyone with the app can read them. The `verifyAssets` task (runs before every build) fails if anything other than `chat_system_prompt.txt` is there. DB exports belong outside the repository entirely (e.g. `~/chef-backups/`).
 
 Build and run the app from the `vertexai/app` module. JDK 17 is required — prefix Gradle commands with `JAVA_HOME=/path/to/jdk-17` if your system default differs.
 

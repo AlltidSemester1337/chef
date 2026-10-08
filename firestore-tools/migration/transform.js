@@ -83,10 +83,11 @@ export function transform(rtdb) {
 
   for (const [id, raw] of entries(rtdb.recipes)) {
     const recipe = arrayFields(raw, ['ingredients', 'instructions', 'nutrientsPerServing', 'tags']);
+    // Orphaned recipes have NO uid field (not null): Android's Recipe.uid is a non-null String.
+    if (recipe.uid == null) delete recipe.uid;
     add(`recipes/${id}`, {
       ...recipe,
       id,
-      uid: recipe.uid ?? null,
       isFavourite: recipe.isFavourite ?? false,
       updatedAt: timestamp(raw.updatedAt, id, `recipes/${id}.updatedAt`, warnings)
     });
@@ -155,7 +156,7 @@ export function transform(rtdb) {
     }
 
     for (const [id, raw] of entries(user.lists)) {
-      add(`users/${uid}/lists/${id}`, { ...raw, id, recipeIds: toArray(raw.recipeIds) });
+      add(`users/${uid}/lists/${id}`, { ...raw, id, recipeIds: toArray(raw.recipeIds), createdAt: pushIdToDate(id) });
     }
   }
 

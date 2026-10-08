@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.model
 
+import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -51,5 +52,14 @@ class RecipeOfTheMonthTest {
         val rotw = RecipeOfTheMonth(recipeId = "abc", videoUrl = "")
 
         assertTrue(rotw.videoUrl.isEmpty())
+    }
+
+    @Test
+    fun createdAtTimestamp_mapsCreatedAtForFirestore() {
+        val rotm = RecipeOfTheMonth(createdAt = "2026-04-05T08:00:00Z")
+        assertEquals(1_775_376_000L, rotm.createdAtTimestamp!!.seconds)
+
+        rotm.createdAtTimestamp = Timestamp(1_775_376_000L, 0)
+        assertEquals("2026-04-05T08:00:00Z", rotm.createdAt)
     }
 }

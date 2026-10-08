@@ -1,10 +1,15 @@
 package com.formulae.chef.feature.model
 
-import com.google.firebase.database.PropertyName
+import com.formulae.chef.services.persistence.FirestoreTime
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Exclude
+import com.google.firebase.firestore.PropertyName
 
 data class RecipeVariant(
     var id: String? = null,
     var label: String = "",
+    @get:Exclude
+    @set:Exclude
     var createdAt: String = "",
     @get:PropertyName("isPinned")
     @set:PropertyName("isPinned")
@@ -21,4 +26,13 @@ data class RecipeVariant(
     var difficulty: Difficulty? = Difficulty.EASY,
     var instructions: List<String> = listOf(),
     var tipsAndTricks: String? = null
-)
+) {
+    /** Firestore mapping of [createdAt], stored as a Timestamp. */
+    @get:PropertyName("createdAt")
+    @set:PropertyName("createdAt")
+    var createdAtTimestamp: Timestamp?
+        get() = FirestoreTime.toTimestamp(createdAt)
+        set(value) {
+            createdAt = FirestoreTime.toIso(value)
+        }
+}

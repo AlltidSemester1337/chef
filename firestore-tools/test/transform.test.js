@@ -60,10 +60,10 @@ describe('transform', () => {
     assert.deepEqual(r.tags, ['lamb', 'greek']);
   });
 
-  it('normalises an orphaned recipe (null uid, default isFavourite, sparse array)', () => {
+  it('normalises an orphaned recipe (no uid field, default isFavourite, sparse array)', () => {
     const r = out[`recipes/${RECIPE_ORPHAN}`];
     assert.equal(r.id, RECIPE_ORPHAN);
-    assert.equal(r.uid, null);
+    assert.equal('uid' in r, false);
     assert.equal(r.isFavourite, false);
     assert.equal(r.updatedAt.getTime(), T2);
     assert.deepEqual(r.ingredients.map((i) => i.name), ['salt', 'peppar']);
@@ -99,8 +99,8 @@ describe('transform', () => {
     assert.deepEqual(out[`users/alice/chat_history/${CHAT_2}`].parts, [{ text: '**Svar**' }]);
   });
 
-  it('defaults list id and recipeIds', () => {
-    assert.deepEqual(out[`users/bob/lists/${LIST}`], { name: 'Tom lista', id: LIST, recipeIds: [] });
+  it('defaults list id and recipeIds, and adds createdAt from the push ID', () => {
+    assert.deepEqual(out[`users/bob/lists/${LIST}`], { name: 'Tom lista', id: LIST, recipeIds: [], createdAt: new Date(T2) });
     assert.deepEqual(out[`users/alice/lists/${LIST}`].recipeIds, [RECIPE_A]);
   });
 
