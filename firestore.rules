@@ -44,14 +44,13 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // Pass 2 exercise (Kalle): betaInteractionCount may only stay unchanged or grow by exactly 1.
-      // - Absent counts as 0 (both before and after the write).
-      // - On create there is no existing document: `resource` is null.
-      // - request.resource.data is the document AFTER the write (incl. FieldValue.increment),
-      //   resource.data is the document BEFORE.
-      // - Useful: map.get(key, default), `let x = ...;` inside functions, `x is int`.
+      // betaInteractionCount may only stay unchanged or grow by exactly 1 (absent = 0).
+      // request.resource.data is the doc AFTER the write (incl. FieldValue.increment);
+      // resource is null on create.
       function betaCountValid() {
-        return false; // TODO(Kalle)
+        let before = resource == null ? 0 : resource.data.get('betaInteractionCount', 0);
+        let after = request.resource.data.get('betaInteractionCount', 0);
+        return after is int && (after == before || after == before + 1);
       }
 
       allow read: if isUser(uid);
