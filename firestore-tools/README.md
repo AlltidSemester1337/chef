@@ -31,4 +31,4 @@ Set `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` to target a running emulator instea
 Notes:
 - Every lossy step is reported as a warning (unknown nodes/fields, unparseable timestamps). Read them before `--apply`.
 - Re-running never deletes: documents that exist only in Firestore are left alone and show up as count mismatches in `--verify`.
-- Export files contain user data — keep them in `db-backups/` (gitignored) and delete after the cut-over.
+- Export files contain user data — keep them **outside the repo** (e.g. `~/Downloads/` or `~/chef-backups/`), never in the working tree, so they can't end up in a commit or the APK. Delete them after the cut-over.
