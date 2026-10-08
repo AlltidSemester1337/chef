@@ -116,12 +116,13 @@ class RecipeRepositoryImplIntegrationTest {
     }
 
     @Test
-    fun loadAllRecipes_isSortedByUpdatedAt() = runBlocking {
+    fun loadRecipes_areSortedNewestFirst() = runBlocking {
         val uid = signInAsNewUser()
         repository.saveRecipe(Recipe(id = "late-$uid", uid = uid, title = "late", updatedAt = "2026-02-01T00:00:00Z"))
         repository.saveRecipe(Recipe(id = "early-$uid", uid = uid, title = "early", updatedAt = "2026-01-01T00:00:00Z"))
 
         val mine = awaitCondition({ repository.loadUserRecipes(uid) }) { it.size == 2 }
-        assertEquals(listOf("early", "late"), mine.map { it.title })
+        assertEquals(listOf("late", "early"), mine.map { it.title })
+        assertEquals(listOf("late", "early"), repository.loadAllRecipes().filter { it.uid == uid }.map { it.title })
     }
 }

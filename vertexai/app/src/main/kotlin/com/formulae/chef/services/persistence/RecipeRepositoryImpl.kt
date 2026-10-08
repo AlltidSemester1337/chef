@@ -31,12 +31,12 @@ class RecipeRepositoryImpl(
             .get()
             .await()
             .toObjects(Recipe::class.java)
-            .sortedBy { it.updatedAtTimestamp }
+            .sortedByDescending { it.updatedAtTimestamp }
     }
 
-    // Sorted client-side (oldest first, like RTDB push-ID order) to avoid a composite index.
+    // Newest first, sorted client-side to avoid a composite index. The collection screen shows this order.
     override suspend fun loadAllRecipes(): List<Recipe> {
-        return recipes.get().await().toObjects(Recipe::class.java).sortedBy { it.updatedAtTimestamp }
+        return recipes.get().await().toObjects(Recipe::class.java).sortedByDescending { it.updatedAtTimestamp }
     }
 
     override fun removeRecipe(recipeId: String) {

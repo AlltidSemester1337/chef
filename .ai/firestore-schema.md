@@ -68,7 +68,7 @@ Queries:
 - By tag: `where tags array-contains <tag>` (max one `array-contains` per query).
 - Single recipe: `doc(recipeId)`.
 
-Sorting is done client-side by `updatedAt` (the collection is small). No composite indexes needed.
+Sorting is done client-side, newest `updatedAt` first (the collection is small). No composite indexes needed.
 
 ### `recipes/{recipeId}/variants/{variantId}`
 
