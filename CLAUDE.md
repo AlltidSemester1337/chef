@@ -5,7 +5,7 @@ Before any actions are taken in new sessions, all documentation and instructions
 No files in this directory are allowed to edit unless explicitly instructed in prompt.
 
 - `.ai/firestore-schema.md` — Firestore data model (collections, Timestamp/ordering conventions, security semantics). Reference this whenever working with data models or Firebase persistence. The app moved from Realtime Database to Firestore in CHE-50.
-- `.ai/database-schema.md` — legacy Firebase Realtime Database schema. Only relevant for the RTDB export that feeds the migration (`firestore-tools/`).
+- `.ai/database-schema.md` — legacy Firebase Realtime Database schema. The RTDB was emptied and closed on 2026-10-08 (CHE-50); only relevant when reading old RTDB backups with the migration tooling (`firestore-tools/`).
 
 ## Project Overview
 
@@ -42,15 +42,11 @@ The project requires JDK 17 and Android SDK with platform 36. Three properties m
 
 **Before making any changes to the database schema or migrating data, a backup of the current database state MUST be created first.**
 
-Backups contain user data and **must be stored outside the repository** (e.g. `~/chef-backups/` or `~/Downloads/`) — never in the working tree, not even in gitignored folders, so they can never end up in a commit or be packaged into the APK (see CHE-49). Always verify the file is non-empty: `firebase database:get / > file` creates the file even when the command fails.
-
-Realtime Database (until it is deleted after the CHE-50 cut-over):
-
-```bash
-cd firestore-tools && F=~/chef-backups/rtdb-backup-$(date +%Y%m%d-%H%M%S).json && npx firebase database:get / --project $PROJECT_ID > "$F" && ls -lh "$F"
-```
+Backups contain user data and **must be stored outside the repository** (e.g. `~/chef-backups/` or `~/Downloads/`) — never in the working tree, not even in gitignored folders, so they can never end up in a commit or be packaged into the APK (see CHE-49). Always verify the backup is non-empty: shell redirection (`cmd > file`) creates the file even when the export command fails.
 
 Firestore: `gcloud firestore export gs://<bucket>/<prefix> --project $PROJECT_ID` (needs a Cloud Storage bucket — ask before creating one, it incurs a small storage cost).
+
+The Realtime Database is retired (emptied and closed with deny-all rules in CHE-50). Its final backups live in `~/chef-backups/` and must be kept.
 
 **This step is mandatory — no schema changes may proceed without a confirmed backup.**
 
