@@ -2,8 +2,7 @@ package com.formulae.chef.rotw.model
 
 /**
  * Lightweight recipe representation for backend use.
- * Maps to the Firebase RTDB `recipes/{id}` node.
- * Uses mutable var fields with default values for Firebase Admin SDK deserialization.
+ * Built from a Firestore `recipes/{id}` document (see `recipeDataFrom`).
  */
 data class RecipeData(
     var id: String = "",

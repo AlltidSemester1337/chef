@@ -5,7 +5,7 @@ Before any actions are taken in new sessions, all documentation and instructions
 No files in this directory are allowed to edit unless explicitly instructed in prompt.
 
 - `.ai/firestore-schema.md` — Firestore data model (collections, Timestamp/ordering conventions, security semantics). Reference this whenever working with data models or Firebase persistence. The app moved from Realtime Database to Firestore in CHE-50.
-- `.ai/database-schema.md` — legacy Firebase Realtime Database schema. Only relevant for the RTDB export that feeds the migration (`firestore-tools/`) and for `backend/rotw-job` until it is migrated.
+- `.ai/database-schema.md` — legacy Firebase Realtime Database schema. Only relevant for the RTDB export that feeds the migration (`firestore-tools/`).
 
 ## Project Overview
 

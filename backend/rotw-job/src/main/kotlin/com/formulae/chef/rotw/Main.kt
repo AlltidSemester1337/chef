@@ -6,7 +6,7 @@ import kotlinx.coroutines.runBlocking
 /**
  * Set ROTW_RECOVER_OPERATION (plus ROTW_RECOVER_RECIPE_ID, ROTW_RECOVER_RECIPE_TITLE,
  * ROTW_RECOVER_MONTH_OF) to complete a run whose Veo operation already succeeded but
- * whose upload/RTDB write step crashed, instead of running the normal monthly job.
+ * whose upload/Firestore write step crashed, instead of running the normal monthly job.
  */
 fun main() = runBlocking {
     val operationName = System.getenv("ROTW_RECOVER_OPERATION")

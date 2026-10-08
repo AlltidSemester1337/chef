@@ -99,7 +99,7 @@ Deleting a recipe does **not** delete its `variants` subcollection (same orphani
 
 ## `recipe_of_the_month/{pushId}`
 
-Written only by `rotw-job` (Admin SDK). The job picks a *random* not-yet-featured favourite; the app shows the *latest* record.
+Written only by `rotw-job` (Admin SDK, `backend/rotw-job/.../FirebaseAdminService.kt`; needs `roles/datastore.user`). The job picks a *random* not-yet-featured favourite; the app shows the *latest* record.
 
 ```
 RecipeOfTheMonth {
