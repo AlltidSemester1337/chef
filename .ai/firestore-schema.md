@@ -9,7 +9,7 @@ Target data model for the RTDB → Firestore migration (CHE-50, "Fas 0"). Until 
 | Project | `idyllic-bloom-425307-r6` | |
 | Database ID | `(default)` | Free tier only applies to `(default)` |
 | Edition / mode | Standard edition, Native mode | |
-| Location | `europe-north1` (regional) | Lowest latency from Sweden, regional pricing; multi-region (`eur3`) not worth ~2× price at this scale. **Cannot be changed after creation.** |
+| Location | `europe-north2` (Stockholm, regional) | Users are mostly in Sweden: lowest latency and data stays in Sweden. Same price class as `europe-north1`; multi-region (`eur3`) not worth ~2× price at this scale. Cloud Run is available here too, so the backend can be co-located. **Cannot be changed after creation.** |
 
 Sizing assumption: ≤ 100 concurrent users, read-heavy, writes may be slightly slower. Expected cost: within the free tier (50k reads / 20k writes / 20k deletes per day, 1 GiB).
 

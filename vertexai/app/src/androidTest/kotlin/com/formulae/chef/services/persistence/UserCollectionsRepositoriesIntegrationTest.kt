@@ -27,6 +27,7 @@ class UserCollectionsRepositoriesIntegrationTest {
         val repository = RecipeListRepositoryImpl(firestore = firestore)
 
         val first = repository.createList(uid, "Vardag")
+        awaitCondition({ repository.loadUserLists(uid) }) { it.size == 1 } // distinct createdAt
         val second = repository.createList(uid, "Fest")
         val lists = awaitCondition({ repository.loadUserLists(uid) }) { it.size == 2 }
         assertEquals(listOf("Vardag", "Fest"), lists.map { it.name })
