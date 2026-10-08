@@ -30,7 +30,8 @@ class RecipeListRepositoryImpl(
     override fun createList(uid: String, name: String): RecipeList {
         val newRef = lists(uid).document()
         val list = RecipeList(id = newRef.id, name = name)
-        val data = mapOf("id" to list.id, "name" to list.name, RECIPE_IDS to list.recipeIds, CREATED_AT to Timestamp.now())
+        val data =
+            mapOf("id" to list.id, "name" to list.name, RECIPE_IDS to list.recipeIds, CREATED_AT to Timestamp.now())
         newRef.set(data)
             .addOnSuccessListener { Log.d("RecipeListRepo", "List '${list.name}' created") }
             .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to create list", e) }

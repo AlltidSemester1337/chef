@@ -37,8 +37,12 @@ class FirebaseAdminServiceEmulatorTest {
         val service = FirebaseAdminService(firestore, storageBucket = "unused")
 
         firestore.collection("recipes").document("fav1").set(
-            mapOf("title" to "Moussaka", "isFavourite" to true, "uid" to "u1",
-                "ingredients" to listOf(mapOf("name" to "lamm", "quantity" to "500", "unit" to "g")))
+            mapOf(
+                "title" to "Moussaka",
+                "isFavourite" to true,
+                "uid" to "u1",
+                "ingredients" to listOf(mapOf("name" to "lamm", "quantity" to "500", "unit" to "g"))
+            )
         ).get()
         firestore.collection("recipes").document("fav2").set(mapOf("title" to "Soppa", "isFavourite" to true)).get()
         firestore.collection("recipes").document("plain").set(mapOf("title" to "Gryta", "isFavourite" to false)).get()
@@ -59,7 +63,9 @@ class FirebaseAdminServiceEmulatorTest {
         assertTrue(months.single().get("createdAt") is Timestamp)
         assertEquals("2026-11", months.single().getString("monthOf"))
         assertEquals(setOf("fav1", "fav2"), service.loadSelectedRecipeIds())
-        assertTrue(firestore.collection("video_generation_history").document("fav1").get().get().get("selectedAt") is Timestamp)
+        assertTrue(
+            firestore.collection("video_generation_history").document("fav1").get().get().get("selectedAt") is Timestamp
+        )
         assertEquals("https://v", firestore.collection("recipes").document("fav1").get().get().getString("videoUrl"))
         // update() must not clobber the rest of the recipe
         assertEquals("u1", firestore.collection("recipes").document("fav1").get().get().getString("uid"))

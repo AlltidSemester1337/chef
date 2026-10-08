@@ -45,7 +45,6 @@ data class Recipe(
             updatedAt = FirestoreTime.toIso(value)
         }
 
-
     fun copyOf(
         id: String? = this.id,
         uid: String = this.uid,

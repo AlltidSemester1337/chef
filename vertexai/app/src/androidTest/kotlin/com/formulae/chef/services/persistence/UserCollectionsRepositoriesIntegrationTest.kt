@@ -40,10 +40,16 @@ class UserCollectionsRepositoriesIntegrationTest {
         assertEquals(listOf("r1", "r2"), withRecipes[0].recipeIds)
 
         repository.removeRecipeFromList(uid, first.id!!, "r1")
-        assertEquals(listOf("r2"), awaitCondition({ repository.loadUserLists(uid) }) { it[0].recipeIds.size == 1 }[0].recipeIds)
+        assertEquals(
+            listOf("r2"),
+            awaitCondition({ repository.loadUserLists(uid) }) { it[0].recipeIds.size == 1 }[0].recipeIds
+        )
 
         repository.deleteList(uid, second.id!!)
-        assertEquals(listOf("Vardag"), awaitCondition({ repository.loadUserLists(uid) }) { it.size == 1 }.map { it.name })
+        assertEquals(
+            listOf("Vardag"),
+            awaitCondition({ repository.loadUserLists(uid) }) { it.size == 1 }.map { it.name }
+        )
     }
 
     @Test
@@ -60,7 +66,8 @@ class UserCollectionsRepositoriesIntegrationTest {
         assertTrue(liked[0].second.likedAt.isNotBlank())
 
         repository.deleteMessages(listOf(firstId))
-        assertEquals(listOf("Andra"), awaitCondition({ repository.loadLikedMessages() }) { it.size == 1 }.map { it.second.text })
+        val remaining = awaitCondition({ repository.loadLikedMessages() }) { it.size == 1 }
+        assertEquals(listOf("Andra"), remaining.map { it.second.text })
     }
 
     @Test
@@ -81,7 +88,9 @@ class UserCollectionsRepositoriesIntegrationTest {
         assertFalse(loaded.isPinned)
 
         repository.updateVariantIsPinned(recipeId, variantId, true)
-        assertTrue(awaitCondition({ repository.loadVariantsForRecipe(recipeId) }) { it.single().isPinned }.single().isPinned)
+        assertTrue(
+            awaitCondition({ repository.loadVariantsForRecipe(recipeId) }) { it.single().isPinned }.single().isPinned
+        )
 
         repository.deleteVariant(recipeId, variantId)
         assertTrue(awaitCondition({ repository.loadVariantsForRecipe(recipeId) }) { it.isEmpty() }.isEmpty())
