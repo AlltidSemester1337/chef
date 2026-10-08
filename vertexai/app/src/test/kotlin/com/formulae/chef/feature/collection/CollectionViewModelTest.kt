@@ -63,6 +63,34 @@ class CollectionViewModelTest {
     }
 
     @Test
+    fun `onCollectionShown does not reload on first show`() = runTest(testDispatcher) {
+        val repository = FakeRecipeRepository(sampleRecipes)
+        val viewModel = CollectionViewModel(repository, FakeRecipeListRepository(), FakeRecipeVariantRepository())
+
+        viewModel.onCollectionShown()
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loadAllCalls)
+    }
+
+    @Test
+    fun `onCollectionShown reloads recipes when the screen is re-entered`() = runTest(testDispatcher) {
+        val repository = FakeRecipeRepository(sampleRecipes)
+        val viewModel = CollectionViewModel(repository, FakeRecipeListRepository(), FakeRecipeVariantRepository())
+        viewModel.onCollectionShown()
+        advanceUntilIdle()
+
+        val saved = Recipe(id = "new", uid = "u", title = "Saved from chat", isFavourite = true)
+        repository.recipes = listOf(saved) + sampleRecipes
+        viewModel.onCollectionShown()
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadAllCalls)
+        assertEquals("Saved from chat", viewModel.uiState.value.recipes.first().title)
+        assertEquals(sampleRecipes.size + 1, viewModel.uiState.value.recipes.size)
+    }
+
+    @Test
     fun `init with empty repository produces empty state`() = runTest(testDispatcher) {
         val repository = FakeRecipeRepository(emptyList())
         val viewModel = CollectionViewModel(repository, FakeRecipeListRepository(), FakeRecipeVariantRepository())
@@ -825,8 +853,10 @@ private class FakeRecipeVariantRepository(
 }
 
 private class FakeRecipeRepository(
-    private val recipes: List<Recipe>
+    var recipes: List<Recipe>
 ) : RecipeRepository {
+    var loadAllCalls = 0
+
     val savedRecipes = mutableListOf<Recipe>()
     val removedRecipeIds = mutableListOf<String>()
     val removedUidRecipeIds = mutableListOf<String>()
@@ -840,6 +870,7 @@ private class FakeRecipeRepository(
     }
 
     override suspend fun loadAllRecipes(): List<Recipe> {
+        loadAllCalls++
         return recipes
     }
 

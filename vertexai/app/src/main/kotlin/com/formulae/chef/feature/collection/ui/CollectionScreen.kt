@@ -190,6 +190,11 @@ internal fun CollectionRoute(
         collectionViewModel.setCurrentUser(currentUser?.uid)
     }
 
+    // Re-entering the screen reuses the ViewModel; reload so recipes saved elsewhere show up.
+    LaunchedEffect(Unit) {
+        collectionViewModel.onCollectionShown()
+    }
+
     val recipesSourceList = if (recipesSource == RecipeSource.SAVED && currentUser != null) {
         getUserFavouritesRecipeSourceList(collectionUiState, currentUser)
     } else {
