@@ -1,15 +1,10 @@
 package com.formulae.chef.services.persistence
 
-import com.formulae.chef.BuildConfig
-import com.google.firebase.FirebaseApp
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 
 object FirebaseInstance {
-    val database by lazy {
-        Firebase.database(
-            FirebaseApp.getInstance(),
-            BuildConfig.firebaseDbUrl
-        )
-    }
+    /** The `(default)` Firestore database (europe-north2). Schema: `.ai/firestore-schema.md`. */
+    val firestore: FirebaseFirestore by lazy { Firebase.firestore }
 }

@@ -1,6 +1,9 @@
 package com.formulae.chef.feature.model
 
-import com.google.firebase.database.PropertyName
+import com.formulae.chef.services.persistence.FirestoreTime
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Exclude
+import com.google.firebase.firestore.PropertyName
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
@@ -24,6 +27,8 @@ data class Recipe(
 
     var imageUrl: String? = null,
     var videoUrl: String? = null,
+    @get:Exclude
+    @set:Exclude
     var updatedAt: String = "",
     @get:PropertyName("isFavourite")
     @set:PropertyName("isFavourite")
@@ -31,6 +36,14 @@ data class Recipe(
     var copyId: String? = null,
     var tags: List<String> = emptyList()
 ) {
+    /** Firestore mapping of [updatedAt], stored as a Timestamp. */
+    @get:PropertyName("updatedAt")
+    @set:PropertyName("updatedAt")
+    var updatedAtTimestamp: Timestamp?
+        get() = FirestoreTime.toTimestamp(updatedAt)
+        set(value) {
+            updatedAt = FirestoreTime.toIso(value)
+        }
 
     fun copyOf(
         id: String? = this.id,

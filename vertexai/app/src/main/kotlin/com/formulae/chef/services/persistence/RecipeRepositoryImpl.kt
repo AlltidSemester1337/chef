@@ -3,87 +3,76 @@ package com.formulae.chef.services.persistence
 import android.util.Log
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeOfTheMonth
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
-private const val RECIPES_KEY = "recipes"
-private const val RECIPE_OF_THE_MONTH_KEY = "recipe_of_the_month"
-
 class RecipeRepositoryImpl(
-    private val database: FirebaseDatabase = FirebaseInstance.database
+    private val firestore: FirebaseFirestore = FirebaseInstance.firestore
 ) : RecipeRepository {
-    private val recipesRef = database.getReference(RECIPES_KEY)
+    private val recipes get() = firestore.collection(FirestorePaths.RECIPES)
 
     override fun saveRecipe(recipe: Recipe) {
-        val reference = database.getReference(RECIPES_KEY)
-        val documentRef = recipe.id?.let { reference.child(it) } ?: reference.push()
-        val recipeWithId = recipe.copy(id = documentRef.key)
+        val documentRef = recipe.id?.let { recipes.document(it) } ?: recipes.document()
+        val recipeWithId = recipe.copy(id = documentRef.id)
 
-        documentRef.setValue(recipeWithId).addOnCompleteListener { task ->
+        documentRef.set(recipeWithId).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("FirebaseDB", "Recipe $documentRef saved successfully!")
+                Log.d("Firestore", "Recipe ${documentRef.id} saved successfully!")
             } else {
-                Log.e("FirebaseDB", "Failed to add new recipe: ", task.exception)
+                Log.e("Firestore", "Failed to add new recipe: ", task.exception)
             }
         }
     }
 
     override suspend fun loadUserRecipes(uid: String): List<Recipe> {
-        return recipesRef.orderByChild("uid")
-            .equalTo(uid)
+        return recipes.whereEqualTo("uid", uid)
             .get()
             .await()
-            .children
-            .mapNotNull { snapshot ->
-                snapshot.getValue(Recipe::class.java)
-                    ?.copy(isFavourite = snapshot.child("isFavourite").getValue(Boolean::class.java) ?: false)
-            }
+            .toObjects(Recipe::class.java)
+            .sortedByDescending { it.updatedAtTimestamp }
     }
 
+    // Newest first, sorted client-side to avoid a composite index. The collection screen shows this order.
     override suspend fun loadAllRecipes(): List<Recipe> {
-        return recipesRef.get().await().children.mapNotNull { snapshot ->
-            snapshot.getValue(Recipe::class.java)
-                ?.copy(isFavourite = snapshot.child("isFavourite").getValue(Boolean::class.java) ?: false)
-        }
+        return recipes.get().await().toObjects(Recipe::class.java).sortedByDescending { it.updatedAtTimestamp }
     }
 
     override fun removeRecipe(recipeId: String) {
-        val reference = database.getReference(RECIPES_KEY)
-
-        reference.child(recipeId).removeValue()
+        recipes.document(recipeId).delete()
             .addOnSuccessListener {
-                Log.d("FirebaseDB", "Recipe $recipeId deleted successfully")
+                Log.d("Firestore", "Recipe $recipeId deleted successfully")
             }
             .addOnFailureListener { e ->
-                Log.e("FirebaseDB", "Error deleting recipe", e)
+                Log.e("Firestore", "Error deleting recipe", e)
             }
     }
 
+    // Orphaned = uid field absent (not null): Recipe.uid is a non-null String, so toObject() would
+    // throw on an explicit null.
     override fun removeRecipeUid(recipeId: String) {
-        val reference = database.getReference(RECIPES_KEY)
-
-        reference.child(recipeId).updateChildren(mapOf("uid" to null))
+        recipes.document(recipeId).update("uid", FieldValue.delete())
             .addOnSuccessListener {
-                Log.d("FirebaseDB", "Recipe $recipeId updated successfully")
+                Log.d("Firestore", "Recipe $recipeId updated successfully")
             }
             .addOnFailureListener { e ->
-                Log.e("FirebaseDB", "Error updating recipe", e)
+                Log.e("Firestore", "Error updating recipe", e)
             }
     }
 
     override suspend fun getRecipeById(recipeId: String): Recipe? {
-        val snapshot = recipesRef.child(recipeId).get().await()
-        return snapshot.getValue(Recipe::class.java)
-            ?.copy(isFavourite = snapshot.child("isFavourite").getValue(Boolean::class.java) ?: false)
+        return recipes.document(recipeId).get().await().toObject(Recipe::class.java)
     }
 
     override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? {
-        return database.getReference(RECIPE_OF_THE_MONTH_KEY)
-            .limitToLast(1)
+        return firestore.collection(FirestorePaths.RECIPE_OF_THE_MONTH)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(1)
             .get()
             .await()
-            .children
+            .documents
             .firstOrNull()
-            ?.getValue(RecipeOfTheMonth::class.java)
+            ?.let { doc -> doc.toObject(RecipeOfTheMonth::class.java)?.apply { id = doc.id } }
     }
 }

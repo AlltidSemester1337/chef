@@ -30,7 +30,6 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val firebaseDbUrl: String = localProperties.getProperty("firebaseDbUrl")
 val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
 val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
 val bergetApiKey: String = localProperties.getProperty("bergetApiKey", "")
@@ -45,12 +44,6 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        buildConfigField(
-            "String",
-            "firebaseDbUrl",
-            "\"${firebaseDbUrl}\""
-        )
-
         buildConfigField(
             "String",
             "phoenixApiKey",
@@ -177,7 +170,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
-    implementation("com.google.firebase:firebase-database")
+    implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-appcheck-debug")
 

@@ -94,6 +94,7 @@ class CollectionViewModel(
     private var recipes: List<Recipe> = emptyList()
     private var cookingRecipeId: String? = null
     private var currentUid: String? = null
+    private var hasBeenShown = false
 
     init {
         fetchRecipes()
@@ -104,6 +105,16 @@ class CollectionViewModel(
             recipes = repository.loadAllRecipes()
             _uiState.value = CollectionUiState(recipes = recipes)
         }
+    }
+
+    /**
+     * Called each time the collection screen enters composition. The ViewModel outlives the screen
+     * (it is scoped to the back-stack entry), so on re-entry — e.g. back from chat after saving a
+     * recipe — the list is reloaded. The first call is skipped because `init` already loads it.
+     * The previous list stays visible until the reload completes.
+     */
+    fun onCollectionShown() {
+        if (hasBeenShown) fetchRecipes() else hasBeenShown = true
     }
 
     fun setCurrentUser(uid: String?) {

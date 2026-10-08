@@ -21,3 +21,8 @@ db-backups/
 # Release signing keystores (upload key) — never commit
 *.jks
 *.keystore
+
+# Firestore rules tests (CHE-50)
+firestore-tools/node_modules/
+firestore-debug.log
+ui-debug.log

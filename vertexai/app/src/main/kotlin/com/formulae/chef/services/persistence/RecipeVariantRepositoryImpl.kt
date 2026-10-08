@@ -2,56 +2,43 @@ package com.formulae.chef.services.persistence
 
 import android.util.Log
 import com.formulae.chef.feature.model.RecipeVariant
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
-private const val RECIPE_VARIANTS_KEY = "recipe_variants"
-
 class RecipeVariantRepositoryImpl(
-    private val database: FirebaseDatabase = FirebaseInstance.database
+    private val firestore: FirebaseFirestore = FirebaseInstance.firestore
 ) : RecipeVariantRepository {
 
+    private fun variants(recipeId: String) =
+        firestore.collection(FirestorePaths.RECIPES).document(recipeId).collection(FirestorePaths.VARIANTS)
+
     override suspend fun loadVariantsForRecipe(recipeId: String): List<RecipeVariant> {
-        return database.getReference(RECIPE_VARIANTS_KEY)
-            .child(recipeId)
-            .get()
-            .await()
-            .children
-            .mapNotNull { snapshot ->
-                snapshot.getValue(RecipeVariant::class.java)
-                    ?.copy(isPinned = snapshot.child("isPinned").getValue(Boolean::class.java) ?: false)
-            }
+        return variants(recipeId).get().await().toObjects(RecipeVariant::class.java)
     }
 
     override suspend fun saveVariant(recipeId: String, variant: RecipeVariant): String {
-        val ref = database.getReference(RECIPE_VARIANTS_KEY).child(recipeId)
-        val newRef = ref.push()
-        val id = newRef.key ?: ""
-        newRef.setValue(variant.copy(id = id)).await()
-        Log.d("FirebaseDB", "Variant $id saved successfully")
-        return id
+        val newRef = variants(recipeId).document()
+        newRef.set(variant.copy(id = newRef.id)).await()
+        Log.d("Firestore", "Variant ${newRef.id} saved successfully")
+        return newRef.id
     }
 
     override fun updateVariantIsPinned(recipeId: String, variantId: String, isPinned: Boolean) {
-        database.getReference(RECIPE_VARIANTS_KEY)
-            .child(recipeId)
-            .child(variantId)
-            .updateChildren(mapOf("isPinned" to isPinned))
+        variants(recipeId).document(variantId)
+            .update("isPinned", isPinned)
             .addOnFailureListener { e ->
-                Log.e("FirebaseDB", "Failed to update isPinned for variant $variantId", e)
+                Log.e("Firestore", "Failed to update isPinned for variant $variantId", e)
             }
     }
 
     override fun deleteVariant(recipeId: String, variantId: String) {
-        database.getReference(RECIPE_VARIANTS_KEY)
-            .child(recipeId)
-            .child(variantId)
-            .removeValue()
+        variants(recipeId).document(variantId)
+            .delete()
             .addOnSuccessListener {
-                Log.d("FirebaseDB", "Variant $variantId deleted successfully")
+                Log.d("Firestore", "Variant $variantId deleted successfully")
             }
             .addOnFailureListener { e ->
-                Log.e("FirebaseDB", "Failed to delete variant $variantId", e)
+                Log.e("Firestore", "Failed to delete variant $variantId", e)
             }
     }
 }

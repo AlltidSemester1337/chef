@@ -1,105 +1,73 @@
 package com.formulae.chef.services.persistence
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.firebase.database.FirebaseDatabase
+import com.formulae.chef.services.persistence.FirestoreEmulator.awaitCondition
+import com.formulae.chef.services.persistence.FirestoreEmulator.signInAsNewUser
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Integration tests for [ChatHistoryRepositoryImpl] against the Firebase Realtime Database emulator.
- *
- * Prerequisites:
- *   - Firebase Emulator Suite running: `firebase emulators:start --only database`
- *   - An Android emulator or connected device
- */
+/** [ChatHistoryRepositoryImpl] against the Firestore emulator with production rules. See [FirestoreEmulator]. */
 @RunWith(AndroidJUnit4::class)
 class ChatHistoryRepositoryImplIntegrationTest {
 
-    private lateinit var testDatabase: FirebaseDatabase
-    private lateinit var repository: ChatHistoryRepositoryImpl
+    private suspend fun newRepository() =
+        ChatHistoryRepositoryImpl(uid = signInAsNewUser(), firestore = FirestoreEmulator.firestore)
 
-    private val testUid = "test-chat-user"
-
-    @Before
-    fun setup() {
-        testDatabase = FirebaseDatabase.getInstance("http://10.0.2.2:9000?ns=chef-integration-test")
-        testDatabase.useEmulator("10.0.2.2", 9000)
-        repository = ChatHistoryRepositoryImpl(uid = testUid, database = testDatabase)
-    }
-
-    @After
-    fun tearDown() = runBlocking {
-        testDatabase.getReference("/").removeValue().await()
-    }
+    private suspend fun ChatHistoryRepositoryImpl.awaitEntries(count: Int) =
+        awaitCondition({ loadChatHistoryLastTwentyEntries() }) { it.size >= count }
 
     @Test
     fun loadChatHistoryLastTwentyEntries_returnsEmptyListWhenNoHistory() = runBlocking {
-        val history = repository.loadChatHistoryLastTwentyEntries()
-        assertTrue(history.isEmpty())
+        assertTrue(newRepository().loadChatHistoryLastTwentyEntries().isEmpty())
     }
 
     @Test
-    fun saveNewEntries_andLoad_preservesRoleAndText() = runBlocking {
-        val userEntry = Content(role = "user", parts = listOf(Part("What can I cook tonight?")))
-        val modelEntry = Content(role = "model", parts = listOf(Part("Here are some ideas...")))
+    fun saveNewEntries_andLoad_preservesRoleTextAndOrder() = runBlocking {
+        val repository = newRepository()
+        repository.saveNewEntries(
+            listOf(
+                Content(role = "user", parts = listOf(Part("What can I cook tonight?"))),
+                Content(role = "model", parts = listOf(Part("Here are some ideas...")))
+            )
+        )
 
-        repository.saveNewEntries(listOf(userEntry, modelEntry))
-
-        val loaded = waitForEntries(count = 2)
-        assertEquals(2, loaded.size)
-        assertEquals("user", loaded[0].role)
+        val loaded = repository.awaitEntries(2)
+        assertEquals(listOf("user", "model"), loaded.map { it.role })
         assertEquals("What can I cook tonight?", loaded[0].parts.first().text)
-        assertEquals("model", loaded[1].role)
         assertEquals("Here are some ideas...", loaded[1].parts.first().text)
     }
 
     @Test
-    fun loadChatHistoryLastTwentyEntries_returnsAtMostTwentyEntries() = runBlocking {
-        val entries = (1..25).map { i ->
-            Content(role = if (i % 2 == 0) "model" else "user", parts = listOf(Part("Message $i")))
-        }
-        repository.saveNewEntries(entries)
+    fun loadChatHistoryLastTwentyEntries_returnsTheLastTwentyInOrder() = runBlocking {
+        val repository = newRepository()
+        repository.saveNewEntries((1..25).map { Content(role = "user", parts = listOf(Part("Message $it"))) })
 
-        val loaded = waitForEntries(count = 20)
-        assertEquals(20, loaded.size)
+        awaitCondition({ repository.loadAllEntries() }) { it.size == 25 }
+        val texts = repository.loadChatHistoryLastTwentyEntries().map { it.parts.first().text }
+        assertEquals((6..25).map { "Message $it" }, texts)
     }
 
     @Test
-    fun loadChatHistoryLastTwentyEntries_returnsLastEntries_notFirst() = runBlocking {
-        val entries = (1..25).map { i ->
-            Content(role = "user", parts = listOf(Part("Message $i")))
-        }
-        repository.saveNewEntries(entries)
-
-        val loaded = waitForEntries(count = 20)
-        // The last 20 of 25 messages should be messages 6–25
-        val texts = loaded.map { it.parts.first().text }
-        assertTrue("Message 1" !in texts)
-        assertTrue("Message 25" in texts)
-    }
-
-    @Test
-    fun saveNewEntries_multipleCallsAppend() = runBlocking {
+    fun saveNewEntries_multipleCallsAppendInOrder() = runBlocking {
+        val repository = newRepository()
         repository.saveNewEntries(listOf(Content(role = "user", parts = listOf(Part("First")))))
+        repository.awaitEntries(1)
         repository.saveNewEntries(listOf(Content(role = "model", parts = listOf(Part("Second")))))
 
-        val loaded = waitForEntries(count = 2)
-        assertEquals(2, loaded.size)
+        assertEquals(listOf("First", "Second"), repository.awaitEntries(2).map { it.parts.first().text })
     }
 
-    /** Polls until [count] entries are visible in the DB, to account for async writes. */
-    private suspend fun waitForEntries(count: Int): List<Content> {
-        repeat(10) {
-            val entries = repository.loadChatHistoryLastTwentyEntries()
-            if (entries.size >= count) return entries
-            kotlinx.coroutines.delay(200)
-        }
-        return repository.loadChatHistoryLastTwentyEntries()
+    @Test
+    fun deleteEntries_removesOnlyTheGivenEntries() = runBlocking {
+        val repository = newRepository()
+        repository.saveNewEntries((1..3).map { Content(role = "user", parts = listOf(Part("M$it"))) })
+        val all = awaitCondition({ repository.loadAllEntries() }) { it.size == 3 }
+
+        repository.deleteEntries(all.take(2).map { it.first })
+
+        assertEquals(listOf("M3"), repository.loadAllEntries().map { it.second.parts.first().text })
     }
 }

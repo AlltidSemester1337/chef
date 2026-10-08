@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory
 private val logger = LoggerFactory.getLogger(RecipeOfTheMonthJob::class.java)
 
 class RecipeOfTheMonthJob(
-    private val firebaseAdminService: FirebaseAdminService = FirebaseAdminService(),
+    private val firebaseAdminService: FirebaseAdminService = FirebaseAdminService.fromEnvironment(),
     private val veoClient: VeoClient = VeoClient(),
     private val geminiPromptBuilder: GeminiPromptBuilder = GeminiPromptBuilder()
 ) {
@@ -77,7 +77,7 @@ class RecipeOfTheMonthJob(
                 val tempFile: Path = Files.createTempFile("rotw-$monthOf-", ".mp4")
                 Files.write(tempFile, videoBytes)
                 logger.error(
-                    "Upload or RTDB write failed. Video preserved at $tempFile — " +
+                    "Upload or Firestore write failed. Video preserved at $tempFile — " +
                         "re-upload manually to Firebase Storage at videos/rotw/$monthOf-${selected.id}.mp4 " +
                         "and write the recipe_of_the_month record by hand. Recipe: ${selected.id}",
                     e
@@ -90,7 +90,7 @@ class RecipeOfTheMonthJob(
     }
 
     /**
-     * Completes a run whose Veo operation already succeeded but whose upload/RTDB
+     * Completes a run whose Veo operation already succeeded but whose upload/Firestore
      * write step crashed (or whose client-side polling itself was broken). Video
      * generation is billed at submission time, so this avoids paying twice for the
      * same clip — see VeoClient.fetchExistingOperation.

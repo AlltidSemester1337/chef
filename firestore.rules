@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// Firestore port of database.rules.json (CHE-50). Same semantics; data model in .ai/firestore-schema.md.
+// Admin SDK (rotw-job, migration script) bypasses these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // A recipe's uid may be the caller's or null (null = orphaned via removeRecipeUid).
+    function uidIsCallerOrNull(data) {
+      return data.get('uid', null) == null || data.uid == request.auth.uid;
+    }
+
+    match /recipes/{recipeId} {
+      // Deliberately any signed-in user: the community-browse tab reads other users' favourites.
+      allow read: if signedIn();
+      allow create: if signedIn() && uidIsCallerOrNull(request.resource.data);
+      allow update: if isUser(resource.data.get('uid', null)) && uidIsCallerOrNull(request.resource.data);
+      allow delete: if isUser(resource.data.get('uid', null));
+
+      // Variants have no owner field of their own — the parent recipe's owner writes them.
+      match /variants/{variantId} {
+        allow read: if signedIn();
+        allow write: if signedIn()
+          && get(/databases/$(database)/documents/recipes/$(recipeId)).data.get('uid', null) == request.auth.uid;
+      }
+    }
+
+    match /recipe_of_the_month/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /video_generation_history/{recipeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      // betaInteractionCount may only stay unchanged or grow by exactly 1 (absent = 0).
+      // request.resource.data is the doc AFTER the write (incl. FieldValue.increment);
+      // resource is null on create.
+      function betaCountValid() {
+        let before = resource == null ? 0 : resource.data.get('betaInteractionCount', 0);
+        let after = request.resource.data.get('betaInteractionCount', 0);
+        return after is int && (after == before || after == before + 1);
+      }
+
+      allow read: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['betaInteractionCount', 'preferences', 'cooking_resources'])
+        && betaCountValid();
+      // Deleting the doc would reset the beta counter.
+      allow delete: if false;
+
+      match /{subcollection}/{docId} {
+        allow read, write: if isUser(uid)
+          && subcollection in ['chat_history', 'liked_messages', 'lists'];
+      }
+    }
+  }
+}

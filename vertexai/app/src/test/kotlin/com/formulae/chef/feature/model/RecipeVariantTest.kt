@@ -1,5 +1,6 @@
 package com.formulae.chef.feature.model
 
+import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -62,5 +63,14 @@ class RecipeVariantTest {
     fun `difficulty defaults to EASY`() {
         val variant = RecipeVariant()
         assertEquals(Difficulty.EASY, variant.difficulty)
+    }
+
+    @Test
+    fun createdAtTimestamp_mapsCreatedAtForFirestore() {
+        val variant = RecipeVariant(createdAt = "2026-04-05T08:00:00Z")
+        assertEquals(1_775_376_000L, variant.createdAtTimestamp!!.seconds)
+
+        variant.createdAtTimestamp = Timestamp(1_775_376_060L, 0)
+        assertEquals("2026-04-05T08:01:00Z", variant.createdAt)
     }
 }
