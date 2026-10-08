@@ -1,6 +1,6 @@
 # Chef — Privacy Policy
 
-**Effective date:** 2026-09-27
+**Effective date:** 2026-10-08
 
 Chef ("the app", "we", "us") is a cooking-assistant Android app. It is operated and maintained by Karl Enberg, a private individual in Sweden, who is the data controller. This policy explains what data Chef collects, why, who processes it, and how you can have it deleted.
 
@@ -27,7 +27,7 @@ We do **not** collect your location, contacts, photos, or payment information. C
 
 We use these service providers to run the app. They process data on our behalf, only for the purposes described here:
 
-- **Google Firebase** (Authentication, Realtime Database, Storage, Analytics, App Check): account, stored content, and usage analytics. [Firebase privacy](https://firebase.google.com/support/privacy)
+- **Google Firebase** (Authentication, Cloud Firestore, Storage, Analytics, App Check): account, stored content, and usage analytics. Recipes, chat history and preferences are stored in Cloud Firestore in Stockholm, Sweden (`europe-north2`). The previous Firebase Realtime Database copy is kept read-only for at most 30 days after the move (October 2026) and then deleted. [Firebase privacy](https://firebase.google.com/support/privacy)
 - **Google Cloud Vertex AI / Imagen**: generating recipe images from recipe descriptions.
 - **Google Cloud Text-to-Speech**: reading Chef's replies aloud. The reply text is sent for synthesis.
 - **Berget.ai**: the large language model that powers chat, recipe extraction and preference detection. Your chat messages are sent to Berget.ai to generate replies. [Berget.ai privacy](https://berget.ai)
