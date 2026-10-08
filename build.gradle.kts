@@ -28,29 +28,49 @@ dependencies {
     }
 }
 
-tasks.register<JavaExec>("ktlintCheck") {
-    val outputDir = "${layout.buildDirectory.asFile.get()}/reports/ktlint/"
-    val inputFiles = project.fileTree("src").include("**/*.kt")
-    val outputFile = "${outputDir}ktlint-checkstyle-report.xml"
+// Kotlin sources of every module. Nested worktrees (.claude/worktrees, .trees) are excluded so running
+// from the main checkout doesn't lint other branches' copies of the code.
+val ktlintExcludes = listOf("**/build/**", "**/node_modules/**", "**/.claude/**", "**/.trees/**")
+val ktlintSources = fileTree(rootDir) {
+    include("**/src/**/*.kt")
+    exclude(ktlintExcludes)
+}
+
+fun JavaExec.configureKtlint(reportName: String, vararg extraArgs: String) {
+    val outputFile = layout.buildDirectory.file("reports/ktlint/$reportName.xml")
 
     // See: https://medium.com/@vanniktech/making-your-gradle-tasks-incremental-7f26e4ef09c3
-    inputs.files(inputFiles)
+    inputs.files(ktlintSources)
     outputs.file(outputFile)
 
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    description = "Check Kotlin code style"
     classpath = ktlint
     mainClass.set("com.pinterest.ktlint.Main")
+    workingDir = rootDir
 
     args(
-        "--format",
+        *extraArgs,
         "--code-style=android_studio",
         "--reporter=plain",
-        "--reporter=checkstyle,output=${outputFile}",
-        "**/*.kt"
+        "--reporter=checkstyle,output=${outputFile.get().asFile}",
+        "**/src/**/*.kt",
+        *ktlintExcludes.map { "!$it" }.toTypedArray()
     )
 
     jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
+}
+
+// Fails on violations without touching files — this is what CI and the pre-push checklist run.
+tasks.register<JavaExec>("ktlintCheck") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Check Kotlin code style (fails on violations)"
+    configureKtlint("ktlint-checkstyle-report")
+}
+
+// Rewrites files in place to fix auto-correctable violations.
+tasks.register<JavaExec>("ktlintFormat") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Fix Kotlin code style violations in place"
+    configureKtlint("ktlint-format-report", "--format")
 }
 
 fun notFromFirebase(candidate: ModuleComponentIdentifier): Boolean {

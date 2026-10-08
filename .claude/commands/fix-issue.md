@@ -45,7 +45,7 @@ Follow the testing policy in `CLAUDE.md`:
 Always prefix Gradle with `JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12` and run from inside the worktree:
 
 ```bash
-JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew ktlintCheck --rerun-tasks
+JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew ktlintCheck
 JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:assembleDebug
 JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:testDebugUnitTest
 ```
@@ -56,7 +56,7 @@ If `androidTest` files were added or changed, also compile them:
 JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew :vertexai:app:compileDebugAndroidTestKotlin
 ```
 
-All must pass. Fix lint with `./gradlew ktlintFormat` if needed and re-run.
+All must pass. Fix lint with `JAVA_HOME=/home/kalle/.jdks/jdk-17.0.12 ./gradlew ktlintFormat` if needed and re-run.
 
 ## 7. Commit
 

@@ -28,8 +28,11 @@ The project requires JDK 17 and Android SDK with platform 36. Three properties m
 # Run a single test class
 ./gradlew :vertexai:app:testDebugUnitTest --tests "com.formulae.chef.feature.model.RecipeTest"
 
-# Lint check (ktlint)
+# Lint check (ktlint) — fails on violations, never modifies files (same as CI)
 ./gradlew ktlintCheck
+
+# Auto-fix ktlint violations in place
+./gradlew ktlintFormat
 
 # Check for dependency updates (filters out non-stable and blocklisted)
 ./gradlew dependencyUpdates
