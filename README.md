@@ -53,7 +53,8 @@ Features:
 - 3.2.0 - Multiple recipe suggestions with card grid and images in chat, also major updates for Claude driven development
 - 3.3.0 - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
 - 3.4.0 - Voice latency improvements and add lists in collections view
-- 4.0.0 (Current) - Complete redesign of the app, open beta hardening and first Google Play (internal testing) release
+- 4.0.0 - Complete redesign of the app, open beta hardening and first Google Play (internal testing) release
+- 4.1.0 (Current) - Data layer moved from Realtime Database to Cloud Firestore (europe-north2)
 
 Other features up next: Refer to Linear
 
