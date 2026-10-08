@@ -25,7 +25,7 @@ before(async () => {
   env = await initializeTestEnvironment({
     // "demo-" prefix: the emulator never talks to a real project.
     projectId: 'demo-chef',
-    firestore: { rules: readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8') }
+    firestore: { rules: readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8') }
   });
 });
 

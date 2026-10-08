@@ -23,6 +23,6 @@ db-backups/
 *.keystore
 
 # Firestore rules tests (CHE-50)
-rules-tests/node_modules/
+firestore-tools/node_modules/
 firestore-debug.log
 ui-debug.log
