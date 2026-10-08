@@ -50,7 +50,7 @@ $JAVA_HOME ./gradlew ktlintCheck
 $JAVA_HOME ./gradlew :vertexai:app:assembleDebug
 $JAVA_HOME ./gradlew :vertexai:app:testDebugUnitTest
 ```
-All three must pass before proceeding.
+All three must pass before proceeding. `ktlintCheck` only reports violations; run `$JAVA_HOME ./gradlew ktlintFormat` to auto-fix them, then re-run the check.
 
 ## 7. Commit
 
