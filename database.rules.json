@@ -1,34 +1,9 @@
 {
-  // READ-ONLY since the CHE-50 cut-over to Firestore (2026-10). All writes are rejected so app
-  // versions <= 4.0.2 can no longer change data that now lives in Firestore. Reads stay as they were
-  // for the 30-day safety window; after that the Realtime Database instance is deleted.
+  // The Realtime Database was retired in CHE-50 (2026-10-08): all data now lives in Firestore and the
+  // RTDB data has been deleted. The default instance cannot be removed, so it stays empty and closed.
+  // Keep this file so `firebase deploy` can never reopen it.
   "rules": {
     ".read": false,
-    ".write": false,
-
-    "recipes": {
-      ".indexOn": ["uid"],
-      ".read": "auth != null"
-    },
-
-    "recipe_variants": {
-      "$recipeId": {
-        ".read": "auth != null"
-      }
-    },
-
-    "recipe_of_the_month": {
-      ".read": true
-    },
-
-    "video_generation_history": {
-      ".read": true
-    },
-
-    "users": {
-      "$uid": {
-        ".read": "auth != null && auth.uid == $uid"
-      }
-    }
+    ".write": false
   }
 }

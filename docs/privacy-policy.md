@@ -27,7 +27,7 @@ We do **not** collect your location, contacts, photos, or payment information. C
 
 We use these service providers to run the app. They process data on our behalf, only for the purposes described here:
 
-- **Google Firebase** (Authentication, Cloud Firestore, Storage, Analytics, App Check): account, stored content, and usage analytics. Recipes, chat history and preferences are stored in Cloud Firestore in Stockholm, Sweden (`europe-north2`). The previous Firebase Realtime Database copy is kept read-only for at most 30 days after the move (October 2026) and then deleted. [Firebase privacy](https://firebase.google.com/support/privacy)
+- **Google Firebase** (Authentication, Cloud Firestore, Storage, Analytics, App Check): account, stored content, and usage analytics. Recipes, chat history and preferences are stored in Cloud Firestore in Stockholm, Sweden (`europe-north2`). The previous Firebase Realtime Database copy was deleted on 2026-10-08 after the move. [Firebase privacy](https://firebase.google.com/support/privacy)
 - **Google Cloud Vertex AI / Imagen**: generating recipe images from recipe descriptions.
 - **Google Cloud Text-to-Speech**: reading Chef's replies aloud. The reply text is sent for synthesis.
 - **Berget.ai**: the large language model that powers chat, recipe extraction and preference detection. Your chat messages are sent to Berget.ai to generate replies. [Berget.ai privacy](https://berget.ai)
