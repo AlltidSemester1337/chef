@@ -190,6 +190,18 @@ Only Firestore's automatic single-field indexes are used. They cover every query
 
 Both can be added later without downtime or data migration (Firestore backfills the index in the background). Add a composite index only when a query filters on one field and sorts on another server-side; add exemptions for large unqueried fields (`instructions`, `chat_history.parts`) only if index storage/write cost ever becomes noticeable.
 
+## Future optimisation: realtime listeners
+
+Today every screen does one-shot reads (`get()`), and the collection screen reloads the full `recipes` collection each time it is re-entered (`CollectionViewModel.onCollectionShown`). At ~70 recipes that is ~70 billed reads per visit — fine within the free tier (50k reads/day ≈ 700 visits/day; beyond that ~0.6 SEK per 100k reads).
+
+When to switch: if the recipe count or traffic grows enough that the reloads show up in the bill or the reads feel slow.
+
+How: replace the reload with a Firestore snapshot listener (`addSnapshotListener`, exposed as a Kotlin `Flow<List<Recipe>>` via `callbackFlow`) collected in the ViewModel while the screen is visible.
+- After the initial load only **changed** documents are billed, and a listener re-attached within 30 minutes is served from the local cache plus deltas.
+- New/changed recipes (e.g. saved from chat or by other users) appear without any reload logic.
+- Cost of the change: `RecipeRepository` gets a `Flow`-returning method (interface change), the fakes in unit tests need a flow implementation, and the listener must be removed when the screen/ViewModel goes away (`awaitClose { registration.remove() }`).
+- Best candidates: the collection (`recipes`) and chat history. Leave rarely-changing data (preferences, cooking resources, recipe of the month) on one-shot reads.
+
 ## Reserved for the backend / MCP server (not part of Fas 0)
 
 - `search_recipes` — tag/flag filters first. Firestore has no full-text search. Ingredient search needs a derived, normalised field (e.g. `ingredientNames: string[]`) because `array-contains` on `ingredients` only matches an entire `{name, quantity, unit}` object.
