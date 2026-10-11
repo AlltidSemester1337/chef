@@ -213,14 +213,14 @@ internal fun CollectionRoute(
     }
 
     val overlayViewModel: OverlayChatViewModel = viewModel(
-        factory = remember { OverlayChatViewModelFactory(userSessionService) }
+        factory = remember { OverlayChatViewModelFactory() }
     )
     val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
     val overlayEmailVerificationRequired by overlayViewModel.emailVerificationRequired.collectAsState()
     var showChefOverlay by remember { mutableStateOf(false) }
 
     val askChefVariantViewModel: AskChefVariantViewModel = viewModel(
-        factory = remember { AskChefVariantViewModelFactory(userSessionService) }
+        factory = remember { AskChefVariantViewModelFactory() }
     )
     val askChefState by askChefVariantViewModel.state.collectAsState()
     var editBaseRecipe by remember { mutableStateOf<Recipe?>(null) }

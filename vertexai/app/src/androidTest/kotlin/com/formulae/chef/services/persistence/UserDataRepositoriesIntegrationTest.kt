@@ -43,29 +43,18 @@ class UserDataRepositoriesIntegrationTest {
         assertEquals("2026-10-08T07:24:00Z", loaded.updatedAt)
     }
 
+    // Regression: both live as map fields on users/{uid}. A non-merge set() of one would drop the
+    // other, and the server-owned betaInteractionCount with it (which the rules reject).
     @Test
-    fun betaQuota_incrementsByOneFromZero() = runBlocking {
-        val quota = BetaQuotaRepositoryImpl(uid = signInAsNewUser(), firestore = firestore)
-        assertEquals(1, quota.incrementAndGet())
-        assertEquals(2, quota.incrementAndGet())
-        assertEquals(3, quota.incrementAndGet())
-    }
-
-    // Regression: a non-merge set() of preferences/cooking resources would drop betaInteractionCount,
-    // which the rules reject — and would reset the quota if they didn't.
-    @Test
-    fun savingPreferencesAndResources_keepsTheBetaCount() = runBlocking {
+    fun savingPreferencesAndResources_keepsTheOtherField() = runBlocking {
         val uid = signInAsNewUser()
-        val quota = BetaQuotaRepositoryImpl(uid = uid, firestore = firestore)
-        quota.incrementAndGet()
-        quota.incrementAndGet()
+        val preferences = UserPreferencesRepositoryImpl(uid = uid, firestore = firestore)
+        val resources = CookingResourcesRepositoryImpl(uid = uid, firestore = firestore)
 
-        UserPreferencesRepositoryImpl(uid = uid, firestore = firestore)
-            .savePreferences(UserPreferences(summary = "x", updatedAt = "2026-10-08T07:24:00Z"))
-        CookingResourcesRepositoryImpl(uid = uid, firestore = firestore)
-            .save(CachedCookingResources(resources = emptyList(), updatedAt = "2026-10-08T07:24:00Z"))
+        preferences.savePreferences(UserPreferences(summary = "x", updatedAt = "2026-10-08T07:24:00Z"))
+        resources.save(CachedCookingResources(resources = emptyList(), updatedAt = "2026-10-08T07:24:00Z"))
 
-        assertEquals(3, quota.incrementAndGet())
-        assertEquals("x", UserPreferencesRepositoryImpl(uid = uid, firestore = firestore).loadPreferences()!!.summary)
+        assertEquals("x", preferences.loadPreferences()!!.summary)
+        assertEquals("2026-10-08T07:24:00Z", resources.load()!!.updatedAt)
     }
 }

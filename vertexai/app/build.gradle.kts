@@ -127,6 +127,11 @@ android {
         }
     }
 
+    // Lets ViewModel unit tests run code that logs via android.util.Log (returns 0 instead of throwing).
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     packaging {
         resources {
             excludes += "META-INF/DEPENDENCIES"
@@ -138,7 +143,8 @@ android {
 // Everything under src/*/assets is shipped verbatim in the APK/AAB and is readable by anyone with
 // the app (CHE-49). Fail the build if anything other than allowlisted files lands there, so DB
 // exports, service-account keys and other local-only files can never be packaged again.
-val allowedAssets = setOf("chat_system_prompt.txt")
+// System prompts are chosen by chef-backend, so the app ships no assets at all.
+val allowedAssets = emptySet<String>()
 val assetDirs = fileTree("src") { include("*/assets/**") }
 val verifyAssets by tasks.registering {
     description = "Fails if non-allowlisted files or credentials are present in asset directories."
@@ -150,7 +156,7 @@ val verifyAssets by tasks.registering {
         if (offending.isNotEmpty()) {
             throw GradleException(
                 "Files in assets are packaged into the APK and must not contain secrets or data dumps. " +
-                    "Move these out of src/*/assets (DB exports belong in db-backups/):\n" +
+                    "Move these out of src/*/assets (DB backups belong outside the repo):\n" +
                     offending.joinToString("\n") { "  - ${it.relativeTo(projectDir)}" }
             )
         }
