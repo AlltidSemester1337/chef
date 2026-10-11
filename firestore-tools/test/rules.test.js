@@ -137,15 +137,16 @@ describe('users/{uid}', () => {
   describe('betaInteractionCount', () => {
     const ref = () => doc(db(ALICE), `users/${ALICE}`);
 
-    it('allows create with count 1', () => assertSucceeds(setDoc(ref(), { betaInteractionCount: 1 })));
-    it('denies create with count 2', () => assertFails(setDoc(ref(), { betaInteractionCount: 2 })));
-    it('allows first increment on a doc without the field', async () => {
+    // Server-owned: chef-backend increments it with the Admin SDK, which bypasses the rules.
+    it('denies create with a count', () => assertFails(setDoc(ref(), { betaInteractionCount: 1 })));
+    it('denies create with count 0', () => assertFails(setDoc(ref(), { betaInteractionCount: 0 })));
+    it('denies adding the field to a doc without it', async () => {
       await seed(`users/${ALICE}`, { preferences: { summary: 'x' } });
-      await assertSucceeds(updateDoc(ref(), { betaInteractionCount: increment(1) }));
+      await assertFails(updateDoc(ref(), { betaInteractionCount: increment(1) }));
     });
-    it('allows +1 via FieldValue.increment', async () => {
+    it('denies +1 via FieldValue.increment', async () => {
       await seed(`users/${ALICE}`, { betaInteractionCount: 4 });
-      await assertSucceeds(updateDoc(ref(), { betaInteractionCount: increment(1) }));
+      await assertFails(updateDoc(ref(), { betaInteractionCount: increment(1) }));
     });
     it('denies +2', async () => {
       await seed(`users/${ALICE}`, { betaInteractionCount: 4 });
@@ -166,6 +167,10 @@ describe('users/{uid}', () => {
     it('allows merge-set of preferences', async () => {
       await seed(`users/${ALICE}`, { betaInteractionCount: 4 });
       await assertSucceeds(setDoc(ref(), { preferences: { summary: 'x' } }, { merge: true }));
+    });
+    it('allows writing the unchanged count back', async () => {
+      await seed(`users/${ALICE}`, { betaInteractionCount: 4 });
+      await assertSucceeds(setDoc(ref(), { betaInteractionCount: 4, preferences: { summary: 'x' } }));
     });
     it('denies a non-merge set that would wipe the count', async () => {
       await seed(`users/${ALICE}`, { betaInteractionCount: 4 });
