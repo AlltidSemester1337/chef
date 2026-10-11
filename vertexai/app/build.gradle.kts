@@ -34,6 +34,10 @@ val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
 val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
 val bergetApiKey: String = localProperties.getProperty("bergetApiKey", "")
 
+// Base URL of chef-backend (Cloud Run), which proxies the AI and TTS calls. Not a secret, but
+// project-specific, so it lives in local.properties / CI secrets rather than in the repo.
+val chefBackendUrl: String = localProperties.getProperty("chefBackendUrl", "")
+
 // Upload-key signing for Play releases. Optional: when any key is missing, release builds are left
 // unsigned so debug builds and CI keep working without the keystore.
 val releaseSigningKeys = listOf("releaseStoreFile", "releaseStorePassword", "releaseKeyAlias", "releaseKeyPassword")
@@ -60,6 +64,12 @@ android {
             "String",
             "bergetApiKey",
             "\"${bergetApiKey}\""
+        )
+
+        buildConfigField(
+            "String",
+            "chefBackendUrl",
+            "\"${chefBackendUrl}\""
         )
 
         applicationId = "com.formulae.chef"
