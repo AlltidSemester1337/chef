@@ -20,10 +20,3 @@
     @com.google.firebase.database.PropertyName <fields>;
     @com.google.firebase.database.PropertyName <methods>;
 }
-
-# OpenTelemetry's optional Jackson-based JSON exporter and incubator metrics/trace/logs APIs are
-# not used by this app (we export via OTLP/gRPC), so their absence at runtime is safe to ignore.
--dontwarn com.fasterxml.jackson.core.JsonFactory
--dontwarn com.fasterxml.jackson.core.JsonGenerator
--dontwarn io.opentelemetry.api.incubator.**
-

@@ -32,16 +32,11 @@ jobs:
 
       # local.properties is gitignored; reconstruct it from repository secrets.
       #
-      # Secret formats expected (set under repo Settings → Secrets → Actions):
-      #   PHOENIX_API_KEY              — raw key value (quotes added by this step)
-      #   CHEF_MAIN_CHAT_PROMPT_TEMPLATE — raw prompt text (quotes added by this step)
-      #
-      # Note: phoenixApiKey and chefMainChatPromptTemplate are inserted as-is into buildConfigField, so this
-      # step wraps them in double quotes to produce valid Java string literals.
+      # Secrets expected (repo Settings → Secrets → Actions):
+      #   CHEF_BACKEND_URL — base URL of chef-backend (not secret, but project-specific).
+      # Optional for CI: the build and unit tests pass with an empty value.
       - name: Create local.properties
-        run: |
-          echo 'phoenixApiKey="${{ secrets.PHOENIX_API_KEY }}"' >> local.properties
-          echo 'chefMainChatPromptTemplate="${{ secrets.CHEF_MAIN_CHAT_PROMPT_TEMPLATE }}"' >> local.properties
+        run: echo 'chefBackendUrl=${{ secrets.CHEF_BACKEND_URL }}' >> local.properties
 
       - name: ktlint
         run: ./gradlew ktlintCheck

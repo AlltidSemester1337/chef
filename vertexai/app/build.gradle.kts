@@ -30,10 +30,6 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val phoenixApiKey: String = localProperties.getProperty("phoenixApiKey")
-val gcpTtsApiKey: String = localProperties.getProperty("gcpTtsApiKey", "")
-val bergetApiKey: String = localProperties.getProperty("bergetApiKey", "")
-
 // Base URL of chef-backend (Cloud Run), which proxies the AI and TTS calls. Not a secret, but
 // project-specific, so it lives in local.properties / CI secrets rather than in the repo.
 val chefBackendUrl: String = localProperties.getProperty("chefBackendUrl", "")
@@ -48,24 +44,6 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        buildConfigField(
-            "String",
-            "phoenixApiKey",
-            phoenixApiKey
-        )
-
-        buildConfigField(
-            "String",
-            "gcpTtsApiKey",
-            "\"${gcpTtsApiKey}\""
-        )
-
-        buildConfigField(
-            "String",
-            "bergetApiKey",
-            "\"${bergetApiKey}\""
-        )
-
         buildConfigField(
             "String",
             "chefBackendUrl",
@@ -164,6 +142,15 @@ val verifyAssets by tasks.registering {
 }
 tasks.named("preBuild") { dependsOn(verifyAssets) }
 
+// A release without the backend URL would build fine but every AI and voice feature would fail.
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        if (chefBackendUrl.isBlank()) {
+            throw GradleException("chefBackendUrl must be set in local.properties for release builds.")
+        }
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
@@ -191,10 +178,6 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-debug")
 
     implementation("com.google.firebase:firebase-vertexai:16.5.0")
-
-    implementation("io.opentelemetry:opentelemetry-api:1.52.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.52.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.52.0")
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")

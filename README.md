@@ -11,11 +11,10 @@ The following files are **gitignored** and must be obtained from the team before
 
 | File | Purpose |
 |------|---------|
-| `local.properties` | Must contain `phoenixApiKey`, `gcpTtsApiKey` (GCP Cloud Text-to-Speech API key — see `.claude/skills/gcp/cloud-tts.md` for setup), and `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON/preference/compaction text models). Optional for Play releases: `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword` (upload-key signing — see [Release build](#release-build)) |
+| `local.properties` | Must contain `chefBackendUrl`: the base URL of [chef-backend](https://github.com/AlltidSemester1337/chef-backend), which serves the AI text completions and text-to-speech (the app holds no AI or TTS API keys). Optional for Play releases: `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword` (upload-key signing — see [Release build](#release-build)) |
 | `vertexai/app/google-services.json` | Firebase / GCP service account credentials |
-| `vertexai/app/src/main/assets/chat_system_prompt.txt` | Main chat system prompt — **required at runtime; app crashes on launch without it** |
 
-> **Never put credentials or data exports in `src/*/assets/`.** Assets are shipped verbatim in the APK/AAB and anyone with the app can read them. The `verifyAssets` task (runs before every build) fails if anything other than `chat_system_prompt.txt` is there. DB exports belong outside the repository entirely (e.g. `~/chef-backups/`).
+> **Never put credentials or data exports in `src/*/assets/`.** Assets are shipped verbatim in the APK/AAB and anyone with the app can read them. The `verifyAssets` task (runs before every build) fails if anything is there (the app ships no assets; system prompts live on the backend). DB exports belong outside the repository entirely (e.g. `~/chef-backups/`).
 
 Build and run the app from the `vertexai/app` module. JDK 17 is required — prefix Gradle commands with `JAVA_HOME=/path/to/jdk-17` if your system default differs.
 
@@ -54,7 +53,8 @@ Features:
 - 3.3.0 - Search recipes by tags in collections view, basic voice interactions, FAB with interactive chat on all screens, and personalization improvements.
 - 3.4.0 - Voice latency improvements and add lists in collections view
 - 4.0.0 - Complete redesign of the app, open beta hardening and first Google Play (internal testing) release
-- 4.1.0 (Current) - Data layer moved from Realtime Database to Cloud Firestore (europe-north2)
+- 4.1.0 - Data layer moved from Realtime Database to Cloud Firestore (europe-north2)
+- 4.2.0 (Current) - AI text completions, text-to-speech and the beta quota moved behind chef-backend
 
 Other features up next: Refer to Linear
 
