@@ -9,7 +9,7 @@ No files in this directory are allowed to edit unless explicitly instructed in p
 
 ## Project Overview
 
-Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes via Google Vertex AI (Gemini models), manages recipe collections, and provides user authentication through Firebase. Instrumentation is done via OpenTelemetry with Phoenix Arize for model evaluation.
+Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes via Google Vertex AI (Gemini models), manages recipe collections, and provides user authentication through Firebase. AI text completions and text-to-speech go through chef-backend, which also traces the AI calls (Phoenix Arize) for model evaluation.
 
 ## Build & Test Commands
 
@@ -180,7 +180,7 @@ Default emulator ports: `8080` (Firestore), `9099` (Authentication). Tests reach
 
 This split matters — do not conflate the two categories:
 
-- **Deterministic/cheap utility REST APIs** (e.g. chef-backend's auth/error handling — see `ChefBackendClientTest`): add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `GcpTextToSpeechServiceTest` for the pattern. These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
+- **Deterministic/cheap utility REST APIs** (e.g. chef-backend's auth/error handling — see `ChefBackendClientTest`): add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `ChefBackendClientTest` for the pattern. These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
 - **AI model API calls** (Gemini, Imagen, Berget.ai/Mistral chat completions, or any other per-request-metered generative inference call): do **NOT** write an automated `androidTest` that hits the real API, even guarded — these cost money per token/request and have non-deterministic output. Unit-test only the pure request/response-shaping logic (e.g. request-body builders, response parsers) with hardcoded fixtures, no network. Regression testing for these is covered by manual E2E sessions, not automated integration tests.
 
 ### AI Model API Calls
