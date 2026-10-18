@@ -18,8 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.formulae.chef.BuildConfig
+import com.formulae.chef.services.backend.ChefBackendClient
 import com.formulae.chef.services.voice.AudioPlayer
-import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.SpeechInputManager
 import com.formulae.chef.services.voice.buildTtsFlow
 import com.formulae.chef.services.voice.splitIntoSentences
@@ -39,7 +39,7 @@ fun rememberVoiceController(
     val context = LocalContext.current
 
     val speechManager = remember { SpeechInputManager(context) }
-    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
+    val ttsService = remember { ChefBackendClient(BuildConfig.chefBackendUrl) }
     val audioPlayer = remember { AudioPlayer(context) }
 
     DisposableEffect(Unit) {

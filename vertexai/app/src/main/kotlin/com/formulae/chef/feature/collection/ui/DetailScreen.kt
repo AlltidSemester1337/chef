@@ -97,8 +97,8 @@ import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.RecipeVariant
 import com.formulae.chef.feature.model.parsedServingsCount
 import com.formulae.chef.feature.model.scaledToServings
+import com.formulae.chef.services.backend.ChefBackendClient
 import com.formulae.chef.services.voice.AudioPlayer
-import com.formulae.chef.services.voice.GcpTextToSpeechService
 import com.formulae.chef.services.voice.buildTtsFlow
 import com.formulae.chef.ui.components.BottomWaveAccent
 import com.formulae.chef.ui.components.BottomWaveAccentOffset
@@ -190,7 +190,7 @@ private fun CreateDetailScreen(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    val ttsService = remember { GcpTextToSpeechService(BuildConfig.gcpTtsApiKey) }
+    val ttsService = remember { ChefBackendClient(BuildConfig.chefBackendUrl) }
     val audioPlayer = remember { AudioPlayer(context) }
     DisposableEffect(Unit) {
         onDispose { audioPlayer.release() }

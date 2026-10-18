@@ -6,31 +6,21 @@ import androidx.lifecycle.viewModelScope
 import com.formulae.chef.buildRecipeContextText
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
-import com.formulae.chef.services.BetaQuotaService
-import com.formulae.chef.services.QuotaResult
-import com.formulae.chef.services.ai.BergetChatCompletionService
-import com.formulae.chef.services.ai.BergetModelConfig
+import com.formulae.chef.services.backend.AiCompletionService
+import com.formulae.chef.services.backend.AiPurpose
+import com.formulae.chef.services.backend.BackendException
 import com.formulae.chef.services.persistence.Content
 import com.formulae.chef.services.persistence.Part
-import com.formulae.chef.services.telemetry.LlmSpanAttributes
-import com.formulae.chef.services.telemetry.getTracer
-import com.formulae.chef.services.telemetry.withParentSpan
 import com.google.gson.Gson
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.context.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AskChefVariantViewModel(
-    private val chatCompletionService: BergetChatCompletionService,
-    private val recipeAdjustConfig: BergetModelConfig,
-    private val jsonConfig: BergetModelConfig,
-    private val betaQuotaService: BetaQuotaService
+    private val aiService: AiCompletionService
 ) : ViewModel() {
-
     sealed class State {
         object Idle : State()
         object Loading : State()
@@ -43,76 +33,34 @@ class AskChefVariantViewModel(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
+    /**
+     * Adjusts [recipe] per [userRequest] (counts against the beta quota on the backend), then
+     * extracts the adjusted recipe as JSON.
+     */
     fun adjustRecipe(recipe: Recipe, userRequest: String) {
         viewModelScope.launch {
             _state.value = State.Loading
-            when (betaQuotaService.checkAndRecordInteraction()) {
-                QuotaResult.Blocked -> {
-                    _state.value = State.QuotaExceeded
-                    return@launch
-                }
-                QuotaResult.EmailVerificationRequired -> {
-                    _state.value = State.EmailVerificationRequired
-                    return@launch
-                }
-                QuotaResult.Allowed -> Unit
-            }
-            try {
-                val resultRecipe = withParentSpan("adjustRecipeFlow") {
-                    val prompt = buildAdjustPrompt(recipe, userRequest)
-                    val adjustedText = generateInstrumented(
-                        spanName = "adjustRecipe",
-                        config = recipeAdjustConfig,
-                        prompt = prompt
-                    )
-
-                    val jsonText = generateInstrumented(
-                        spanName = "extractRecipeJson",
-                        config = jsonConfig,
-                        prompt = adjustedText
-                    )
-
-                    val recipes = Gson().fromJson(jsonText, Recipes::class.java).recipes
-                    if (recipes.isEmpty()) throw Exception("No recipe in JSON response")
-
-                    recipes.first()
-                }
-
-                _state.value = State.Success(resultRecipe)
+            _state.value = try {
+                val adjustedText = complete(AiPurpose.RECIPE_ADJUST, buildAdjustPrompt(recipe, userRequest))
+                val jsonText = complete(AiPurpose.DERIVE_RECIPE_JSON, adjustedText)
+                val recipes = Gson().fromJson(jsonText, Recipes::class.java).recipes
+                if (recipes.isEmpty()) throw IllegalStateException("No recipe in JSON response")
+                State.Success(recipes.first())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: BackendException.QuotaExceeded) {
+                State.QuotaExceeded
+            } catch (e: BackendException.EmailVerificationRequired) {
+                State.EmailVerificationRequired
             } catch (e: Exception) {
                 Log.e(TAG, "adjustRecipe failed", e)
-                _state.value = State.Error
+                State.Error
             }
         }
     }
 
-    private suspend fun generateInstrumented(
-        spanName: String,
-        config: BergetModelConfig,
-        prompt: String
-    ): String {
-        val span = getTracer().spanBuilder(spanName)
-            .setSpanKind(SpanKind.CLIENT)
-            .setAllAttributes(LlmSpanAttributes.input(spanName, config.model, prompt))
-            .startSpan()
-        return try {
-            Context.current().with(span).makeCurrent().use {
-                val result = chatCompletionService.createChatCompletion(
-                    config,
-                    listOf(Content(role = "user", parts = listOf(Part(prompt))))
-                )
-                span.setAllAttributes(LlmSpanAttributes.output(result))
-                span.setStatus(StatusCode.OK)
-                result
-            }
-        } catch (e: Exception) {
-            span.recordException(e)
-            span.setStatus(StatusCode.ERROR)
-            throw e
-        } finally {
-            span.end()
-        }
-    }
+    private suspend fun complete(purpose: AiPurpose, prompt: String): String =
+        aiService.complete(purpose, listOf(Content(role = "user", parts = listOf(Part(prompt)))))
 
     fun reset() {
         _state.value = State.Idle

@@ -72,10 +72,6 @@ class MainActivity : ComponentActivity() {
 
         this.actionBar?.hide()
 
-        // Initializes the OTLP exporter and registers the global OpenTelemetry SDK exactly once
-        // per process, even if onCreate runs again after an Activity recreation.
-        ChefTelemetry.ensureInitialized()
-
         val userSessionService = UserSessionServiceFirebaseImpl()
 
         setContent {
@@ -89,13 +85,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Force-export any buffered spans instead of relying on the batch timer, since the
-        // process may be killed while backgrounded before the default 5s delay fires.
-        ChefTelemetry.flush()
     }
 
     private companion object {

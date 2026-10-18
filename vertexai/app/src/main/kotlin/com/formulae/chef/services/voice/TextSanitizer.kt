@@ -24,7 +24,7 @@ fun String.sanitizeForTts(): String =
 
 /**
  * Splits text into TTS-ready sentence chunks. Each chunk is markdown-stripped,
- * punctuation-terminated, and safe to pass directly to [GcpTextToSpeechService.synthesize].
+ * punctuation-terminated, and safe to pass directly to [com.formulae.chef.services.backend.TextToSpeechService.synthesize].
  * Splitting on sentence boundaries allows chunked streaming playback: the first sentence
  * can be synthesized and played while subsequent sentences are still being synthesized.
  */

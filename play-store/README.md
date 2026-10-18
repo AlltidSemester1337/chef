@@ -53,7 +53,7 @@ Bump `versionCode` in `vertexai/app/build.gradle.kts` for every upload after the
 
 **App content** (Policy → App content). Complete every card:
 - [ ] Privacy policy: the privacy policy URL above
-- [ ] App access: **All or some functionality is restricted**. Add instructions plus a reviewer login: an email-verified test account that is on the admin allowlist (`AdminUsers`) so it isn't blocked by the 20-interaction beta quota
+- [ ] App access: **All or some functionality is restricted**. Add instructions plus a reviewer login: an email-verified test account with the `admin` custom claim so it isn't blocked by the beta quota (enforced by chef-backend)
 - [ ] Ads: **No, my app does not contain ads**
 - [ ] Content rating: category **All other app types**. Answer *No* to violence, sexuality, language, controlled substances and gambling. Answer *Yes* to "users can interact/exchange content": users see AI-generated content and recipes saved by others in a shared collection. The expected rating is around PEGI 3 / Everyone, plus an "Users interact" note
 - [ ] Target audience: **18+** (AI chat with a shared collection; simplest compliance). Appeals to children: **No**

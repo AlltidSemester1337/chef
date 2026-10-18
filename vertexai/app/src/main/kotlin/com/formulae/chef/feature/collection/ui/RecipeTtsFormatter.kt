@@ -6,7 +6,7 @@ import com.formulae.chef.services.voice.splitIntoSentences
 
 /**
  * Returns one TTS-ready string per ingredient for sentence-chunked streaming playback.
- * Each element can be passed directly to [GcpTextToSpeechService.synthesize].
+ * Each element can be passed directly to [com.formulae.chef.services.backend.TextToSpeechService.synthesize].
  */
 internal fun buildIngredientSentences(recipe: Recipe): List<String> =
     recipe.ingredients

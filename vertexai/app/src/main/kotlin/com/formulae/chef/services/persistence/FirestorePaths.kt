@@ -17,7 +17,6 @@ internal object FirestorePaths {
     // Single-object user data lives as map fields on users/{uid}.
     const val PREFERENCES = "preferences"
     const val COOKING_RESOURCES = "cooking_resources"
-    const val BETA_INTERACTION_COUNT = "betaInteractionCount"
 }
 
 internal fun FirebaseFirestore.userDoc(uid: String): DocumentReference =

@@ -9,11 +9,11 @@ No files in this directory are allowed to edit unless explicitly instructed in p
 
 ## Project Overview
 
-Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes via Google Vertex AI (Gemini models), manages recipe collections, and provides user authentication through Firebase. Instrumentation is done via OpenTelemetry with Phoenix Arize for model evaluation.
+Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes via Google Vertex AI (Gemini models), manages recipe collections, and provides user authentication through Firebase. AI text completions and text-to-speech go through chef-backend, which also traces the AI calls (Phoenix Arize) for model evaluation.
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. Three properties must be set in `local.properties`: `phoenixApiKey`, `gcpTtsApiKey`, `bergetApiKey` (Berget.ai chat completions API key, used for chat/JSON-extraction/preference/compaction text models). A valid `google-services.json` is also required. The Cloud Text-to-Speech API must be enabled in the GCP project and the key must not restrict `texttospeech.googleapis.com` (see `.claude/skills/gcp/cloud-tts.md`). The system prompt must be placed at `vertexai/app/src/main/assets/chat_system_prompt.txt` (gitignored — obtain from the team).
+The project requires JDK 17 and Android SDK with platform 36. `local.properties` must set `chefBackendUrl`, the base URL of chef-backend (separate repo, FastAPI on Cloud Run), which proxies all AI text completions and text-to-speech. A valid `google-services.json` is also required. The app holds no AI/TTS API keys and ships no system prompts.
 
 ```bash
 # Build the main Chef app
@@ -80,29 +80,29 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 
 ### Main App (`vertexai/app/src/main/kotlin/com/formulae/chef/`)
 
-**Entry point:** `MainActivity` — initializes Firebase, AppCheck, OpenTelemetry tracing, then launches Compose UI via `AppNavigation`.
+**Entry point:** `MainActivity` — initializes Firebase and App Check, then launches Compose UI via `AppNavigation`.
 
 **Navigation:** `AppNavigation` uses Jetpack Navigation Compose with 4 routes: `home`, `chat`, `collection`, `signIn`.
 
 **Feature packages follow a vertical-slice pattern:**
-- `feature/chat/` — `ChatViewModel` (AndroidViewModel) handles Gemini chat, recipe derivation from chat messages (extracts JSON), and image generation via Imagen 3.0 through the Vertex AI Prediction API. Uses two generative models: one for chat, one for JSON extraction.
+- `feature/chat/` — `ChatViewModel` (AndroidViewModel) handles the chat, recipe derivation from chat messages (extracts JSON), preference detection and history compaction through chef-backend (one `AiPurpose` per use), and recipe image generation via Gemini (Firebase Vertex AI). `OverlayChatViewModel` and `AskChefVariantViewModel` also go through the backend.
 - `feature/collection/` — `CollectionViewModel` (ViewModel) with injected `RecipeRepository`. Manages recipe list display and removal.
 - `feature/useraccount/` — `SignInViewModel` handles Firebase email/password auth flow.
 - `feature/model/` — `Recipe` (main data model with nested `Ingredient`, `Nutrient`, `Difficulty` enum) and `Recipes` wrapper.
 
 **Services layer:**
 - `services/authentication/` — `UserSessionService` interface with `UserSessionServiceFirebaseImpl` (Firebase Auth with `callbackFlow` for auth state).
-- `services/persistence/` — repository interfaces with Firestore implementations (`RecipeRepositoryImpl`, `RecipeVariantRepositoryImpl`, `RecipeListRepositoryImpl`, `ChatHistoryRepositoryImpl`, `LikedMessagesRepositoryImpl`, `UserPreferencesRepositoryImpl`, `CookingResourcesRepositoryImpl`, `BetaQuotaRepositoryImpl`). `FirebaseInstance` holds the Firestore instance; `FirestorePaths` the collection/field names. Writes to the `users/{uid}` document must use `SetOptions.merge()`/`update()` — a plain `set()` would drop `betaInteractionCount`, which the rules reject.
-- `services/voice/` — `SpeechInputManager` (wraps Android `SpeechRecognizer`), `GcpTextToSpeechService` (GCP Cloud TTS REST, Chirp 3 HD), `AudioPlayer` (in-memory MP3 via `MediaPlayer`). All three are instantiated at the composable layer via `rememberVoiceController()` in `feature/chat/ui/VoiceController.kt`.
+- `services/persistence/` — repository interfaces with Firestore implementations (`RecipeRepositoryImpl`, `RecipeVariantRepositoryImpl`, `RecipeListRepositoryImpl`, `ChatHistoryRepositoryImpl`, `LikedMessagesRepositoryImpl`, `UserPreferencesRepositoryImpl`, `CookingResourcesRepositoryImpl`). `FirebaseInstance` holds the Firestore instance; `FirestorePaths` the collection/field names. Writes to the `users/{uid}` document must use `SetOptions.merge()`/`update()` — a plain `set()` would drop the server-owned `betaInteractionCount`, which the rules reject.
+- `services/voice/` — `SpeechInputManager` (wraps Android `SpeechRecognizer`), TTS via `ChefBackendClient` (`TextToSpeechService`, MP3 from the backend), `AudioPlayer` (in-memory MP3 via `MediaPlayer`). All three are instantiated at the composable layer via `rememberVoiceController()` in `feature/chat/ui/VoiceController.kt`.
 
-**ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. Assets are shipped verbatim in the APK, so `src/main/assets/` may only hold `chat_system_prompt.txt` (enforced by the `verifyAssets` Gradle task) — never credentials or DB exports.
+**ViewModel creation:** Factory pattern via `GenerativeAiViewModelFactory`, `CollectionViewModelFactory`, `SignInViewModelFactory`. Assets are shipped verbatim in the APK, so `src/main/assets/` must stay empty (enforced by the `verifyAssets` Gradle task) — never credentials, prompts or DB exports.
 
 ### Key Design Decisions
 
 - `Recipe.copyOf()` is a custom copy method (not the data class `copy()`) because Firebase deserialization requires mutable `var` fields with `@PropertyName` annotations that don't work correctly with Kotlin's generated `copy()`.
 - Domain models keep timestamps as ISO-8601 `String`s; Firestore stores them as `Timestamp`. Each model has an `@Exclude`d string field plus a `…Timestamp` accessor annotated `@PropertyName("<field>")` that converts via `FirestoreTime`. Firestore auto-IDs are random, so ordering always comes from a timestamp field, never from document IDs. Orphaned recipes have the `uid` field absent (not `null`) because `Recipe.uid` is non-null.
 - Chat history persistence uses a custom `Content`/`Part` data class pair in `ChatHistoryRepositoryImpl` as an intermediary for Firebase serialization, then maps to `com.google.firebase.vertexai.type.Content`.
-- OpenTelemetry spans wrap all generative AI calls (`generateChatModelResponse`, `generateJsonModelResponse`, `generateImage`) with LLM-specific attributes for Phoenix Arize eval.
+- Text generation goes through chef-backend (`services/backend/ChefBackendClient`, `POST /v1/ai/complete`) with an `AiPurpose`; the backend picks system prompt, model and parameters, enforces the beta quota (429 → quota dialog, 403 → email verification dialog) and traces the calls. Requests carry the Firebase ID token and App Check token. ViewModels depend on the `AiCompletionService` interface, so they can be unit tested with a fake. Image generation still uses Gemini via Firebase Vertex AI (App Check protected).
 - Voice I/O (mic input, TTS playback) is wired at the composable layer, not the ViewModel layer — `OverlayChatViewModel` has no Application context, and audio I/O is transient UI state. The shared `rememberVoiceController()` composable in `VoiceController.kt` encapsulates all voice lifecycle management for both chat interfaces.
 
 ## ADB Device Interaction
@@ -180,7 +180,7 @@ Default emulator ports: `8080` (Firestore), `9099` (Authentication). Tests reach
 
 This split matters — do not conflate the two categories:
 
-- **Deterministic/cheap utility REST APIs** (e.g. GCP Cloud TTS): add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `GcpTextToSpeechServiceTest` for the pattern. These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
+- **Deterministic/cheap utility REST APIs** (e.g. chef-backend's auth/error handling — see `ChefBackendClientTest`): add an `androidTest` integration test that calls the real API. Guard the test with `assumeTrue(BuildConfig.<key>.isNotBlank())` so it is skipped automatically when the key is not configured (CI / reviewer machines). See `ChefBackendClientTest` for the pattern. These tests require a connected device/emulator and the relevant API key in `local.properties`. They are NOT run as part of normal unit tests — run with `./gradlew :vertexai:app:connectedAndroidTest`.
 - **AI model API calls** (Gemini, Imagen, Berget.ai/Mistral chat completions, or any other per-request-metered generative inference call): do **NOT** write an automated `androidTest` that hits the real API, even guarded — these cost money per token/request and have non-deterministic output. Unit-test only the pure request/response-shaping logic (e.g. request-body builders, response parsers) with hardcoded fixtures, no network. Regression testing for these is covered by manual E2E sessions, not automated integration tests.
 
 ### AI Model API Calls

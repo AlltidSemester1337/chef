@@ -29,13 +29,12 @@ import com.formulae.chef.feature.chat.ui.Participant
 import com.formulae.chef.feature.model.Recipe
 import com.formulae.chef.feature.model.Recipes
 import com.formulae.chef.feature.model.UserPreferences
-import com.formulae.chef.services.BetaQuotaService
 import com.formulae.chef.services.MAX_CHAT_INPUT_LENGTH
 import com.formulae.chef.services.MAX_IMAGES_PER_MESSAGE
-import com.formulae.chef.services.QuotaResult
-import com.formulae.chef.services.ai.BergetChatCompletionService
-import com.formulae.chef.services.ai.BergetModelConfig
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.services.backend.AiCompletionService
+import com.formulae.chef.services.backend.AiPurpose
+import com.formulae.chef.services.backend.BackendException
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.Content
@@ -44,9 +43,6 @@ import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
-import com.formulae.chef.services.telemetry.LlmSpanAttributes
-import com.formulae.chef.services.telemetry.getTracer
-import com.formulae.chef.services.telemetry.withParentSpan
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.ktx.Firebase
@@ -55,12 +51,11 @@ import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.ImagePart
 import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.StatusCode
 import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -85,16 +80,11 @@ private data class PreferenceDetectionResult(
 )
 
 class ChatViewModel(
-    private val chatCompletionService: BergetChatCompletionService,
-    private val chatConfig: BergetModelConfig,
-    private val jsonConfig: BergetModelConfig,
-    private val preferencesConfig: BergetModelConfig,
-    private val compactionConfig: BergetModelConfig,
+    private val aiService: AiCompletionService,
     imageGenerativeModel: GenerativeModel,
     application: Application,
     userSessionService: UserSessionService,
-    private val applicationScope: CoroutineScope,
-    private val betaQuotaService: BetaQuotaService = BetaQuotaService(userSessionService)
+    private val applicationScope: CoroutineScope
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
     private val _projectId = FirebaseApp.getInstance().options.projectId
@@ -260,25 +250,9 @@ class ChatViewModel(
         )
 
         viewModelScope.launch {
-            when (betaQuotaService.checkAndRecordInteraction()) {
-                QuotaResult.Blocked -> {
-                    _uiState.value.replaceLastPendingMessage()
-                    _quotaExceeded.value = true
-                    return@launch
-                }
-                QuotaResult.EmailVerificationRequired -> {
-                    _uiState.value.replaceLastPendingMessage()
-                    _emailVerificationRequired.value = true
-                    return@launch
-                }
-                QuotaResult.Allowed -> Unit
-            }
             try {
-                val modelResponse = generateModelResponseInstrumented(
-                    config = chatConfig,
-                    spanName = "generateChatModelResponse",
-                    messages = _chatHistory.value + newUserContent
-                )
+                // The backend counts this call against the beta quota.
+                val modelResponse = aiService.complete(AiPurpose.CHAT, _chatHistory.value + newUserContent)
                 _uiState.value.replaceLastPendingMessage()
 
                 val newModelContent = Content(role = "model", parts = listOf(Part(modelResponse)))
@@ -313,6 +287,14 @@ class ChatViewModel(
                         )
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: BackendException.QuotaExceeded) {
+                _uiState.value.replaceLastPendingMessage()
+                _quotaExceeded.value = true
+            } catch (e: BackendException.EmailVerificationRequired) {
+                _uiState.value.replaceLastPendingMessage()
+                _emailVerificationRequired.value = true
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Failed to generate chat response", e)
                 _uiState.value.replaceLastPendingMessage()
@@ -342,10 +324,7 @@ class ChatViewModel(
             } else {
                 "User message: $userMessage"
             }
-            val responseText = chatCompletionService.createChatCompletion(
-                preferencesConfig,
-                listOf(Content(role = "user", parts = listOf(Part(prompt))))
-            )
+            val responseText = completeSingle(AiPurpose.EXTRACT_PREFERENCES, prompt)
             val gson = Gson()
             val result = gson.fromJson(responseText, PreferenceDetectionResult::class.java)
             if (result.detected && result.updatedSummary.isNotBlank()) {
@@ -390,10 +369,7 @@ class ChatViewModel(
                 }
                 append("Chat transcript to summarize:\n$transcript")
             }
-            val newSummary = chatCompletionService.createChatCompletion(
-                compactionConfig,
-                listOf(Content(role = "user", parts = listOf(Part(prompt))))
-            ).trim()
+            val newSummary = completeSingle(AiPurpose.COMPACT_HISTORY, prompt).trim()
             if (newSummary.isNotBlank()) {
                 val updatedPrefs = UserPreferences(
                     summary = newSummary,
@@ -411,11 +387,7 @@ class ChatViewModel(
     }
 
     private suspend fun extractRecipeDetailsFromMessage(messageText: String): List<Recipe> {
-        val recipesJsonText = generateModelResponseInstrumented(
-            config = jsonConfig,
-            spanName = "generateJsonModelResponse",
-            messages = listOf(Content(role = "user", parts = listOf(Part(messageText))))
-        )
+        val recipesJsonText = completeSingle(AiPurpose.DERIVE_RECIPE_JSON, messageText)
         val gson = Gson()
         val recipesWrapper = gson.fromJson(recipesJsonText, Recipes::class.java)
         return recipesWrapper.recipes.map { recipe ->
@@ -454,7 +426,7 @@ class ChatViewModel(
 
     private suspend fun createImageForRecipeAsync(recipe: String): String {
         Log.d("ChatViewModel", "Starting image generation pipeline")
-        val gcsUri = generateImageInstrumented(recipe)
+        val gcsUri = generateImage(recipe)
         Log.d("ChatViewModel", "Image generated and uploaded, fetching download URL")
         val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
         val downloadUrl = Firebase.storage("gs://$_projectId.firebasestorage.app/")
@@ -548,91 +520,43 @@ class ChatViewModel(
     }
 
     private suspend fun deriveRecipesFromMessage(messageText: String): List<Recipe> =
-        withParentSpan("deriveRecipesFromMessage") {
-            val recipes = extractRecipeDetailsFromMessage(messageText)
-            recipes.map { recipe ->
-                val imageUrl = try {
-                    createImageForRecipeAsync(recipe.toString())
-                } catch (e: Exception) {
-                    Log.e(
-                        "ChatViewModel",
-                        "Image generation pipeline failed for '${recipe.title}' " +
-                            "[${e.javaClass.simpleName}: ${e.message}]",
-                        e
-                    )
-                    null
-                }
-                recipe.copyOf(imageUrl = imageUrl)
+        extractRecipeDetailsFromMessage(messageText).map { recipe ->
+            val imageUrl = try {
+                createImageForRecipeAsync(recipe.toString())
+            } catch (e: Exception) {
+                Log.e(
+                    "ChatViewModel",
+                    "Image generation pipeline failed for '${recipe.title}' " +
+                        "[${e.javaClass.simpleName}: ${e.message}]",
+                    e
+                )
+                null
             }
+            recipe.copyOf(imageUrl = imageUrl)
         }
 
-    private suspend fun generateModelResponseInstrumented(
-        config: BergetModelConfig,
-        spanName: String,
-        messages: List<Content>
-    ): String {
-        val prompt = messages.lastOrNull()?.parts?.firstOrNull()?.text ?: ""
-        val span = getTracer().spanBuilder(spanName)
-            .setSpanKind(SpanKind.CLIENT)
-            .setAllAttributes(LlmSpanAttributes.input(spanName, config.model, prompt))
-            .startSpan()
+    /** One-shot completion: [prompt] as the only user message. */
+    private suspend fun completeSingle(purpose: AiPurpose, prompt: String): String =
+        aiService.complete(purpose, listOf(Content(role = "user", parts = listOf(Part(prompt)))))
 
-        return try {
-            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                val response = chatCompletionService.createChatCompletion(config, messages)
-                span.setAllAttributes(LlmSpanAttributes.output(response))
-                span.setStatus(StatusCode.OK)
-                response
-            }
-        } catch (e: Exception) {
-            span.recordException(e)
-            span.setStatus(StatusCode.ERROR)
-            throw e
-        } finally {
-            span.end()
-        }
-    }
-
-    private suspend fun generateImageInstrumented(recipe: String): String {
+    private suspend fun generateImage(recipe: String): String {
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
-        val modelName = "vertexai/gemini-flash-image"
-        val span = getTracer().spanBuilder("generateImage")
-            .setSpanKind(SpanKind.CLIENT)
-            .setAllAttributes(LlmSpanAttributes.input("generateImage", modelName, prompt))
-            .startSpan()
+        val response = _imageGenerativeModel.generateContent(content { text(prompt) })
+        val imagePart = response.candidates?.firstOrNull()?.content?.parts
+            ?.filterIsInstance<ImagePart>()
+            ?.firstOrNull()
+            ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
 
-        return try {
-            io.opentelemetry.context.Context.current().with(span).makeCurrent().use {
-                val response = _imageGenerativeModel.generateContent(content { text(prompt) })
-                val imagePart = response.candidates?.firstOrNull()?.content?.parts
-                    ?.filterIsInstance<ImagePart>()
-                    ?.firstOrNull()
-                    ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
+        val outputStream = ByteArrayOutputStream()
+        imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+        val imagePath = "recipes/${UUID.randomUUID()}.jpg"
 
-                val outputStream = ByteArrayOutputStream()
-                imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                val imageBytes = outputStream.toByteArray()
-                val imagePath = "recipes/${UUID.randomUUID()}.jpg"
+        Firebase.storage("gs://$_projectId.firebasestorage.app/")
+            .reference.child(imagePath)
+            .putBytes(outputStream.toByteArray())
+            .await()
 
-                Firebase.storage("gs://$_projectId.firebasestorage.app/")
-                    .reference.child(imagePath)
-                    .putBytes(imageBytes)
-                    .await()
-
-                val gcsUri = "gs://$_projectId.firebasestorage.app/$imagePath"
-
-                span.setAllAttributes(LlmSpanAttributes.output(gcsUri))
-                span.setStatus(StatusCode.OK)
-
-                gcsUri
-            }
-        } catch (e: Exception) {
-            span.recordException(e)
-            span.setStatus(StatusCode.ERROR)
-            throw e
-        } finally {
-            span.end()
-        }
+        return "gs://$_projectId.firebasestorage.app/$imagePath"
     }
 
     companion object {

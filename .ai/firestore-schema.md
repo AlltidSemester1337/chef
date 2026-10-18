@@ -129,7 +129,7 @@ One document per user. Single-object data lives as map fields on this document (
 
 ```
 User {
-  betaInteractionCount: number                 // absent = 0; may only increase by exactly 1 (rules); client increments in a transaction (returns the new value)
+  betaInteractionCount: number                 // absent = 0; server-owned: chef-backend increments it in a transaction (Admin SDK) for counted AI purposes; clients may not change it (rules)
   preferences: {                               // absent until first detected
     summary:   string
     updatedAt: Timestamp
@@ -182,7 +182,7 @@ RecipeList {
 | `recipes/{id}` | any signed-in user | create: `uid` must be caller (or absent/null); update/delete: only current owner; owner may remove `uid` (orphan) |
 | `recipes/{id}/variants/{v}` | any signed-in user | only the parent recipe's owner (`get()` on parent) |
 | `recipe_of_the_month`, `video_generation_history` | public | nobody (Admin SDK bypasses rules) |
-| `users/{uid}` and subcollections | owner only | owner only; `betaInteractionCount` may only change by +1 (absent → 1); user doc may not be deleted |
+| `users/{uid}` and subcollections | owner only | owner only; `betaInteractionCount` must stay unchanged (server-owned); user doc may not be deleted |
 
 ## Indexes
 
@@ -208,4 +208,4 @@ How: replace the reload with a Firestore snapshot listener (`addSnapshotListener
 - Vector search — optional `embedding: Vector` on `recipes` + vector index, queried with `findNearest`. Adds ~4–12 kB per recipe read; decide placement when the backend is built.
 - `plan_week` — `users/{uid}/meal_plans/{isoWeek}` (e.g. `2026-W41`); deterministic ID makes re-runs idempotent.
 - `generate_shopping_list` — `users/{uid}/shopping_lists/{isoWeek}`.
-- Beta quota — move `betaInteractionCount` enforcement into the backend (server-side increment + check). Rules can only guarantee "+1 per write", not that the client actually calls it.
+- Beta quota — done in 4.2: chef-backend checks and increments `betaInteractionCount` server-side (`POST /v1/ai/complete`), and the rules deny client writes to it.

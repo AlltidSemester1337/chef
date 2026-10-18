@@ -44,19 +44,18 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // betaInteractionCount may only stay unchanged or grow by exactly 1 (absent = 0).
-      // request.resource.data is the doc AFTER the write (incl. FieldValue.increment);
-      // resource is null on create.
-      function betaCountValid() {
-        let before = resource == null ? 0 : resource.data.get('betaInteractionCount', 0);
-        let after = request.resource.data.get('betaInteractionCount', 0);
-        return after is int && (after == before || after == before + 1);
+      // betaInteractionCount is server-owned: chef-backend increments it with the Admin SDK
+      // (which bypasses these rules), so clients may only leave it exactly as it is.
+      // request.resource.data is the doc AFTER the write; resource is null on create.
+      function betaCountUnchanged() {
+        let before = resource == null ? null : resource.data.get('betaInteractionCount', null);
+        return request.resource.data.get('betaInteractionCount', null) == before;
       }
 
       allow read: if isUser(uid);
       allow create, update: if isUser(uid)
         && request.resource.data.keys().hasOnly(['betaInteractionCount', 'preferences', 'cooking_resources'])
-        && betaCountValid();
+        && betaCountUnchanged();
       // Deleting the doc would reset the beta counter.
       allow delete: if false;
 

@@ -87,12 +87,7 @@ adb install -r vertexai/app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.formulae.chef/.MainActivity
 ```
 
-> If the app crashes immediately on launch with `FileNotFoundException: chat_system_prompt.txt`, the asset is missing from the worktree. Copy it from another worktree or obtain it from the team:
-> ```bash
-> cp .trees/<other-branch>/vertexai/app/src/main/assets/chat_system_prompt.txt \
->    .trees/<this-branch>/vertexai/app/src/main/assets/
-> ```
-> Then rebuild and reinstall.
+> AI and voice features need `chefBackendUrl` in `local.properties` and, for debug builds, an App Check debug token registered in the Firebase console (otherwise the backend answers 401).
 
 Wait 2 seconds, then take a screenshot to confirm the app launched:
 

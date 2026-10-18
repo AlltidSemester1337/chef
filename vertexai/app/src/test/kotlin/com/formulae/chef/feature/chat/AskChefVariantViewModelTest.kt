@@ -2,11 +2,125 @@ package com.formulae.chef.feature.chat
 
 import com.formulae.chef.feature.model.Ingredient
 import com.formulae.chef.feature.model.Recipe
+import com.formulae.chef.services.backend.AiPurpose
+import com.formulae.chef.services.backend.BackendException
+import com.formulae.chef.services.backend.FakeAiCompletionService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AskChefVariantViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val ai = FakeAiCompletionService()
+    private lateinit var viewModel: AskChefVariantViewModel
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        viewModel = AskChefVariantViewModel(ai)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private val adjustedJson = """{"recipes":[{"title":"Vegetarian Carbonara","summary":"No meat"}]}"""
+
+    // --- adjustRecipe ---
+
+    @Test
+    fun adjustRecipe_adjustsThenExtractsJson() = runTest(testDispatcher) {
+        ai.replies[AiPurpose.RECIPE_ADJUST] = "Adjusted recipe text"
+        ai.replies[AiPurpose.DERIVE_RECIPE_JSON] = adjustedJson
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(listOf(AiPurpose.RECIPE_ADJUST, AiPurpose.DERIVE_RECIPE_JSON), ai.calls.map { it.first })
+        val adjustPrompt = ai.calls[0].second.single().parts.single().text
+        assertTrue(adjustPrompt.contains("Pasta Carbonara"))
+        assertTrue(adjustPrompt.contains("make it vegetarian"))
+        assertEquals("Adjusted recipe text", ai.calls[1].second.single().parts.single().text)
+        val state = viewModel.state.value as AskChefVariantViewModel.State.Success
+        assertEquals("Vegetarian Carbonara", state.recipe.title)
+    }
+
+    @Test
+    fun adjustRecipe_quotaExceeded_skipsExtractionAndReportsQuota() = runTest(testDispatcher) {
+        ai.failures[AiPurpose.RECIPE_ADJUST] = BackendException.QuotaExceeded()
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(AskChefVariantViewModel.State.QuotaExceeded, viewModel.state.value)
+        assertEquals(1, ai.calls.size)
+    }
+
+    @Test
+    fun adjustRecipe_emailVerificationRequired_reportsVerification() = runTest(testDispatcher) {
+        ai.failures[AiPurpose.RECIPE_ADJUST] = BackendException.EmailVerificationRequired()
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(AskChefVariantViewModel.State.EmailVerificationRequired, viewModel.state.value)
+    }
+
+    @Test
+    fun adjustRecipe_extractionFails_reportsError() = runTest(testDispatcher) {
+        ai.failures[AiPurpose.DERIVE_RECIPE_JSON] = BackendException.Upstream(502)
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(AskChefVariantViewModel.State.Error, viewModel.state.value)
+    }
+
+    @Test
+    fun adjustRecipe_invalidJson_reportsError() = runTest(testDispatcher) {
+        ai.replies[AiPurpose.DERIVE_RECIPE_JSON] = "not json"
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(AskChefVariantViewModel.State.Error, viewModel.state.value)
+    }
+
+    @Test
+    fun adjustRecipe_noRecipesInJson_reportsError() = runTest(testDispatcher) {
+        ai.replies[AiPurpose.DERIVE_RECIPE_JSON] = """{"recipes":[]}"""
+
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        assertEquals(AskChefVariantViewModel.State.Error, viewModel.state.value)
+    }
+
+    @Test
+    fun reset_returnsToIdle() = runTest(testDispatcher) {
+        ai.failure = BackendException.Upstream(502)
+        viewModel.adjustRecipe(sampleRecipe, "make it vegetarian")
+        advanceUntilIdle()
+
+        viewModel.reset()
+
+        assertEquals(AskChefVariantViewModel.State.Idle, viewModel.state.value)
+    }
+
+    // --- buildAdjustPrompt ---
 
     private val sampleRecipe = Recipe(
         title = "Pasta Carbonara",

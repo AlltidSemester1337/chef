@@ -3,6 +3,7 @@ package com.formulae.chef.services.voice
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import com.formulae.chef.services.backend.TextToSpeechService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.flow
  */
 fun buildTtsFlow(
     sentences: List<String>,
-    ttsService: GcpTextToSpeechService,
+    ttsService: TextToSpeechService,
     context: Context,
     logTag: String = "TTS"
 ): Flow<ByteArray> = flow {

@@ -148,7 +148,7 @@ private fun HomeScreenContent(
     var showLegalInfo by remember { mutableStateOf(false) }
     var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     val overlayViewModel: OverlayChatViewModel = viewModel(
-        factory = remember { OverlayChatViewModelFactory(userSessionService) }
+        factory = remember { OverlayChatViewModelFactory() }
     )
     val overlayQuotaExceeded by overlayViewModel.quotaExceeded.collectAsState()
     val overlayEmailVerificationRequired by overlayViewModel.emailVerificationRequired.collectAsState()
