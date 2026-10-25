@@ -239,10 +239,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-appcheck-debug")
-
-    implementation("com.google.firebase:firebase-vertexai:16.5.0")
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")

@@ -9,11 +9,11 @@ No files in this directory are allowed to edit unless explicitly instructed in p
 
 ## Project Overview
 
-Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes via Google Vertex AI (Gemini models), manages recipe collections, and provides user authentication through Firebase. AI text completions and text-to-speech go through chef-backend, which also traces the AI calls (Phoenix Arize) for model evaluation.
+Chef is a personal cooking assistant Android app (Kotlin/Jetpack Compose) that generates recipes with AI models, manages recipe collections, and provides user authentication through Firebase. All AI calls (text completions, recipe images, cooking resources) and text-to-speech go through chef-backend, which also traces the AI calls (Phoenix Arize) for model evaluation. The app never calls an AI model directly.
 
 ## Build & Test Commands
 
-The project requires JDK 17 and Android SDK with platform 36. `local.properties` must set `chefBackendUrl`, the base URL of chef-backend (separate repo, FastAPI on Cloud Run), which proxies all AI text completions and text-to-speech. A valid `google-services.json` is also required. The app holds no AI/TTS API keys and ships no system prompts.
+The project requires JDK 17 and Android SDK with platform 36. `local.properties` must set `chefBackendUrl`, the base URL of chef-backend (separate repo, FastAPI on Cloud Run), which proxies all AI calls (text, recipe images, cooking resources) and text-to-speech. A valid `google-services.json` is also required. The app holds no AI/TTS API keys and ships no system prompts or prompt templates.
 
 ```bash
 # Build the main Chef app
@@ -85,7 +85,8 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 **Navigation:** `AppNavigation` uses Jetpack Navigation Compose with 4 routes: `home`, `chat`, `collection`, `signIn`.
 
 **Feature packages follow a vertical-slice pattern:**
-- `feature/chat/` — `ChatViewModel` (AndroidViewModel) handles the chat, recipe derivation from chat messages (extracts JSON), preference detection and history compaction through chef-backend (one `AiPurpose` per use), and recipe image generation via Gemini (Firebase Vertex AI). `OverlayChatViewModel` and `AskChefVariantViewModel` also go through the backend.
+- `feature/chat/` — `ChatViewModel` (AndroidViewModel) handles the chat, recipe derivation from chat messages (extracts JSON), preference detection and history compaction through chef-backend (one `AiPurpose` per use), and recipe images (`RecipeImageService`: the backend generates the image, uploads it to Storage and returns the download URL). `OverlayChatViewModel` and `AskChefVariantViewModel` also go through the backend.
+- `feature/home/` — `HomeViewModel` fetches cooking resources from chef-backend (`CookingResourcesService`, sends only the locale; the backend reads the user's preferences) and caches them for 7 days in `users/{uid}.cooking_resources`.
 - `feature/collection/` — `CollectionViewModel` (ViewModel) with injected `RecipeRepository`. Manages recipe list display and removal.
 - `feature/useraccount/` — `SignInViewModel` handles Firebase email/password auth flow.
 - `feature/model/` — `Recipe` (main data model with nested `Ingredient`, `Nutrient`, `Difficulty` enum) and `Recipes` wrapper.
@@ -102,8 +103,8 @@ The primary app is **`:vertexai:app`** — this is where all Chef-specific code 
 - `Recipe.copyOf()` is a custom copy method (not the data class `copy()`) because Firebase deserialization requires mutable `var` fields with `@PropertyName` annotations that don't work correctly with Kotlin's generated `copy()`.
 - Domain models keep timestamps as ISO-8601 `String`s; Firestore stores them as `Timestamp`. Each model has an `@Exclude`d string field plus a `…Timestamp` accessor annotated `@PropertyName("<field>")` that converts via `FirestoreTime`. Firestore auto-IDs are random, so ordering always comes from a timestamp field, never from document IDs. Orphaned recipes have the `uid` field absent (not `null`) because `Recipe.uid` is non-null.
 - Classes that Firestore or Gson (de)serialize by reflection must live in `feature/model/` (kept wholesale by `proguard-rules.pro`) or be annotated `@Keep`; otherwise R8 strips them and only the release build breaks. `verifyReleaseModelsKept` (runs after `minifyReleaseWithR8`, also in CI) checks the sources and `mapping.txt`.
-- Chat history persistence uses a custom `Content`/`Part` data class pair in `ChatHistoryRepositoryImpl` as an intermediary for Firebase serialization, then maps to `com.google.firebase.vertexai.type.Content`.
-- Text generation goes through chef-backend (`services/backend/ChefBackendClient`, `POST /v1/ai/complete`) with an `AiPurpose`; the backend picks system prompt, model and parameters, enforces the beta quota (429 → quota dialog, 403 → email verification dialog) and traces the calls. Requests carry the Firebase ID token and App Check token. ViewModels depend on the `AiCompletionService` interface, so they can be unit tested with a fake. Image generation still uses Gemini via Firebase Vertex AI (App Check protected).
+- Chat history uses the app's own `Content`/`Part` data classes (`services/persistence/ChatHistoryRepository.kt`) for both Firestore serialization and backend requests.
+- Text generation goes through chef-backend (`services/backend/ChefBackendClient`, `POST /v1/ai/complete`) with an `AiPurpose`; the backend picks system prompt, model and parameters, enforces the beta quota (429 → quota dialog, 403 → email verification dialog) and traces the calls. Requests carry the Firebase ID token and App Check token. ViewModels depend on the `AiCompletionService` interface, so they can be unit tested with a fake. Recipe images (`POST /v1/images/recipe`, daily per-user budget → 429 `rate_limited`) and cooking resources (`POST /v1/cooking-resources`) use the same client, headers and error mapping, behind `RecipeImageService` and `CookingResourcesService`. The app has no Firebase AI Logic (`firebase-vertexai`) or Firebase Storage dependency.
 - Voice I/O (mic input, TTS playback) is wired at the composable layer, not the ViewModel layer — `OverlayChatViewModel` has no Application context, and audio I/O is transient UI state. The shared `rememberVoiceController()` composable in `VoiceController.kt` encapsulates all voice lifecycle management for both chat interfaces.
 
 ## ADB Device Interaction
