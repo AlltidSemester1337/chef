@@ -23,10 +23,6 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.formulae.chef.feature.chat.ChatViewModel
 import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.backend.ChefBackendClient
-import com.google.firebase.Firebase
-import com.google.firebase.vertexai.type.ResponseModality
-import com.google.firebase.vertexai.type.generationConfig
-import com.google.firebase.vertexai.vertexAI
 
 class GenerativeViewModelFactory(
     private val userSessionService: UserSessionService
@@ -40,22 +36,13 @@ class GenerativeViewModelFactory(
         return with(viewModelClass) {
             when {
                 isAssignableFrom(ChatViewModel::class.java) -> {
-                    // Text generation goes through chef-backend, which picks prompts and models per purpose.
-                    // Image generation stays on Gemini via Firebase Vertex AI (protected by App Check).
-                    val imageConfig = generationConfig {
-                        responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
-                    }
-
-                    val imageGenerativeModel = Firebase.vertexAI.generativeModel(
-                        modelName = "gemini-2.5-flash-image",
-                        generationConfig = imageConfig
-                    )
-
+                    // chef-backend picks prompts and models for both text and recipe images.
+                    val backendClient = ChefBackendClient(BuildConfig.chefBackendUrl)
                     val applicationScope = (application as ChefApplication).applicationScope
 
                     ChatViewModel(
-                        aiService = ChefBackendClient(BuildConfig.chefBackendUrl),
-                        imageGenerativeModel = imageGenerativeModel,
+                        aiService = backendClient,
+                        recipeImageService = backendClient,
                         application = application,
                         userSessionService = userSessionService,
                         applicationScope = applicationScope

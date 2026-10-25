@@ -42,8 +42,8 @@ class MainActivity : ComponentActivity() {
     init {
         Firebase.initialize(context = this)
         // Debug provider keeps local dev builds / directly-installed test builds working without
-        // per-device Play Integrity setup. Play Integrity is required for release so App Check
-        // provides real abuse protection once Firebase enforces it for AI Logic (Nov 2, 2026).
+        // per-device Play Integrity setup. Play Integrity is required for release so the App Check
+        // tokens that chef-backend and Firestore verify come from a genuine app.
         val appCheckProviderFactory = if (BuildConfig.DEBUG) {
             DebugAppCheckProviderFactory.getInstance()
         } else {

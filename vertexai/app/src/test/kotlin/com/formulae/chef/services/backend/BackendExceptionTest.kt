@@ -14,6 +14,12 @@ class BackendExceptionTest {
     }
 
     @Test
+    fun fromResponse_429WithRateLimitedDetail_isRateLimited() {
+        val e = BackendException.fromResponse(429, """{"detail":"rate_limited"}""")
+        assertTrue(e is BackendException.RateLimited)
+    }
+
+    @Test
     fun fromResponse_403WithEmailVerificationDetail_isEmailVerificationRequired() {
         val e = BackendException.fromResponse(403, """{"detail":"email_verification_required"}""")
         assertTrue(e is BackendException.EmailVerificationRequired)

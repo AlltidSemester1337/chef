@@ -3,7 +3,7 @@
 ![App Icon](vertexai/app/src/main/res/mipmap-xxxhdpi/logo_round.webp)
 
 A personalized cooking assistant / recipe generator and collection browsing Android app (Kotlin) to
-suggest recipes for cooking. Built on Google firebase and vertexai platform.
+suggest recipes for cooking. Built on Firebase, with AI calls through chef-backend.
 
 ## Required setup
 
