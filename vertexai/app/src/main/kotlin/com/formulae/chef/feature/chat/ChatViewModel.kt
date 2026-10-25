@@ -334,7 +334,8 @@ class ChatViewModel(
                 )
                 _userPreferencesRepository.savePreferences(updated)
                 _cachedPreferences = updated
-                Log.d("ChatViewModel", "Preferences updated: ${result.updatedSummary}")
+                // Length only: the summary may hold health-related diet details.
+                Log.d("ChatViewModel", "Preferences updated (${result.updatedSummary.length} chars)")
             }
         } catch (e: Exception) {
             Log.w("ChatViewModel", "Preference detection failed (non-critical)", e)
@@ -396,7 +397,8 @@ class ChatViewModel(
             val ingredients = recipe.ingredients
             val instructions = recipe.instructions
             if (title.isEmpty() || summary.isEmpty() || ingredients.isEmpty() || instructions.isEmpty()) {
-                throw Exception("Failed to derive details from recipe: $recipe")
+                // No recipe content in the message: it ends up in logs.
+                throw Exception("Derived recipe is missing title, summary, ingredients or instructions")
             }
             recipe.copyOf(
                 id = UUID.randomUUID().toString(),
@@ -416,7 +418,7 @@ class ChatViewModel(
                         val imageUrl = createImageForRecipeAsync(recipe.toString())
                         _uiState.value.updateRecipeImage(messageId, recipeId, imageUrl)
                     } catch (e: Exception) {
-                        Log.e("ChatViewModel", "Image generation failed for ${recipe.title}", e)
+                        Log.e("ChatViewModel", "Image generation failed for recipe $recipeId", e)
                         _uiState.value.markRecipeImageFailed(messageId, recipeId)
                     }
                 }
@@ -524,12 +526,7 @@ class ChatViewModel(
             val imageUrl = try {
                 createImageForRecipeAsync(recipe.toString())
             } catch (e: Exception) {
-                Log.e(
-                    "ChatViewModel",
-                    "Image generation pipeline failed for '${recipe.title}' " +
-                        "[${e.javaClass.simpleName}: ${e.message}]",
-                    e
-                )
+                Log.e("ChatViewModel", "Image generation pipeline failed for recipe ${recipe.id}", e)
                 null
             }
             recipe.copyOf(imageUrl = imageUrl)

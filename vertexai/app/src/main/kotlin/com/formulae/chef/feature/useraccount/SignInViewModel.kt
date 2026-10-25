@@ -57,7 +57,7 @@ class SignInViewModel(
                 val user = withContext(Dispatchers.IO) {
                     userSessionService.signInEmailPassword(emailInput.trim(), passwordInput.trim())
                 }
-                Log.d("SignInViewModel", "User result: $user") // Debug log
+                Log.d("SignInViewModel", "Sign-in returned ${if (user != null) "a user" else "no user"}")
                 // This line should be reached if signInEmailPassword returns successfully.
                 if (user != null) {
                     Log.d("SignInViewModel", "Navigating to home") // Ensure this runs

@@ -33,7 +33,7 @@ class RecipeListRepositoryImpl(
         val data =
             mapOf("id" to list.id, "name" to list.name, RECIPE_IDS to list.recipeIds, CREATED_AT to Timestamp.now())
         newRef.set(data)
-            .addOnSuccessListener { Log.d("RecipeListRepo", "List '${list.name}' created") }
+            .addOnSuccessListener { Log.d("RecipeListRepo", "List ${list.id} created") }
             .addOnFailureListener { e -> Log.e("RecipeListRepo", "Failed to create list", e) }
         return list
     }
