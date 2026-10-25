@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-chef \"node --test test/\"",
+    "test": "firebase emulators:exec --only firestore,storage --project demo-chef \"node --test test/\"",
     "test:unit": "node --test test/transform.test.js",
     "migrate": "node migration/migrate.js"
   },

@@ -1,11 +1,11 @@
 # firestore-tools
 
-Firestore security-rule tests and the RTDB → Firestore migration script (CHE-50). Data model: `.ai/firestore-schema.md`.
+Firestore and Storage security-rule tests (`../firestore.rules`, `../storage.rules`) and the RTDB → Firestore migration script (CHE-50). Data model: `.ai/firestore-schema.md`.
 
 ```bash
 cd firestore-tools
 npm install
-npm test            # rules + migration tests in the Firestore emulator (needs Java 11+)
+npm test            # rule + migration tests in the Firestore and Storage emulators (needs Java 11+)
 npm run test:unit   # transform tests only, no emulator
 ```
 
