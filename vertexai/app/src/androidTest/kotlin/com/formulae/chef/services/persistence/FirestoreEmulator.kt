@@ -1,11 +1,16 @@
 package com.formulae.chef.services.persistence
 
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.MemoryCacheSettings
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 /**
  * Shared Firestore + Auth emulator wiring for persistence integration tests.
@@ -41,6 +46,32 @@ object FirestoreEmulator {
         auth.signOut()
         return auth.signInAnonymously().await().user!!.uid
     }
+
+    /**
+     * Writes a document through the emulator's REST API with the `owner` token, which bypasses the
+     * rules — for seeding data the rules would reject (e.g. documents written before validation).
+     * [fieldsJson] is a Firestore REST `fields` object.
+     */
+    suspend fun seedBypassingRules(collection: String, documentId: String, fieldsJson: String) =
+        withContext(Dispatchers.IO) {
+            val projectId = FirebaseApp.getInstance().options.projectId
+            val url = URL(
+                "http://$HOST:8080/v1/projects/$projectId/databases/(default)/documents/$collection" +
+                    "?documentId=$documentId"
+            )
+            val connection = url.openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "POST"
+                connection.doOutput = true
+                connection.setRequestProperty("Authorization", "Bearer owner")
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write("{\"fields\":$fieldsJson}".toByteArray()) }
+                val status = connection.responseCode
+                check(status == 200) { "Seeding $collection/$documentId failed: HTTP $status" }
+            } finally {
+                connection.disconnect()
+            }
+        }
 
     /** Polls [block] until [condition] holds, to wait for fire-and-forget repository writes. */
     suspend fun <T> awaitCondition(block: suspend () -> T, condition: (T) -> Boolean): T {

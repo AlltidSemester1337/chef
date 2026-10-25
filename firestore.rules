@@ -13,23 +13,133 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // A recipe's uid may be the caller's or null (null = orphaned via removeRecipeUid).
-    function uidIsCallerOrNull(data) {
-      return data.get('uid', null) == null || data.uid == request.auth.uid;
+    // Custom claim set via the Admin SDK; lets the operator clean up documents nobody else can delete.
+    function isAdmin() {
+      return signedIn() && request.auth.token.get('admin', false) == true;
+    }
+
+    // --- Field validation helpers. Absent and null are treated alike for optional fields,
+    // because the Android SDK writes null for unset Kotlin properties.
+    // Rules cannot iterate, so list elements are not type-checked; the app reads defensively.
+
+    function optString(d, key, max) {
+      let v = d.get(key, null);
+      return v == null || (v is string && v.size() <= max);
+    }
+
+    function optList(d, key, max) {
+      let v = d.get(key, null);
+      return v == null || (v is list && v.size() <= max);
+    }
+
+    function optDifficulty(d) {
+      return d.get('difficulty', null) == null || d.difficulty in ['EASY', 'MEDIUM', 'HARD'];
+    }
+
+    // Recipe images live at recipes/{uuid}.jpg in the project's default bucket, whether the app or
+    // the backend uploads them. Both the Firebase download-URL form and the plain GCS form are accepted.
+    function isRecipeImageUrl(url) {
+      return url is string && url.matches(
+        '^https://(firebasestorage[.]googleapis[.]com/v0/b/idyllic-bloom-425307-r6[.]firebasestorage[.]app/o/recipes%2F'
+        + '|storage[.]googleapis[.]com/idyllic-bloom-425307-r6[.]firebasestorage[.]app/recipes/)'
+        + '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.]jpg([?]alt=media)?$');
+    }
+
+    // Shape of a recipe document (data model: .ai/firestore-schema.md). Presence of fields is
+    // checked separately on create, because older documents lack some optional ones.
+    function recipeFieldsValid(d, recipeId) {
+      return d.keys().hasOnly([
+          'id', 'uid', 'title', 'summary', 'servings', 'prepTime', 'cookingTime',
+          'nutrientsPerServing', 'ingredients', 'difficulty', 'instructions', 'tipsAndTricks',
+          'imageUrl', 'videoUrl', 'isFavourite', 'copyId', 'tags', 'updatedAt'])
+        && d.get('id', recipeId) == recipeId
+        && d.get('title', '') is string && d.get('title', '').size() <= 200
+        && optString(d, 'summary', 2000)
+        && optString(d, 'servings', 100)
+        && optString(d, 'prepTime', 100)
+        && optString(d, 'cookingTime', 100)
+        && optString(d, 'tipsAndTricks', 5000)
+        && optString(d, 'copyId', 128)
+        && optList(d, 'ingredients', 100)
+        && optList(d, 'instructions', 100)
+        && optList(d, 'nutrientsPerServing', 50)
+        && optList(d, 'tags', 30)
+        && optDifficulty(d)
+        && d.get('isFavourite', false) is bool
+        && (d.get('updatedAt', null) == null || d.updatedAt is timestamp);
+    }
+
+    function validRecipeCreate(d, recipeId) {
+      return d.keys().hasAll(['id', 'uid', 'title', 'summary', 'ingredients', 'instructions', 'isFavourite', 'tags', 'updatedAt'])
+        && d.uid == request.auth.uid
+        && d.title.size() > 0
+        && d.updatedAt is timestamp
+        && recipeFieldsValid(d, recipeId)
+        && (d.get('imageUrl', null) == null || isRecipeImageUrl(d.imageUrl))
+        // videoUrl is set by rotw-job (Admin SDK) only.
+        && d.get('videoUrl', null) == null;
+    }
+
+    function validRecipeUpdate(before, after, recipeId) {
+      return after.get('uid', null) == before.uid
+        && recipeFieldsValid(after, recipeId)
+        // Existing documents keep older image URL formats; only new values must point at our bucket.
+        && (after.get('imageUrl', null) == before.get('imageUrl', null)
+          || after.get('imageUrl', null) == null
+          || isRecipeImageUrl(after.imageUrl))
+        && after.get('videoUrl', null) == before.get('videoUrl', null);
+    }
+
+    // removeRecipeUid: the owner "removes" a recipe from their collection by deleting only the uid
+    // field. Orphans keep uid absent (never null — Android's Recipe.uid is non-null).
+    function isOrphaning() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid'])
+        && !('uid' in request.resource.data);
     }
 
     match /recipes/{recipeId} {
       // Deliberately any signed-in user: the community-browse tab reads other users' favourites.
       allow read: if signedIn();
-      allow create: if signedIn() && uidIsCallerOrNull(request.resource.data);
-      allow update: if isUser(resource.data.get('uid', null)) && uidIsCallerOrNull(request.resource.data);
-      allow delete: if isUser(resource.data.get('uid', null));
+      allow create: if signedIn() && validRecipeCreate(request.resource.data, recipeId);
+      allow update: if isUser(resource.data.get('uid', null))
+        && (isOrphaning() || validRecipeUpdate(resource.data, request.resource.data, recipeId));
+      allow delete: if isUser(resource.data.get('uid', null)) || isAdmin();
 
       // Variants have no owner field of their own — the parent recipe's owner writes them.
+      function isRecipeOwner() {
+        return signedIn()
+          && get(/databases/$(database)/documents/recipes/$(recipeId)).data.get('uid', null) == request.auth.uid;
+      }
+
+      function validVariant(d, variantId) {
+        return d.keys().hasOnly([
+            'id', 'label', 'createdAt', 'isPinned', 'title', 'summary', 'servings', 'prepTime',
+            'cookingTime', 'nutrientsPerServing', 'ingredients', 'difficulty', 'instructions', 'tipsAndTricks'])
+          && d.keys().hasAll(['id', 'label', 'createdAt', 'title', 'ingredients', 'instructions'])
+          && d.id == variantId
+          && d.label is string && d.label.size() > 0 && d.label.size() <= 100
+          && d.createdAt is timestamp
+          && d.get('isPinned', false) is bool
+          && d.title is string && d.title.size() <= 200
+          && optString(d, 'summary', 2000)
+          && optString(d, 'servings', 100)
+          && optString(d, 'prepTime', 100)
+          && optString(d, 'cookingTime', 100)
+          && optString(d, 'tipsAndTricks', 5000)
+          && optList(d, 'ingredients', 100)
+          && optList(d, 'instructions', 100)
+          && optList(d, 'nutrientsPerServing', 50)
+          && optDifficulty(d);
+      }
+
       match /variants/{variantId} {
         allow read: if signedIn();
-        allow write: if signedIn()
-          && get(/databases/$(database)/documents/recipes/$(recipeId)).data.get('uid', null) == request.auth.uid;
+        allow create: if isRecipeOwner() && validVariant(request.resource.data, variantId);
+        // The app only toggles the pin after creation.
+        allow update: if isRecipeOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+          && request.resource.data.isPinned is bool;
+        allow delete: if isRecipeOwner() || isAdmin();
       }
     }
 

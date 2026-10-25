@@ -6,6 +6,7 @@ import com.formulae.chef.feature.model.RecipeOfTheMonth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import java.time.Instant
 import kotlinx.coroutines.tasks.await
 
 class RecipeRepositoryImpl(
@@ -15,7 +16,9 @@ class RecipeRepositoryImpl(
 
     override fun saveRecipe(recipe: Recipe) {
         val documentRef = recipe.id?.let { recipes.document(it) } ?: recipes.document()
-        val recipeWithId = recipe.copy(id = documentRef.id)
+        // The rules require updatedAt; recipes from chat already carry it.
+        val updatedAt = recipe.updatedAt.ifBlank { Instant.now().toString() }
+        val recipeWithId = recipe.copy(id = documentRef.id, updatedAt = updatedAt)
 
         documentRef.set(recipeWithId).addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -30,13 +33,16 @@ class RecipeRepositoryImpl(
         return recipes.whereEqualTo("uid", uid)
             .get()
             .await()
-            .toObjects(Recipe::class.java)
+            .documents
+            .toObjectsSkippingInvalid(Recipe::class.java)
             .sortedByDescending { it.updatedAtTimestamp }
     }
 
     // Newest first, sorted client-side to avoid a composite index. The collection screen shows this order.
     override suspend fun loadAllRecipes(): List<Recipe> {
-        return recipes.get().await().toObjects(Recipe::class.java).sortedByDescending { it.updatedAtTimestamp }
+        return recipes.get().await().documents
+            .toObjectsSkippingInvalid(Recipe::class.java)
+            .sortedByDescending { it.updatedAtTimestamp }
     }
 
     override fun removeRecipe(recipeId: String) {
@@ -62,7 +68,7 @@ class RecipeRepositoryImpl(
     }
 
     override suspend fun getRecipeById(recipeId: String): Recipe? {
-        return recipes.document(recipeId).get().await().toObject(Recipe::class.java)
+        return recipes.document(recipeId).get().await().toObjectOrNull(Recipe::class.java)
     }
 
     override suspend fun getLatestRecipeOfTheMonth(): RecipeOfTheMonth? {
