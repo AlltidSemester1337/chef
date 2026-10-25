@@ -47,6 +47,14 @@ jobs:
       - name: Unit tests
         run: ./gradlew :vertexai:app:testDebugUnitTest
 
+      # Minifies the release build (unsigned) and runs verifyReleaseModelsKept, which fails if R8
+      # stripped a model class that Firestore or Gson (de)serialize by reflection. Release builds
+      # require a backend URL, so a placeholder is used when the secret is not set.
+      - name: R8 model check (release)
+        run: |
+          grep -q '^chefBackendUrl=.' local.properties || echo 'chefBackendUrl=https://ci.invalid' >> local.properties
+          ./gradlew :vertexai:app:minifyReleaseWithR8
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4

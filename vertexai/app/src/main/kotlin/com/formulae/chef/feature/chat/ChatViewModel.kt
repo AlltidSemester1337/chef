@@ -21,6 +21,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.Keep
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.formulae.chef.buildRecipeContextText
@@ -74,6 +75,8 @@ private val IMAGE_PROMPT_TEMPLATE =
     "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, " +
         "create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
 
+// @Keep: Gson creates this by reflection, so R8 must keep its fields and constructor.
+@Keep
 private data class PreferenceDetectionResult(
     val detected: Boolean = false,
     val updatedSummary: String = ""
