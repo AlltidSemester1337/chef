@@ -179,10 +179,20 @@ RecipeList {
 
 | Path | Read | Write |
 |---|---|---|
-| `recipes/{id}` | any signed-in user | create: `uid` must be caller (or absent/null); update/delete: only current owner; owner may remove `uid` (orphan) |
-| `recipes/{id}/variants/{v}` | any signed-in user | only the parent recipe's owner (`get()` on parent) |
+| `recipes/{id}` | any signed-in user | create: `uid` must be the caller, document validated (see below); update: only current owner, `uid`/`videoUrl` unchanged, validated; owner may orphan by deleting only `uid`; delete: owner or admin (`admin` custom claim) |
+| `recipes/{id}/variants/{v}` | any signed-in user | create: parent recipe's owner (`get()` on parent), validated; update: owner, `isPinned` only; delete: owner or admin |
 | `recipe_of_the_month`, `video_generation_history` | public | nobody (Admin SDK bypasses rules) |
 | `users/{uid}` and subcollections | owner only | owner only; `betaInteractionCount` must stay unchanged (server-owned); user doc may not be deleted |
+
+### Recipe and variant validation (CHE-56)
+
+The rules are the API for recipe writes, so they validate the document shape:
+
+- `keys().hasOnly([...])` — exactly the fields of the models above; `hasAll` on create for `id, uid, title, summary, ingredients, instructions, isFavourite, tags, updatedAt` (variants: `id, label, createdAt, title, ingredients, instructions`). Updates don't require presence because older documents lack some optional fields.
+- Types and sizes: `id` == document ID; title ≤ 200 (non-empty on create), summary ≤ 2000, servings/prepTime/cookingTime ≤ 100, tipsAndTricks ≤ 5000, copyId ≤ 128; ingredients/instructions ≤ 100, nutrientsPerServing ≤ 50, tags ≤ 30 elements; difficulty `EASY|MEDIUM|HARD|null`; `updatedAt`/`createdAt` timestamps. Optional fields may be absent or `null` (the Android SDK writes `null` for unset properties).
+- List elements are not type-checked (rules cannot iterate) — `RecipeRepositoryImpl` skips documents that fail to deserialize instead of failing the whole list.
+- `imageUrl`: new values must point at `recipes/{uuid}.jpg` in the default bucket (Firebase download-URL form or `storage.googleapis.com` form, so the app or the backend can upload). Unchanged values are always accepted on update (older documents use other formats).
+- `videoUrl`: `null` on create and unchanged on update — set only by rotw-job (Admin SDK).
 
 ## Indexes
 
