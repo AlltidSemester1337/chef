@@ -55,10 +55,10 @@ The Realtime Database is retired (emptied and closed with deny-all rules in CHE-
 Node package with the security-rule tests (`firestore.rules` at the repo root) and the RTDB → Firestore migration script. See `firestore-tools/README.md`.
 
 ```bash
-cd firestore-tools && npm install && npm test   # rules + migration tests in the Firestore emulator
+cd firestore-tools && npm install && npm test   # Firestore + Storage rule tests and migration tests in the emulators
 ```
 
-Any change to `firestore.rules` must come with a rule test in `firestore-tools/test/rules.test.js`.
+Any change to `firestore.rules` must come with a rule test in `firestore-tools/test/rules.test.js`, and any change to `storage.rules` with one in `firestore-tools/test/storage.rules.test.js` (Storage emulator).
 
 ## Development Practices
 

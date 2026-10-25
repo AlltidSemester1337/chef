@@ -43,10 +43,9 @@ import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
+import com.formulae.chef.services.storage.RecipeImageStorage
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 import com.google.firebase.vertexai.GenerativeModel
 import com.google.firebase.vertexai.type.ImagePart
 import com.google.firebase.vertexai.type.content
@@ -87,7 +86,7 @@ class ChatViewModel(
     private val applicationScope: CoroutineScope
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
-    private val _projectId = FirebaseApp.getInstance().options.projectId
+    private val _recipeImageStorage = RecipeImageStorage.forProject(FirebaseApp.getInstance().options.projectId)
 
     private val _imageGenerativeModel = imageGenerativeModel
     private val _userSessionService = userSessionService
@@ -426,13 +425,11 @@ class ChatViewModel(
 
     private suspend fun createImageForRecipeAsync(recipe: String): String {
         Log.d("ChatViewModel", "Starting image generation pipeline")
-        val gcsUri = generateImage(recipe)
-        Log.d("ChatViewModel", "Image generated and uploaded, fetching download URL")
-        val storagePath = gcsUri.removePrefix("gs://$_projectId.firebasestorage.app/")
-        val downloadUrl = Firebase.storage("gs://$_projectId.firebasestorage.app/")
-            .reference.child(storagePath).downloadUrl.await()
-        Log.d("ChatViewModel", "Download URL obtained successfully")
-        return "https://" + downloadUrl.host + downloadUrl.encodedPath + "?alt=media"
+        val jpeg = generateImage(recipe)
+        Log.d("ChatViewModel", "Image generated, uploading")
+        return _recipeImageStorage.upload(jpeg).also {
+            Log.d("ChatViewModel", "Image uploaded, download URL obtained")
+        }
     }
 
     fun onRecipeSelectedFromChat(recipe: Recipe) {
@@ -539,7 +536,7 @@ class ChatViewModel(
     private suspend fun completeSingle(purpose: AiPurpose, prompt: String): String =
         aiService.complete(purpose, listOf(Content(role = "user", parts = listOf(Part(prompt)))))
 
-    private suspend fun generateImage(recipe: String): String {
+    private suspend fun generateImage(recipe: String): ByteArray {
         val prompt = IMAGE_PROMPT_TEMPLATE + recipe
         val response = _imageGenerativeModel.generateContent(content { text(prompt) })
         val imagePart = response.candidates?.firstOrNull()?.content?.parts
@@ -549,14 +546,7 @@ class ChatViewModel(
 
         val outputStream = ByteArrayOutputStream()
         imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-        val imagePath = "recipes/${UUID.randomUUID()}.jpg"
-
-        Firebase.storage("gs://$_projectId.firebasestorage.app/")
-            .reference.child(imagePath)
-            .putBytes(outputStream.toByteArray())
-            .await()
-
-        return "gs://$_projectId.firebasestorage.app/$imagePath"
+        return outputStream.toByteArray()
     }
 
     companion object {

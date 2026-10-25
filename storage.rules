@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Firebase Storage rules for the default bucket. Admin SDK (rotw-job, chef-backend) bypasses them.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Recipe images. Public read: the app loads them through download URLs without a token
+    // (Coil, ".../o/recipes%2F<uuid>.jpg?alt=media"). Older images use other names, hence **.
+    match /recipes/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // New images: one write per object, by a signed-in user, JPEG only, bounded size.
+    // No overwrite and no delete from clients. The same path works when the backend uploads
+    // with the Admin SDK instead (then client create can be removed).
+    // Transitional: release 4.2.0 uploads without metadata (application/octet-stream or no type);
+    // the name is still <uuid>.jpg and Storage serves it as image/jpeg. Newer versions send
+    // image/jpeg. Drop the fallback once 4.2.0 is out of use, or when the backend uploads (CHE-61).
+    function isJpegUpload() {
+      return request.resource.contentType == 'image/jpeg'
+        || request.resource.contentType == 'application/octet-stream'
+        || request.resource.contentType == null;
+    }
+
+    match /recipes/{fileName} {
+      // An upload to an existing path counts as create, hence resource == null.
+      allow create: if request.auth != null
+        && resource == null
+        && fileName.matches('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.]jpg')
+        && isJpegUpload()
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024;
+    }
+
+    // Recipe-of-the-month videos are written by rotw-job (Admin SDK) and played via public URLs.
+    match /videos/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Everything else is denied.
+  }
+}
