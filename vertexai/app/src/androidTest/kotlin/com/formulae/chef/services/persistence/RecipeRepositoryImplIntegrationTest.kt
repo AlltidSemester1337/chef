@@ -19,6 +19,11 @@ import org.junit.runner.RunWith
 /** [RecipeRepositoryImpl] against the Firestore emulator with production rules. See [FirestoreEmulator]. */
 @RunWith(AndroidJUnit4::class)
 class RecipeRepositoryImplIntegrationTest {
+    private companion object {
+        // The only image URL form the rules accept for new recipes (see firestore.rules).
+        const val IMAGE_URL = "https://firebasestorage.googleapis.com/v0/b/" +
+            "idyllic-bloom-425307-r6.firebasestorage.app/o/recipes%2F0b7d8a3e-5c1f-4e2a-9d6b-1f2e3d4c5b6a.jpg?alt=media"
+    }
 
     private lateinit var repository: RecipeRepositoryImpl
 
@@ -43,7 +48,8 @@ class RecipeRepositoryImplIntegrationTest {
             ingredients = listOf(Ingredient(name = "Flour", quantity = "1/2", unit = "g")),
             instructions = listOf("Mix", "Bake"),
             nutrientsPerServing = listOf(Nutrient(name = "Calories", quantity = "300", unit = "kcal")),
-            tags = listOf("italian", "weeknight")
+            tags = listOf("italian", "weeknight"),
+            imageUrl = IMAGE_URL
         )
 
         repository.saveRecipe(recipe)
@@ -59,6 +65,34 @@ class RecipeRepositoryImplIntegrationTest {
         assertEquals(listOf("Mix", "Bake"), loaded.instructions)
         assertEquals("kcal", loaded.nutrientsPerServing!![0].unit)
         assertEquals(listOf("italian", "weeknight"), loaded.tags)
+        assertEquals(IMAGE_URL, loaded.imageUrl)
+    }
+
+    @Test
+    fun loadRecipes_skipMalformedDocuments_insteadOfFailingTheWholeList() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "good-$uid", uid = uid, title = "Good"))
+        assertNotNull(awaitRecipe("good-$uid"))
+        // Wrong types (title is a number, ingredients a string) — the rules reject this today, but
+        // older documents or Admin SDK writes could still look like this.
+        FirestoreEmulator.seedBypassingRules(
+            "recipes",
+            "bad-$uid",
+            """{"id":{"stringValue":"bad-$uid"},"uid":{"stringValue":"$uid"},""" +
+                """"title":{"integerValue":"42"},"ingredients":{"stringValue":"x"}}"""
+        )
+
+        assertEquals(listOf("good-$uid"), repository.loadUserRecipes(uid).map { it.id })
+        assertTrue(repository.loadAllRecipes().any { it.id == "good-$uid" })
+        assertNull(repository.getRecipeById("bad-$uid"))
+    }
+
+    @Test
+    fun saveRecipe_withoutUpdatedAt_isStampedSoTheRulesAcceptIt() = runBlocking {
+        val uid = signInAsNewUser()
+        repository.saveRecipe(Recipe(id = "stamp-$uid", uid = uid, title = "No timestamp"))
+
+        assertTrue(awaitRecipe("stamp-$uid")!!.updatedAt.isNotBlank())
     }
 
     @Test

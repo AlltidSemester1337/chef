@@ -13,7 +13,7 @@ class RecipeVariantRepositoryImpl(
         firestore.collection(FirestorePaths.RECIPES).document(recipeId).collection(FirestorePaths.VARIANTS)
 
     override suspend fun loadVariantsForRecipe(recipeId: String): List<RecipeVariant> {
-        return variants(recipeId).get().await().toObjects(RecipeVariant::class.java)
+        return variants(recipeId).get().await().documents.toObjectsSkippingInvalid(RecipeVariant::class.java)
     }
 
     override suspend fun saveVariant(recipeId: String, variant: RecipeVariant): String {
