@@ -3,16 +3,14 @@ package com.formulae.chef.feature.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.services.authentication.UserSessionService
+import com.formulae.chef.services.backend.CookingResourcesRequests
+import com.formulae.chef.services.backend.CookingResourcesService
 import com.formulae.chef.services.persistence.CachedCookingResources
 import com.formulae.chef.services.persistence.CookingResourcesRepository
 import com.formulae.chef.services.persistence.CookingResourcesRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
-import com.google.firebase.vertexai.GenerativeModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.Locale
@@ -27,13 +25,14 @@ private const val CACHE_MAX_AGE_DAYS = 7L
 
 class HomeViewModel(
     private val userSessionService: UserSessionService,
-    private val resourcesGenerativeModel: GenerativeModel,
+    private val cookingResourcesService: CookingResourcesService,
     private val preferencesRepositoryFactory: (String) -> UserPreferencesRepository = { uid ->
         UserPreferencesRepositoryImpl(uid)
     },
     private val resourcesRepositoryFactory: (String) -> CookingResourcesRepository = { uid ->
         CookingResourcesRepositoryImpl(uid)
-    }
+    },
+    private val locale: () -> Locale = { Locale.getDefault() }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -47,7 +46,8 @@ class HomeViewModel(
         }
     }
 
-    private suspend fun loadOrGenerateResources(uid: String) {
+    // Internal for tests: UserSessionService hands out FirebaseUser, which tests cannot create.
+    internal suspend fun loadOrGenerateResources(uid: String) {
         _uiState.value = _uiState.value.copy(isLoading = true)
         try {
             val prefsRepo = preferencesRepositoryFactory(uid)
@@ -62,8 +62,16 @@ class HomeViewModel(
                 return
             }
 
-            Log.d(TAG, "Generating fresh cooking resources via Gemini")
-            val generated = generateResources(preferences?.summary.orEmpty())
+            // The backend reads the user's preferences itself; only the locale is sent.
+            Log.d(TAG, "Fetching fresh cooking resources from backend")
+            val generated = try {
+                cookingResourcesService.fetchCookingResources(CookingResourcesRequests.languageTag(locale()))
+            } catch (e: Exception) {
+                // E.g. the daily budget is used up: an outdated list beats an empty section.
+                Log.e(TAG, "Fetching cooking resources failed", e)
+                _uiState.value = HomeUiState(resources = cached?.resources.orEmpty(), isLoading = false)
+                return
+            }
             if (generated.isNotEmpty()) {
                 val newCache = CachedCookingResources(
                     resources = generated,
@@ -98,26 +106,6 @@ class HomeViewModel(
                 Log.w(TAG, "Could not parse timestamps for staleness check, treating as stale", e)
                 true
             }
-        }
-    }
-
-    private suspend fun generateResources(preferencesSummary: String): List<CookingResource> {
-        val locale = Locale.getDefault()
-        val prompt = buildString {
-            append("User locale: ${locale.displayLanguage} (${locale.country})\n")
-            if (preferencesSummary.isNotBlank()) {
-                append("User cooking preferences: $preferencesSummary\n")
-            }
-            append("Recommend 5-8 personalized cooking resources for this user.")
-        }
-        return try {
-            val response = resourcesGenerativeModel.generateContent(prompt)
-            val json = response.text ?: return emptyList()
-            val type = object : TypeToken<List<CookingResource>>() {}.type
-            Gson().fromJson(json, type) ?: emptyList()
-        } catch (e: Exception) {
-            Log.e(TAG, "Gemini resource generation failed", e)
-            emptyList()
         }
     }
 }
