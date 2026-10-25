@@ -1,6 +1,6 @@
 # Firestore Schema
 
-Target data model for the RTDB → Firestore migration (CHE-50, "Fas 0"). Until the cut-over the app still runs on RTDB — see `.ai/database-schema.md` for the live schema.
+Live data model of the app. It replaced the Firebase Realtime Database in the RTDB → Firestore migration (CHE-50, "Fas 0"); the RTDB was emptied and closed on 2026-10-08. `.ai/database-schema.md` describes the old RTDB schema and is only needed for the migration tooling and old backups.
 
 ## Database
 
@@ -93,7 +93,7 @@ RecipeVariant {
 }
 ```
 
-Deleting a recipe does **not** delete its `variants` subcollection (same orphaning behaviour as RTDB today). A collection-group query on `variants` is available to the backend.
+Deleting a recipe does **not** delete its `variants` subcollection (same orphaning behaviour as in the old RTDB). A collection-group query on `variants` is available to the backend.
 
 ---
 
