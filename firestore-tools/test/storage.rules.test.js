@@ -42,44 +42,20 @@ describe('recipes/ read', () => {
   });
 });
 
-describe('recipes/{uuid}.jpg create', () => {
-  // A fresh name per upload: creating at an existing path is an overwrite, which is denied.
+describe('recipes/ client uploads', () => {
+  // chef-backend uploads with the Admin SDK (CHE-61); clients may not write recipes/ at all.
   const freshImage = () => `recipes/${randomUUID()}.jpg`;
   const upload = (uid, path = freshImage(), data = bytes(1024), metadata = JPEG) =>
     uploadBytes(ref(storage(uid), path), data, metadata);
 
-  it('allows a signed-in user to upload a JPEG at a UUID name', () => assertSucceeds(upload(ALICE)));
-  it('allows up to 5 MiB', () => assertSucceeds(upload(ALICE, freshImage(), bytes(5 * 1024 * 1024))));
-
+  it('denies a signed-in user uploading a valid JPEG at a UUID name', () => assertFails(upload(ALICE)));
+  it('denies metadata-less uploads (release 4.2.0)', () =>
+    assertFails(upload(ALICE, freshImage(), bytes(10), { contentType: 'application/octet-stream' })));
   it('denies unauthenticated upload', () => assertFails(upload(null)));
-  it('denies a second upload to the same name (no overwrite)', async () => {
-    const path = freshImage();
-    await assertSucceeds(upload(ALICE, path));
-    await assertFails(upload(ALICE, path));
-    await assertFails(upload('bob', path));
-  });
-  it('denies other content types', async () => {
-    for (const contentType of ['image/png', 'text/html', 'image/svg+xml', 'application/javascript']) {
-      await assertFails(upload(ALICE, freshImage(), bytes(10), { contentType }), contentType);
-    }
-  });
-  it('accepts metadata-less uploads from release 4.2.0 (transitional)', () =>
-    assertSucceeds(upload(ALICE, freshImage(), bytes(10), { contentType: 'application/octet-stream' })));
-  it('denies more than 5 MiB and empty files', async () => {
-    await assertFails(upload(ALICE, freshImage(), bytes(5 * 1024 * 1024 + 1)));
-    await assertFails(upload(ALICE, freshImage(), bytes(0)));
-  });
-  it('denies names other than <uuid>.jpg', async () => {
-    for (const path of [
-      `recipes/${UUID}`,
-      `recipes/${UUID}.png`,
-      `recipes/${UUID.toUpperCase()}.jpg`,
-      'recipes/evil.jpg',
-      `recipes/x/${UUID}.jpg`,
-      `recipes/${UUID}.jpg.html`
-    ]) {
-      await assertFails(upload(ALICE, path), path);
-    }
+  it('denies other names and content types', async () => {
+    await assertFails(upload(ALICE, 'recipes/evil.jpg'));
+    await assertFails(upload(ALICE, `recipes/x/${UUID}.jpg`));
+    await assertFails(upload(ALICE, freshImage(), bytes(10), { contentType: 'text/html' }));
   });
 });
 
