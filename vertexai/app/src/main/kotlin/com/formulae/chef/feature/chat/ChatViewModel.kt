@@ -18,7 +18,6 @@ package com.formulae.chef.feature.chat
 
 import android.app.Application
 import android.content.Context
-import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.Keep
@@ -36,6 +35,7 @@ import com.formulae.chef.services.authentication.UserSessionService
 import com.formulae.chef.services.backend.AiCompletionService
 import com.formulae.chef.services.backend.AiPurpose
 import com.formulae.chef.services.backend.BackendException
+import com.formulae.chef.services.backend.RecipeImageService
 import com.formulae.chef.services.persistence.ChatHistoryRepository
 import com.formulae.chef.services.persistence.ChatHistoryRepositoryImpl
 import com.formulae.chef.services.persistence.Content
@@ -44,14 +44,8 @@ import com.formulae.chef.services.persistence.Part
 import com.formulae.chef.services.persistence.RecipeRepositoryImpl
 import com.formulae.chef.services.persistence.UserPreferencesRepository
 import com.formulae.chef.services.persistence.UserPreferencesRepositoryImpl
-import com.formulae.chef.services.storage.RecipeImageStorage
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.UserInfo
-import com.google.firebase.vertexai.GenerativeModel
-import com.google.firebase.vertexai.type.ImagePart
-import com.google.firebase.vertexai.type.content
 import com.google.gson.Gson
-import java.io.ByteArrayOutputStream
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -70,10 +64,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-private val IMAGE_PROMPT_TEMPLATE =
-    "As a professional photographer specializing in 100mm Macro lens natural lighting food photography, " +
-        "create a photorealistic, colorful, visually appealing image of a single serving for the following recipe: "
-
 // @Keep: Gson creates this by reflection, so R8 must keep its fields and constructor.
 @Keep
 private data class PreferenceDetectionResult(
@@ -83,15 +73,13 @@ private data class PreferenceDetectionResult(
 
 class ChatViewModel(
     private val aiService: AiCompletionService,
-    imageGenerativeModel: GenerativeModel,
+    private val recipeImageService: RecipeImageService,
     application: Application,
     userSessionService: UserSessionService,
     private val applicationScope: CoroutineScope
 ) : AndroidViewModel(application) {
     private val _recipeRepositoryImpl = RecipeRepositoryImpl()
-    private val _recipeImageStorage = RecipeImageStorage.forProject(FirebaseApp.getInstance().options.projectId)
 
-    private val _imageGenerativeModel = imageGenerativeModel
     private val _userSessionService = userSessionService
 
     private val _quotaExceeded = MutableStateFlow(false)
@@ -417,7 +405,7 @@ class ChatViewModel(
                 async {
                     val recipeId = recipe.id ?: return@async
                     try {
-                        val imageUrl = createImageForRecipeAsync(recipe.toString())
+                        val imageUrl = createImageForRecipe(recipe)
                         _uiState.value.updateRecipeImage(messageId, recipeId, imageUrl)
                     } catch (e: Exception) {
                         Log.e("ChatViewModel", "Image generation failed for recipe $recipeId", e)
@@ -428,12 +416,11 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun createImageForRecipeAsync(recipe: String): String {
-        Log.d("ChatViewModel", "Starting image generation pipeline")
-        val jpeg = generateImage(recipe)
-        Log.d("ChatViewModel", "Image generated, uploading")
-        return _recipeImageStorage.upload(jpeg).also {
-            Log.d("ChatViewModel", "Image uploaded, download URL obtained")
+    // chef-backend generates the image, stores it in Storage and returns its download URL.
+    private suspend fun createImageForRecipe(recipe: Recipe): String {
+        Log.d("ChatViewModel", "Requesting recipe image from backend")
+        return recipeImageService.generateRecipeImage(buildRecipeContextText(recipe)).also {
+            Log.d("ChatViewModel", "Recipe image stored")
         }
     }
 
@@ -524,7 +511,7 @@ class ChatViewModel(
     private suspend fun deriveRecipesFromMessage(messageText: String): List<Recipe> =
         extractRecipeDetailsFromMessage(messageText).map { recipe ->
             val imageUrl = try {
-                createImageForRecipeAsync(recipe.toString())
+                createImageForRecipe(recipe)
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Image generation pipeline failed for recipe ${recipe.id}", e)
                 null
@@ -535,19 +522,6 @@ class ChatViewModel(
     /** One-shot completion: [prompt] as the only user message. */
     private suspend fun completeSingle(purpose: AiPurpose, prompt: String): String =
         aiService.complete(purpose, listOf(Content(role = "user", parts = listOf(Part(prompt)))))
-
-    private suspend fun generateImage(recipe: String): ByteArray {
-        val prompt = IMAGE_PROMPT_TEMPLATE + recipe
-        val response = _imageGenerativeModel.generateContent(content { text(prompt) })
-        val imagePart = response.candidates?.firstOrNull()?.content?.parts
-            ?.filterIsInstance<ImagePart>()
-            ?.firstOrNull()
-            ?: throw IllegalStateException("No image data in response from gemini-2.5-flash-image")
-
-        val outputStream = ByteArrayOutputStream()
-        imagePart.image.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-        return outputStream.toByteArray()
-    }
 
     companion object {
         fun recipeContextGreeting(recipeTitle: String): String =
