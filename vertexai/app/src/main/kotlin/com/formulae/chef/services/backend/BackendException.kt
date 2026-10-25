@@ -8,6 +8,9 @@ sealed class BackendException(message: String) : Exception(message) {
     /** 429: beta quota used up. Also returned for anonymous users, who have no quota. */
     class QuotaExceeded : BackendException("Beta quota exceeded")
 
+    /** 429 `rate_limited`: a per-user daily budget (e.g. recipe images) is used up. */
+    class RateLimited : BackendException("Daily budget for this request type used up")
+
     /** 403: the user must verify their email address first. */
     class EmailVerificationRequired : BackendException("Email verification required")
 
@@ -26,6 +29,7 @@ sealed class BackendException(message: String) : Exception(message) {
         fun fromResponse(status: Int, body: String?): BackendException {
             val detail = parseDetail(body)
             return when {
+                status == 429 && detail == "rate_limited" -> RateLimited()
                 status == 429 -> QuotaExceeded()
                 status == 403 && detail == "email_verification_required" -> EmailVerificationRequired()
                 status == 401 -> Unauthorized()

@@ -1,11 +1,8 @@
 package com.formulae.chef.services.backend
 
 import android.util.Log
+import com.formulae.chef.feature.model.CookingResource
 import com.formulae.chef.services.persistence.Content
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /** Generates text for a [purpose]. Seam for ViewModel tests. */
@@ -20,11 +17,32 @@ fun interface TextToSpeechService {
     suspend fun synthesize(text: String): ByteArray
 }
 
-/** HTTP client for chef-backend, which proxies the AI and TTS calls. */
+/** Generates and stores a picture of a recipe. Seam for ViewModel tests. */
+fun interface RecipeImageService {
+    /**
+     * @param recipeText plain-text recipe (title, summary, ingredients, steps).
+     * @return public HTTPS download URL of the stored image.
+     * @throws BackendException for error responses, `IOException` for network failures.
+     */
+    suspend fun generateRecipeImage(recipeText: String): String
+}
+
+/** Recommends cooking websites, channels and blogs for the signed-in user. Seam for ViewModel tests. */
+fun interface CookingResourcesService {
+    /**
+     * @param languageTag BCP 47 tag, see [CookingResourcesRequests.languageTag].
+     * @return validated resources, possibly empty.
+     * @throws BackendException for error responses, `IOException` for network failures.
+     */
+    suspend fun fetchCookingResources(languageTag: String): List<CookingResource>
+}
+
+/** HTTP client for chef-backend, which proxies the AI, image and TTS calls. */
 class ChefBackendClient(
     private val baseUrl: String,
-    private val tokenProvider: BackendTokenProvider = FirebaseBackendTokenProvider()
-) : AiCompletionService, TextToSpeechService {
+    private val tokenProvider: BackendTokenProvider = FirebaseBackendTokenProvider(),
+    private val transport: BackendTransport = HttpUrlConnectionTransport()
+) : AiCompletionService, TextToSpeechService, RecipeImageService, CookingResourcesService {
 
     override suspend fun complete(purpose: AiPurpose, messages: List<Content>): String {
         val body = CompletionRequests.buildRequestBody(purpose, messages)
@@ -35,6 +53,18 @@ class ChefBackendClient(
     override suspend fun synthesize(text: String): ByteArray {
         val body = JSONObject().put("text", text).toString()
         return post("/v1/tts/synthesize", body, TTS_READ_TIMEOUT_MS)
+    }
+
+    override suspend fun generateRecipeImage(recipeText: String): String {
+        val body = RecipeImageRequests.buildRequestBody(recipeText)
+        val response = post("/v1/images/recipe", body, IMAGE_READ_TIMEOUT_MS)
+        return RecipeImageRequests.parseResponse(response.decodeToString())
+    }
+
+    override suspend fun fetchCookingResources(languageTag: String): List<CookingResource> {
+        val body = CookingResourcesRequests.buildRequestBody(languageTag)
+        val response = post("/v1/cooking-resources", body, AI_READ_TIMEOUT_MS)
+        return CookingResourcesRequests.parseResponse(response.decodeToString())
     }
 
     // Tokens are cached by Firebase. If the backend still rejects them (e.g. revoked or a fresh
@@ -53,38 +83,25 @@ class ChefBackendClient(
         forceRefresh: Boolean
     ): ByteArray {
         val headers = tokenProvider.authHeaders(forceRefresh)
-        return withContext(Dispatchers.IO) {
-            val connection = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
-            try {
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                headers.forEach { (name, value) -> connection.setRequestProperty(name, value) }
-                connection.doOutput = true
-                connection.connectTimeout = CONNECT_TIMEOUT_MS
-                connection.readTimeout = readTimeoutMs
-                connection.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
-
-                val status = connection.responseCode
-                if (status != HttpURLConnection.HTTP_OK) {
-                    val error = connection.errorStream?.use { it.readBytes().decodeToString() }
-                    val exception = BackendException.fromResponse(status, error)
-                    // Not the raw body: a 422 body echoes the request, i.e. user content.
-                    Log.e(TAG, "POST $path failed: ${exception.message}")
-                    throw exception
-                }
-                connection.inputStream.use { it.readBytes() }
-            } finally {
-                connection.disconnect()
-            }
+        val response = transport.post(baseUrl.trimEnd('/') + path, headers, jsonBody, readTimeoutMs)
+        if (response.status != HTTP_OK) {
+            val exception = BackendException.fromResponse(response.status, response.body.decodeToString())
+            // Not the raw body: a 422 body echoes the request, i.e. user content.
+            Log.e(TAG, "POST $path failed: ${exception.message}")
+            throw exception
         }
+        return response.body
     }
 
     private companion object {
         const val TAG = "ChefBackendClient"
-        const val CONNECT_TIMEOUT_MS = 15_000
+        const val HTTP_OK = 200
 
         // Cloud Run may cold-start, and long chat answers take a while to generate.
         const val AI_READ_TIMEOUT_MS = 90_000
         const val TTS_READ_TIMEOUT_MS = 30_000
+
+        // Image generation, JPEG conversion and the upload all happen before the server answers.
+        const val IMAGE_READ_TIMEOUT_MS = 120_000
     }
 }

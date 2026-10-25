@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 /**
  * Integration tests against the deployed chef-backend: URLs, headers and error mapping.
  *
- * Only rejected credentials are sent, so no AI or TTS call is ever made (no cost). A successful
+ * Only rejected credentials are sent, so no AI, image or TTS call is ever made (no cost). A successful
  * round trip needs a signed-in user and a registered App Check debug token, and is covered by
  * manual E2E testing. Skipped when chefBackendUrl is not set in local.properties.
  */
@@ -27,10 +27,13 @@ class ChefBackendClientTest {
     @Before
     fun setUp() {
         assumeTrue("Skipping: chefBackendUrl not configured", BuildConfig.chefBackendUrl.isNotBlank())
-        client = ChefBackendClient(BuildConfig.chefBackendUrl) { forceRefresh ->
-            tokenRequests += forceRefresh
-            mapOf("Authorization" to "Bearer not-a-token", "X-Firebase-AppCheck" to "not-a-token")
-        }
+        client = ChefBackendClient(
+            BuildConfig.chefBackendUrl,
+            tokenProvider = { forceRefresh ->
+                tokenRequests += forceRefresh
+                mapOf("Authorization" to "Bearer not-a-token", "X-Firebase-AppCheck" to "not-a-token")
+            }
+        )
     }
 
     @Test(expected = BackendException.Unauthorized::class)
@@ -41,6 +44,16 @@ class ChefBackendClientTest {
     @Test(expected = BackendException.Unauthorized::class)
     fun synthesize_withRejectedTokens_throwsUnauthorized() = runTest {
         client.synthesize("Hello Chef.")
+    }
+
+    @Test(expected = BackendException.Unauthorized::class)
+    fun generateRecipeImage_withRejectedTokens_throwsUnauthorized() = runTest {
+        client.generateRecipeImage("Recipe: Pancakes")
+    }
+
+    @Test(expected = BackendException.Unauthorized::class)
+    fun fetchCookingResources_withRejectedTokens_throwsUnauthorized() = runTest {
+        client.fetchCookingResources("sv-SE")
     }
 
     @Test
