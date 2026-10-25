@@ -1,3 +1,11 @@
+# Strip verbose/debug/info logging from release builds. Log.w/e stay for crash triage from
+# logcat, so they must never carry user content (chat text, recipes, preferences, emails).
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+
 # Gson deserializes recipe/nutrition data by reflection — keep field names and no-arg constructors.
 -keepclassmembers class com.formulae.chef.feature.model.** {
     <fields>;
