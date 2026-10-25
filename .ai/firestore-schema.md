@@ -1,6 +1,6 @@
 # Firestore Schema
 
-Target data model for the RTDB → Firestore migration (CHE-50, "Fas 0"). Until the cut-over the app still runs on RTDB — see `.ai/database-schema.md` for the live schema.
+Live data model of the app. It replaced the Firebase Realtime Database in the RTDB → Firestore migration (CHE-50, "Fas 0"); the RTDB was emptied and closed on 2026-10-08. `.ai/database-schema.md` describes the old RTDB schema and is only needed for the migration tooling and old backups.
 
 ## Database
 
@@ -49,7 +49,7 @@ Recipe {
   cookingTime:         string           // human-readable, may be ""
   prepTime:            string           // may be ""
   servings:            string
-  imageUrl:            string           // Firebase Storage HTTPS URL
+  imageUrl:            string           // Firebase Storage HTTPS URL; image generated and uploaded by chef-backend (POST /v1/images/recipe)
   videoUrl:            string?          // set by rotw-job when featured
   isFavourite:         boolean          // true = visible in community view
   copyId:              string?          // set when this recipe is a copy of another user's recipe (source recipe ID)
@@ -93,7 +93,7 @@ RecipeVariant {
 }
 ```
 
-Deleting a recipe does **not** delete its `variants` subcollection (same orphaning behaviour as RTDB today). A collection-group query on `variants` is available to the backend.
+Deleting a recipe does **not** delete its `variants` subcollection (same orphaning behaviour as in the old RTDB). A collection-group query on `variants` is available to the backend.
 
 ---
 
@@ -134,7 +134,7 @@ User {
     summary:   string
     updatedAt: Timestamp
   }?
-  cooking_resources: {                         // absent until first fetched
+  cooking_resources: {                         // absent until first fetched; app-side 7-day cache of POST /v1/cooking-resources
     resources: { title: string, url: string, type: string, description: string }[]
     updatedAt: Timestamp
   }?
@@ -191,7 +191,7 @@ The rules are the API for recipe writes, so they validate the document shape:
 - `keys().hasOnly([...])` — exactly the fields of the models above; `hasAll` on create for `id, uid, title, summary, ingredients, instructions, isFavourite, tags, updatedAt` (variants: `id, label, createdAt, title, ingredients, instructions`). Updates don't require presence because older documents lack some optional fields.
 - Types and sizes: `id` == document ID; title ≤ 200 (non-empty on create), summary ≤ 2000, servings/prepTime/cookingTime ≤ 100, tipsAndTricks ≤ 5000, copyId ≤ 128; ingredients/instructions ≤ 100, nutrientsPerServing ≤ 50, tags ≤ 30 elements; difficulty `EASY|MEDIUM|HARD|null`; `updatedAt`/`createdAt` timestamps. Optional fields may be absent or `null` (the Android SDK writes `null` for unset properties).
 - List elements are not type-checked (rules cannot iterate) — `RecipeRepositoryImpl` skips documents that fail to deserialize instead of failing the whole list.
-- `imageUrl`: new values must point at `recipes/{uuid}.jpg` in the default bucket (Firebase download-URL form or `storage.googleapis.com` form, so the app or the backend can upload). Unchanged values are always accepted on update (older documents use other formats).
+- `imageUrl`: new values must point at `recipes/{uuid}.jpg` in the default bucket (Firebase download-URL form or `storage.googleapis.com` form). Since 4.3.0 only chef-backend uploads images (Admin SDK); `storage.rules` denies all client writes. Unchanged values are always accepted on update (older documents use other formats).
 - `videoUrl`: `null` on create and unchanged on update — set only by rotw-job (Admin SDK).
 
 ## Indexes
