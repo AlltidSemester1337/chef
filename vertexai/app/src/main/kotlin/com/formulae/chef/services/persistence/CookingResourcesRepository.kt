@@ -1,10 +1,13 @@
 package com.formulae.chef.services.persistence
 
+import androidx.annotation.Keep
 import com.formulae.chef.feature.model.CookingResource
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.PropertyName
 
+// @Keep: Firestore maps this by reflection, so R8 must keep names, fields and constructors.
+@Keep
 data class CachedCookingResources(
     var resources: List<CookingResource> = emptyList(),
     @get:Exclude

@@ -142,6 +142,71 @@ val verifyAssets by tasks.registering {
 }
 tasks.named("preBuild") { dependsOn(verifyAssets) }
 
+// Firestore and Gson (de)serialize model classes by reflection. When R8 renames or strips such a
+// class, only the release build fails, at runtime (CHE-55, CHE-69). Convention: reflection-serialized
+// data classes live in feature/model (kept by proguard-rules.pro) or are annotated @Keep. This task
+// checks the convention in the sources, and its result in R8's mapping.txt: each such class keeps its
+// name, its no-arg constructor and its field names. Runs after every release minification.
+val mainKotlinSources = fileTree("src/main/kotlin") { include("**/*.kt") }
+val releaseMapping = layout.buildDirectory.file("outputs/mapping/release/mapping.txt")
+val verifyReleaseModelsKept by tasks.registering {
+    description = "Fails if a reflection-serialized model class lost its name, constructor or fields in R8."
+    inputs.files(mainKotlinSources)
+    inputs.file(releaseMapping)
+    doLast {
+        val srcRoot = file("src/main/kotlin")
+        val dataClass = Regex("""^((?:@\w+\s+)*)(?:(?:private|internal)\s+)?data class (\w+)""", RegexOption.MULTILINE)
+        val reflectiveUse = Regex("""(?:toObjects?|fromJson|\.get)\([^\n]*?(\w+)::class\.java|TypeToken<(?:\w+<)?(\w+)>""")
+        val declared = mutableSetOf<String>()
+        val kept = mutableMapOf<String, String>() // simple name -> FQN
+        val used = mutableSetOf<String>()
+        mainKotlinSources.files.forEach { source ->
+            val text = source.readText()
+            val pkg = Regex("""^package ([\w.]+)""", RegexOption.MULTILINE).find(text)?.groupValues?.get(1) ?: ""
+            val inModelPackage = source.relativeTo(srcRoot).invariantSeparatorsPath
+                .startsWith("com/formulae/chef/feature/model/")
+            dataClass.findAll(text).forEach { match ->
+                val name = match.groupValues[2]
+                declared += name
+                if (inModelPackage || "@Keep" in match.groupValues[1]) kept[name] = "$pkg.$name"
+            }
+            reflectiveUse.findAll(text).forEach { match ->
+                used += match.groupValues.drop(1).first { it.isNotEmpty() }
+            }
+        }
+
+        val problems = mutableListOf<String>()
+        (used intersect declared).filterNot { it in kept }.forEach {
+            problems += "$it is (de)serialized by reflection but is neither in feature/model nor @Keep"
+        }
+        val mapping = releaseMapping.get().asFile.readLines()
+        val fieldLine = Regex("""^\s+[\w.$\[\]]+ ([\w$]+) -> ([\w$]+)$""")
+        for (fqn in kept.values.sorted()) {
+            val start = mapping.indexOfFirst { it.startsWith("$fqn -> ") }
+            if (start < 0) {
+                problems += "$fqn was removed by R8"
+                continue
+            }
+            if (mapping[start] != "$fqn -> $fqn:") problems += "$fqn was renamed (${mapping[start]})"
+            // Member lines are indented; R8 also puts "# {...}" metadata comments between them.
+            val members = mapping.drop(start + 1).takeWhile { it.startsWith(" ") || it.startsWith("#") }
+            if (members.none { "void <init>()" in it }) problems += "$fqn lost its no-arg constructor"
+            members.mapNotNull { fieldLine.find(it) }
+                .filter { it.groupValues[1] != it.groupValues[2] }
+                .forEach { problems += "$fqn field ${it.groupValues[1]} was renamed to ${it.groupValues[2]}" }
+        }
+        if (problems.isNotEmpty()) {
+            throw GradleException(
+                "Release build would break Firestore/Gson (de)serialization. Move the class to feature/model " +
+                    "or annotate it with @Keep:\n" + problems.joinToString("\n") { "  - $it" }
+            )
+        }
+        logger.lifecycle("verifyReleaseModelsKept: ${kept.size} model classes intact after R8")
+    }
+}
+tasks.matching { it.name == "minifyReleaseWithR8" }.configureEach { finalizedBy(verifyReleaseModelsKept) }
+verifyReleaseModelsKept.configure { mustRunAfter("minifyReleaseWithR8") }
+
 // A release without the backend URL would build fine but every AI and voice feature would fail.
 tasks.matching { it.name == "preReleaseBuild" }.configureEach {
     doFirst {
