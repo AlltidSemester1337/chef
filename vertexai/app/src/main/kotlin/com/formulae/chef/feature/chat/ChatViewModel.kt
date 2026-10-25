@@ -407,6 +407,7 @@ class ChatViewModel(
                     try {
                         val imageUrl = createImageForRecipe(recipe)
                         _uiState.value.updateRecipeImage(messageId, recipeId, imageUrl)
+                        saveImageIfStarred(messageId, recipe.copyOf(imageUrl = imageUrl))
                     } catch (e: Exception) {
                         Log.e("ChatViewModel", "Image generation failed for recipe $recipeId", e)
                         _uiState.value.markRecipeImageFailed(messageId, recipeId)
@@ -415,6 +416,19 @@ class ChatViewModel(
             }.awaitAll()
         }
     }
+
+    // The user may star a recipe while its image is still being generated; the saved copy then
+    // has no image yet, so save it again once the image is there.
+    private suspend fun saveImageIfStarred(messageId: String, recipe: Recipe) {
+        val message = _uiState.value.messages.find { it.id == messageId } ?: return
+        if (recipe.id !in message.starredRecipeIds) return
+        withContext(Dispatchers.IO) {
+            _recipeRepositoryImpl.saveRecipe(toSavedRecipe(recipe))
+        }
+    }
+
+    private fun toSavedRecipe(recipe: Recipe): Recipe =
+        recipe.copyOf(uid = _currentUser?.uid ?: "", isFavourite = true)
 
     // chef-backend generates the image, stores it in Storage and returns its download URL.
     private suspend fun createImageForRecipe(recipe: Recipe): String {
@@ -449,12 +463,8 @@ class ChatViewModel(
                     _uiState.value.updateRecipeStarred(messageId, recipeId, isStarred = false)
                     Toast.makeText(context, "Recipe removed from collection.", Toast.LENGTH_SHORT).show()
                 } else {
-                    val recipeToSave = recipe.copyOf(
-                        uid = _currentUser?.uid ?: "",
-                        isFavourite = true
-                    )
                     withContext(Dispatchers.IO) {
-                        _recipeRepositoryImpl.saveRecipe(recipeToSave)
+                        _recipeRepositoryImpl.saveRecipe(toSavedRecipe(recipe))
                     }
                     _uiState.value.updateRecipeStarred(messageId, recipeId, isStarred = true)
                     Toast.makeText(context, "Recipe saved to collection.", Toast.LENGTH_SHORT).show()
